@@ -1,0 +1,18 @@
+# /etc/systemd/system/oracle-rdbms.service
+#   Invoking Oracle scripts to start/shutdown Instances defined in /etc/oratab
+#   and starts Listener
+
+[Unit]
+Description=Oracle Database(s) and Listener
+Requires=network.target
+After=network.target
+
+[Service]
+Type=forking
+Restart=no
+ExecStart=/usr/local/bin/manage_oracle_rdbms_procs.sh -a start
+ExecStop=/usr/local/bin/manage_oracle_rdbms_procs.sh -a stop
+User={{ oracle_user }}
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,6 @@
+- name: Apply patches to GI
+  hosts: ansible_db                     # AIX Lapr hostgroup name defined in Ansible inventory.
+  remote_user: oracle                   # Grid Home Owner.
+  become: yes                           # For root access.
+  roles:
+     - {role: oraswgi-manage-patches }  

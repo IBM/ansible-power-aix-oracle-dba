@@ -1,0 +1,7 @@
+ - name: Apply patches to GI
+   hosts: rachosts      # AIX Lapr hostgroup name defined in Ansible inventory.
+   become: yes
+   remote_user: grid    # Remote AIX Lpar username.
+   serial: 1
+   roles:
+      - {role: oraswgi-manage-patches }

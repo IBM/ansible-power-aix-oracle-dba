@@ -1,0 +1,32 @@
+---
+- hosts: localhost
+  connection: local
+  vars:
+       hostname: ansible_db             # AIX hostname
+       service_name: db122c             # Service name of the database
+       user: sys
+       password: oracle                 # sys user password
+       db_mode: sysdba
+       listener_port: 1521              # Listen port
+       sql_query:
+          - { query: 'select name from v$database' }   # SQL Query 1.
+          - { query: 'select instance_name from v$instance' }    # SQL Query 2.
+       oracle_env:
+          ORACLE_HOME: /home/ansible/oracle_client              # Oracle client home location on Ansible controller.
+          LD_LIBRARY_PATH: /home/ansible/oracle_client/lib      # Oracle client library location on Ansible controller.
+  tasks:
+
+    - oracle_sql:
+        username: "{{ user }}"
+        password: "{{ password }}"
+        service_name: "{{ service_name }}"
+        hostname: "{{ hostname }}"
+        port: "{{ listener_port }}"
+        mode: "{{ db_mode }}"
+        sql: "{{ item.query }}"
+      with_items:
+        - "{{ sql_query }}"
+      environment: "{{ oracle_env }}"
+      register: output
+    - debug: 
+        var: output

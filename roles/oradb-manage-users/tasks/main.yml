@@ -1,0 +1,30 @@
+---
+
+- name: Manage users (cdb/pdb)
+  oracle_user:
+          hostname={{ hostname }}
+          port={{ listener_port_template }}
+          service_name={{ item.0.service_name }}
+          user={{ db_user }}
+          password={{ db_password_pdb }}
+          mode="{{ db_mode}}"
+          schema={{ item.1.schema }}
+          schema_password={{ item.0.user_pdb_password }}
+          schema_password_hash={{ user_pdb_password_hash | default(omit) }}
+          profile={{ item.1.profile |default (omit) }}
+          state={{ item.0.state }}
+          default_tablespace={{ item.1.default_tablespace |default (omit)}}
+          default_temp_tablespace={{ item.1.default_temp_tablespace |default (omit)}}
+          update_password={{ item.1.update_password | default('on_create') }}
+          authentication_type={{ item.1.authentication_type | default(omit) }}
+          grants={{ item.1.grants |default (omit) }}
+  environment: "{{ oracle_env }}"
+  with_subelements:
+      - "{{ oracle_databases }}"
+      - users
+      - flags:
+        skip_missing: True
+  when: oracle_databases is defined and item.0.state is defined and item.1 is defined
+  loop_control:
+      label: "port: {{ listener_port_template }} service: {{ item.0.service_name }} schema: {{ item.1.schema }} state:{{ item.0.state }}"
+  tags: users

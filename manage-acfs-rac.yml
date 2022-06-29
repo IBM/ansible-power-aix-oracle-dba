@@ -1,0 +1,8 @@
+#Playbook to create ACFS on RAC environment
+#
+- name: Create ACFS in RAC
+  gather_facts: no
+  hosts: rac91                  # AIX Lpar hostgroup defined in ansible inventory.
+  remote_user: grid             # Grid Home owner.
+  roles:
+     - {role: create-acfs-rac }

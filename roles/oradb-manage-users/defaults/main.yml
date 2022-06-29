@@ -1,0 +1,31 @@
+db_user: sys
+db_password_cdb: oracle         # CDB Password.
+db_password_pdb: oracle         # PDB Admin Password.
+db_mode: sysdba
+db_service_name: "{% if item.0 is defined %}
+                    {%- if item.0.oracle_db_unique_name is defined %}{{ item.0.oracle_db_unique_name }}
+                    {%- elif item.0.oracle_db_instance_name is defined %}{{ item.0.oracle_db_instance_name }}
+                    {%- else %}{{ item.0.oracle_db_name }}
+                    {%- endif %}
+                  {%- endif %}"
+
+listener_port_template: "{% if item.0.listener_port is defined %}{{ item.0.listener_port }}{% else %}{{ listener_port }}{% endif %}"
+listener_port: 1521             # Database listener port.
+hostname: ansible_db
+oracle_env:
+  ORACLE_HOME: /home/ansible/oracle_client              # Oracle client path installed on Ansible controller.
+  LD_LIBRARY_PATH: /home/ansible/oracle_client/lib      # Oracle client library path installed on Ansible controller.
+
+oracle_databases:
+      - users:
+          - schema: DBUser1                           # Username to be created in PDB.
+        default_tablespace: users                       # Default tablespace to be assigned to the created user.
+        service_name: ansipdb4.pbm.ihost.com            # PDB service name.
+        user_pdb_password: oracle3
+        state: present                                  # present|absent.
+      - users:                                         # Multiple users can be created with different attributes as shown below.
+         - schema: DBUser2
+        default_tablespace: users
+        service_name: db19cpdb.pbm.ihost.com
+        user_pdb_password: oracle4
+        state: present

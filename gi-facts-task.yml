@@ -1,0 +1,13 @@
+- hosts: rachosts                               # AIX LAPR hostname/groupname. The connection mode will be remote. Oracle environment variables on the remote lpar must be defined.
+  remote_user: grid                             # Name of the Grid owner on the remote server.
+  vars:
+      oracle_env:
+         ORACLE_HOME: /u01/app/19c/grid/                # Grid Home path on the remote lpar.
+         LD_LIBRARY_PATH: /u01/app/19c/grid/lib         # Grid Home Library path on the remote lpar.
+  tasks:
+    - name: Return GI facts
+      oracle_gi_facts:
+      environment: "{{ oracle_env }}"
+      register: gifacts
+    - debug:
+       var: gifacts

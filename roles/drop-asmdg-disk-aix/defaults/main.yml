@@ -1,0 +1,20 @@
+grid_install_user: "{{ ansible_user_id }}"
+oracle_group: oinstall                        # Grid owner's primary user group
+oracle_home_gi: /u01/grid19c                  # Grid Home Location
+oracle_rsp_stage: /u01/app/stage                  # Location on aix lpar to copy response file
+asm_diskgroups:
+   - diskgroup: PQSTDB                        # Name of the diskgroup to perform modifications or deletion.
+     disk: PQSTDB_0001                        # Desired Diskname to drop. Value obtained from v$asm_disk.
+oracle_sid: +ASM                              # SID of the running ASM instance
+
+is_rac: False                                 # If this is RAC environment set to True & update racnodes below, if NOT, mention False.
+racnodes: rac93,rac94                         # Rac node names except one node where asm diskgroup is running. Applicable to RAC only.
+oracle_env:
+       ORACLE_HOME: "{{ oracle_home_gi }}"
+       ORACLE_SID: "{{ oracle_sid }}"
+       PATH: "{{ oracle_home_gi }}/bin:$PATH"
+       
+# Note: When setting the following parameter, only one must be True at the same time.
+
+drop_diskgroup: False                          # If diskgroup needs to be dropped, set it to True otherwise set it False.
+drop_disk: True                              # If a disk from diskgroup needs to be dropped, set it to True otherwise set it False.

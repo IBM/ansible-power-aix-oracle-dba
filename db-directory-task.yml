@@ -1,0 +1,56 @@
+---
+- hosts: localhost
+  connection: local
+  vars:
+
+   - name: Global Variables
+     hostname: ansible_db                       # AIX Lpar hostname.
+     service_name: db122c                       # Service name for the database where the directory needs to be created.
+     db_user: sys
+     db_password_cdb: oracle                    # Sys user password.
+     listener_port: 1521                        # Database listener port number.
+     db_mode: sysdba
+     directory_name: TESTDIR                    # Desired directory name to be created.
+     path: /u01/testdir                         # Path to which the database directory is to be created. This must be created manually.
+     state: present                             # To create a directory - present. To drop a directory - absent.
+     mode: enforce                               
+     oracle_env:
+      ORACLE_HOME: /home/ansible/oracle_client          # Oracle Client Home on Ansible Controller.
+      LD_RUN_PATH: /home/ansible/oracle_client/lib      # Oracle Client Home Library on Ansible Controller.
+
+  tasks:
+   - name: Create Directory
+     oracle_directory:
+           hostname: "{{ hostname }}"
+           service_name: "{{ service_name }}"
+           port: "{{ listener_port }}"
+           user: "{{ db_user }}"
+           password: "{{ db_password_cdb }}"
+           mode: "{{ db_mode }}"
+           directory_name: "{{ directory_name }}"
+           directory_path: "{{ path }}"
+           state: "{{ state }}"
+           directory_mode: "{{ mode }}"
+     register: crdir
+     when: state == 'present'
+     environment: "{{ oracle_env }}"
+   - debug:
+       var: crdir
+
+   - name: Drop Directory
+     oracle_directory:
+           hostname: "{{ hostname }}"
+           service_name: "{{ service_name }}"
+           port: "{{ listener_port }}"
+           user: "{{ db_user }}"
+           password: "{{ db_password_cdb }}"
+           mode: "{{ db_mode }}"
+           directory_name: "{{ directory_name }}"
+           directory_path: "{{ path }}"
+           state: "{{ state }}"
+           directory_mode: "{{ mode }}"
+     register: deldir
+     when: state == 'absent'
+     environment: "{{ oracle_env }}"
+   - debug:
+       var: deldir

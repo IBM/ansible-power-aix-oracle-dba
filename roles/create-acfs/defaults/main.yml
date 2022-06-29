@@ -1,0 +1,12 @@
+grid_owner: oracle
+oracle_home_gi: /u01/grid19c    # Grid Home location.
+oracle_sid: +ASM                # Grid SID.
+path: /acfs                     # Path onto which ACFS to be mounted.
+diskgroup: DATA1                # Diskgroup name where ACFS should me created.
+volname: ACFSDATA1              # Desired ACFS volume name to be created.
+size: 80G                       # ACFS mount point size.
+oracle_env:                     
+    ORACLE_HOME: "{{oracle_home_gi}}"
+    PATH: "{{oracle_home_gi}}/bin:$PATH:/bin:/usr/bin:/sbin:/usr/sbin:/opt/freeware/bin"
+    ORACLE_SID: "{{ oracle_sid }}"
+create_acfs: False               # True: Creates ACFS mount point | False: Deletes ACFS mount point.

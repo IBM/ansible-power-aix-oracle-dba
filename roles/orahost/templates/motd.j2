@@ -1,0 +1,18 @@
+------------------------------------------
+Welcome to {{ ansible_fqdn }}
+{{ ansible_lsb.description }} {{ ansible_userspace_architecture }}
+
+FQDN: {{ ansible_fqdn }}
+{% if 'virtualbox' in ansible_virtualization_type %}
+IP:   {{ hostvars[host]['ansible_all_ipv4_addresses'][1] }}
+{% else %}
+IP:    {{ hostvars[host]['ansible_default_ipv4']['address'] }}
+{% endif %}
+
+
+Kernel: {{ ansible_kernel }}
+#cpu's: {{ ansible_processor_vcpus }} 
+mem:    {{ ansible_memtotal_mb }} MB
+
+
+------------------------------------------

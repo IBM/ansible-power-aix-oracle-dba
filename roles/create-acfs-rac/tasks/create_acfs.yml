@@ -1,0 +1,44 @@
+- name: Check volume
+  shell: "asmcmd volinfo --all|grep -w {{ volname }}"
+  when: create_acfs
+  register: checkvol
+  environment: "{{ oracle_env }}"
+  ignore_errors: True
+
+- fail:
+   msg: "Seems ACFS Volume already exists"
+  when: checkvol.rc == 0
+
+- name: Create ACFS Volume
+  shell: "asmcmd volcreate -G {{ diskgroup }} -s {{ size}} {{ volname }}"
+  environment: "{{ oracle_env }}"
+  when: create_acfs and checkvol.rc != 0
+  register: volcreate
+  tags: volcreate
+
+- name: Get Volume Device
+  shell: "asmcmd volinfo -G {{ diskgroup }} {{ volname }} | grep 'Volume Device' | awk '{print $3}'"
+  environment: "{{ oracle_env }}"
+  when: create_acfs
+  register: getvol
+  tags: getvol
+
+- name: Make Filesystem
+  shell: "mkfs -V acfs {{ getvol.stdout }}"
+  environment: "{{ oracle_env }}"
+  when: create_acfs
+  tags: mkacfs
+
+- name: Add filesystem
+  shell: srvctl add filesystem -d {{ getvol.stdout }} -m {{ path }} -fstype ACFS -autostart ALWAYS
+  environment: "{{ oracle_env }}"
+  when: create_acfs
+  tags: addfs
+  become: yes
+
+- name: start filesystem
+  shell: srvctl start filesystem -d {{ getvol.stdout }}
+  environment: "{{ oracle_env }}"
+  when: create_acfs
+  tags: startfs
+  become: yes

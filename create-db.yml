@@ -1,0 +1,5 @@
+- name: Create a Database
+  hosts: rac91                  # Target Lpar hostname
+  remote_user: oracle           # Remote username
+  roles:
+     - { role: oradb-create }

@@ -1,0 +1,38 @@
+---
+# This playbook can execute single or multiple SQL files on desired databases. 
+# Modify the values in the variables section as per requirement.
+- hosts: localhost
+  connection: local
+  vars:
+       hostname: ansible_db             # AIX hostname
+       service_name: db122c             # Service name of the database
+       user: sys                        
+       password: oracle                 # sys user password
+       db_mode: sysdba          
+       listener_port: 1521              # Listen port
+       sqlfile:
+          - { script: '/home/ansible/ansible_test/stage/create.sql' }   # SQL Script 1 location & name of the file.
+          - { script: '/home/ansible/ansible_test/stage/insert.sql' }   # SQL Script 2 location & name of the file.
+          - { script: '/home/ansible/ansible_test/stage/insert1.sql' }  # SQL Script 3 location & name of the file.
+       oracle_env:              
+          ORACLE_HOME: /home/ansible/oracle_client              # Oracle client home location on Ansible controller.
+          LD_LIBRARY_PATH: /home/ansible/oracle_client/lib      # Oracle client library location on Ansible controller.
+ 
+# Do NOT change anything beyond this section.          
+
+  tasks:
+
+    - oracle_sql:
+        username: "{{ user }}"
+        password: "{{ password }}"
+        service_name: "{{ service_name }}"
+        hostname: "{{ hostname }}"
+        port: "{{ listener_port }}"
+        mode: "{{ db_mode }}"
+        script: "{{ item.script }}"
+      with_items:
+        - "{{ sqlfile }}"
+      environment: "{{ oracle_env }}"
+      register: output
+    - debug: 
+        var: output

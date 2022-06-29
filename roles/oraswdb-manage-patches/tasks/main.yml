@@ -1,0 +1,24 @@
+- name: db-opatch | check if GI is installed
+  stat: path=/etc/oracle/olr.loc
+  register: olrloc
+
+- name: db-opatch | Create patch-base directory (version specific)
+  file:
+     dest={{ oracle_patch_stage }}/{{ db_version }}
+     mode=775
+     owner={{ oracle_user }}
+     group={{ oracle_group }}
+     state=directory
+  with_items:
+      - "{{ db_homes_installed }}"
+  tags:
+    - directories
+  when: apply_patches_db and item.apply_patches |default (False) 
+
+- include_tasks: db-home-patch.yml
+  with_items:
+      - "{{ db_homes_installed }}"
+  loop_control:
+    loop_var: dbh
+  when: db_homes_installed is defined and dbh.state == 'present' and dbh.apply_patches |default (False) and apply_patches_db
+  tags: autopatch

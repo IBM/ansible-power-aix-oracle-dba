@@ -1,0 +1,40 @@
+- name: Drop PDB
+  oracle_pdb:
+        name={{ item.pdb_name }}
+        sourcedb={{ item.cdb }}
+        datafile_dest={{ item.datafile_dest |default(omit) }}
+        save_state={{ item.save_state | default(omit)}}
+        pdb_admin_username={{ pdbadmin_user | default(omit)}}
+        pdb_admin_password={{ pdbadmin_password | default(omit)}}
+        host={{ hostname }}
+        username={{ db_user | default('sys') }}
+        password={{ db_password_cdb }}
+        mode={{ db_mode }}
+        service_name={{ oracle_db_name }}
+        port={{ listener_port }}
+        state={{ item.state |default(omit) }}
+  environment: "{{ oracle_env }}"
+  with_items:
+      - "{{ drop_oracle_pdbs | default ([]) }}"
+  when: item.state == 'absent' | default ([])
+
+- name: Unplug PDB
+  oracle_pdb:
+        name={{ item.pdb_name }}
+        sourcedb={{ item.cdb }}
+        datafile_dest={{ item.datafile_dest |default(omit) }}
+        save_state={{ item.save_state | default(omit)}}
+        pdb_admin_username={{ pdbadmin_user | default(omit)}}
+        pdb_admin_password={{ pdbadmin_password | default(omit)}}
+        host={{ hostname }}
+        username={{ db_user | default('sys') }}
+        password={{ db_password_cdb }}
+        mode={{ db_mode }}
+        service_name={{ oracle_db_name }}
+        port={{ listener_port }}
+        state={{ item.state |default(omit) }}
+        unplug_dest={{ item.xml_file_dest }}/{{ item.xml_file }}
+  environment: "{{ oracle_env }}"
+  with_items:
+      - "{{ drop_oracle_pdbs | default ([]) }}"
+  when: item.state == 'unplugged'

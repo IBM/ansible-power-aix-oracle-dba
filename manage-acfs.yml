@@ -1,0 +1,10 @@
+# Playbook to create ACFS on Oracle restart. "stat" is a mandatory utility to be installed on the lpar.
+# Corresponding role is "create-acfs". 
+# Variables file is create-acfs/defaults/main.yml
+ 
+- name: Create ACFS SI
+  gather_facts: no
+  hosts: ansible_db                     # AIX Lpar Hostname defined in ansible inventory.
+  remote_user: oracle                   # Grid home owner.
+  roles:
+     - {role: create-acfs }

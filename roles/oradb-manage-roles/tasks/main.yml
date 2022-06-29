@@ -1,0 +1,87 @@
+---
+# tasks file for manage-db-users
+- name: Manage roles (cdb)
+  oracle_role:
+          role={{ item.1.name }}
+          state={{ item.0.state }}
+          hostname={{ hostname }}
+          port={{ listener_port_template }}
+          service_name={{ item.0.oracle_db_name }}
+          user={{ db_user }}
+          password={{ item.0.db_password_cdb}}
+          mode={{ db_mode }}
+  with_subelements:
+      - "{{ oracle_databases }}"
+      - roles
+      - flags:
+        skip_missing: True
+  environment: "{{oracle_env}}"
+  when: oracle_databases is defined and item.0.state|lower == 'present' and item.1 is defined
+  loop_control:
+      label: "port: {{ listener_port_template }}, service: {{ item.0.oracle_db_name }}, role: {{ item.1.name }}, state: {{ item.0.state }}"
+  tags: users,grants
+
+- name: Manage roles (pdb)
+  oracle_role:
+          role={{ item.1.name }}
+          state={{ item.0.state }}
+          hostname={{ hostname }}
+          port={{ listener_port_template }}
+          service_name={{ item.0.service_name }}
+          user={{ db_user }}
+          password={{ item.0.db_password_pdb}}
+          mode={{ db_mode }}
+  with_subelements:
+      - "{{ oracle_pdbs }}"
+      - roles
+      - flags:
+        skip_missing: True
+  environment: "{{oracle_env}}"
+  when: oracle_pdbs is defined and item.0 is defined and item.0.state|lower == 'present' and item.1 is defined
+  loop_control:
+      label: "port: {{ listener_port_template }}, service: {{ item.0.service_name }}, role: {{ item.1.name }}, state: {{ item.0.state }}"
+  tags: users,grants
+
+- name: Manage roles (cdb)
+  oracle_role:
+          role={{ item.1.name }}
+          state={{ item.0.state }}
+          hostname={{ hostname }}
+          port={{ listener_port_template }}
+          service_name={{ item.0.oracle_db_name }}
+          user={{ db_user }}
+          password={{ item.0.db_password_cdb}}
+          mode={{ db_mode }}
+  with_subelements:
+      - "{{ oracle_databases }}"
+      - roles
+      - flags:
+        skip_missing: True
+  environment: "{{oracle_env}}"
+  when: oracle_databases is defined and item.0.state|lower == 'absent' and item.1 is defined
+  loop_control:
+      label: "port: {{ listener_port_template }}, service: {{ item.0.oracle_db_name }}, role: {{ item.1.name }}, state: {{ item.0.state }}"
+  tags: users,grants
+
+
+
+- name: Manage roles (pdb)
+  oracle_role:
+          role={{ item.1.name }}
+          state={{ item.0.state }}
+          hostname={{ hostname }}
+          port={{ listener_port_template }}
+          service_name={{ item.0.service_name }}
+          user={{ db_user }}
+          password={{ item.0.db_password_pdb}}
+          mode={{ db_mode }}
+  with_subelements:
+      - "{{ oracle_pdbs }}"
+      - roles
+      - flags:
+        skip_missing: True
+  environment: "{{oracle_env}}"
+  when: oracle_pdbs is defined and item.0 is defined and item.0.state|lower == 'absent' and item.1 is defined
+  loop_control:
+      label: "port: {{ listener_port_template }}, service: {{ item.0.service_name }}, role: {{ item.1.name }}, state: {{ item.0.state }}"
+  tags: users,grants

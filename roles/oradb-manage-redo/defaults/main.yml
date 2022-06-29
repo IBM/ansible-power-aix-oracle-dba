@@ -1,0 +1,12 @@
+db_user: sys
+db_mode: sysdba
+
+db_service_name: orcl           # DB service name
+listener_port: 1521     # Database Listen port
+default_dbpass: oracle  # Sys user password
+
+hostname: rac91                  # AIX Hostname or SCAN address in case of RAC.
+oracle_databases:
+       redolog_groups: 2        # Number of additional redo log groups to add (If there are already 2 groups and need to create  2 more groups, set this value to 4. )
+       redolog_size: 200M       # Redo log file size. 
+       state: present           # "present" - creates redo groups, "absent" - drops redo groups.

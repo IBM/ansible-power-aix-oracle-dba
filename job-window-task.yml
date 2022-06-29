@@ -1,0 +1,42 @@
+---
+- hosts: localhost
+  connection: local
+  vars:
+
+     name: Global Variables
+     hostname: ansible_db
+     service_name: db122cpdb
+     db_user: sys
+     db_password_cdb: oracle
+     listener_port: 1521
+     db_mode: sysdba
+     state: disabled     # enabled, disabled, absent
+     resource_plan: DEFAULT_MAINTENANCE_PLAN
+     window_name: ANSI_WINDOW
+     interval: freq=daily;byday=SUN;byhour=6;byminute=0; bysecond=0
+     comments: This is a window for Ansible testing
+     duration_hour: 12
+     oracle_env:
+       ORACLE_HOME: /home/ansible/oracle_client
+       LD_LIBRARY_PATH: /home/ansible/oracle_client/lib
+
+  tasks:
+
+   - name: Oracle Job Window
+     oracle_jobwindow:
+       hostname: "{{ hostname }}"
+       service_name: "{{ service_name }}"
+       port: "{{ listener_port }}"
+       user: "{{ db_user }}"
+       password: "{{ db_password_cdb }}"
+       mode: "{{ db_mode }}"
+       state: "{{ state }}"
+       resource_plan: "{{ resource_plan }}"
+       name: "{{ window_name }}"
+       interval: "{{ interval }}"
+       comments: "{{ comments }}"
+       duration_hour: "{{ duration_hour }}"
+     environment: "{{ oracle_env }}"
+     register: jobclass
+   - debug:
+       var: jobclass

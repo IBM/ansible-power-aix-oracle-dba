@@ -1,0 +1,5 @@
+- include: create_acfs.yml
+  when: create_acfs
+
+- include: delete_acfs.yml
+  when: not create_acfs

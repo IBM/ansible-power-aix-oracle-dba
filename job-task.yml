@@ -1,0 +1,63 @@
+# Readme for DBMS jobs
+#
+# Playbook: ansible_oracle_aix/job-task.yml
+# This is a standalone task. The variables has to be set in the file itself.
+# Modify the variables under "vars" section. Do NOT change other sections of the file.
+
+
+# name: Global Variables
+# hostname: ansible_db               # Aix Lpar hostname where the database is running
+# service_name: db122cpdb            # Database service name
+# db_password_cdb: oracle            # sys user password
+# listener_port: 1521                # Listener port number
+# state: present                     # present - creates a job, absent - drops a job.
+# enabled: True                      # True - Enables the job, False, Disables the job.
+# job_name: ansiuser1.ansi_job       # Job name along with schema name prefixed.
+# job_action: ansiuser1.PKG_TEST_SCHEDULER.JOB_PROC_STEP_1   # Job action
+# job_type: stored_procedure         # Type of the job
+# repeat_interval: FREQ=MINUTELY;INTERVAL=35 # Job interval
+# ORACLE_HOME: /home/ansible/oracle_client # Oracle client s/w path on Ansible controller.
+# LD_LIBRARY_PATH: /home/ansible/oracle_client/lib # Oracle client library path on Ansible controller.
+
+- hosts: localhost
+  connection: local
+  vars:
+
+     name: Global Variables
+     hostname: ansible_db               # Aix Lpar hostname where the database is running
+     service_name: ansipdb4.pbm.ihost.com            # Database service name
+     db_user: sys                       
+     db_password_cdb: oracle            # sys user password
+     listener_port: 1521                # Listener port number
+     db_mode: sysdba
+     state: present                     # present - creates a job, absent - drops a job.
+     enabled: True                      # True - Enables the job, False, Disables the job.
+     job_name: ansiuser1.ansi_job       # Job name along with schema name prefixed.
+     job_action: ansiuser1.PKG_TEST_SCHEDULER.JOB_PROC_STEP_1   # Job action
+     job_type: stored_procedure         # Type of the job
+     repeat_interval: FREQ=MINUTELY;INTERVAL=35 # Job interval
+     oracle_env:
+       ORACLE_HOME: /home/ansible/oracle_client # Oracle client s/w path on Ansible controller.
+       LD_LIBRARY_PATH: /home/ansible/oracle_client/lib # Oracle client library path on Ansible controller.
+
+
+  tasks:
+
+   - name: Create Job
+     oracle_job:
+       hostname: "{{ hostname }}"
+       service_name: "{{ service_name }}"
+       port: "{{ listener_port }}"
+       user: "{{ db_user }}"
+       password: "{{ db_password_cdb }}"
+       mode: "{{ db_mode }}"
+       state: "{{ state }}"
+       enabled: "{{ enabled }}"
+       job_name: "{{ job_name }}"
+       job_action: "{{ job_action }}"
+       job_type: "{{ job_type }}"
+       repeat_interval: "{{ repeat_interval }}"
+     environment: "{{ oracle_env }}"
+     register: job
+   - debug:
+       var: job

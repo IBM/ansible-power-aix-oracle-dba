@@ -1,0 +1,41 @@
+- hosts: localhost
+  connection: local
+  vars:
+
+     name: Global Variables
+     hostname: ansible_db
+     service_name: db122cpdb
+     db_user: sys
+     db_password_cdb: oracle
+     listener_port: 1521
+     db_mode: sysdba
+     state: present
+     enabled: True
+     repeat_interval: FREQ=MINUTELY;INTERVAL=30
+     convert_to_upper: True
+     comments: This is test
+     schedule_name: ansiuser1.ansi_schedule
+     oracle_env:
+       ORACLE_HOME: /home/ansible/oracle_client
+       LD_LIBRARY_PATH: /home/ansible/oracle_client/lib
+
+
+  tasks:
+
+   - name: Create Job
+     oracle_jobschedule:
+       hostname: "{{ hostname }}"
+       service_name: "{{ service_name }}"
+       port: "{{ listener_port }}"
+       user: "{{ db_user }}"
+       password: "{{ db_password_cdb }}"
+       mode: "{{ db_mode }}"
+       state: "{{ state }}"
+       repeat_interval: "{{ repeat_interval }}"
+       convert_to_upper: "{{ convert_to_upper }}"
+       comments: "{{ comments }}"
+       name: "{{ schedule_name }}"
+     environment: "{{ oracle_env }}"
+     register: job
+   - debug:
+       var: job

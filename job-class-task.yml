@@ -1,0 +1,40 @@
+---
+- hosts: localhost
+  connection: local
+  vars:
+
+     name: Global Variables
+     hostname: ansible_db
+     service_name: db122cpdb
+     db_user: sys
+     db_password_cdb: oracle
+     listener_port: 1521
+     db_mode: sysdba
+     state: present
+     resource_group: ansigroup1
+     class_name: ansiclass
+     logging: failed runs
+     history: 14
+     oracle_env:
+       ORACLE_HOME: /home/ansible/oracle_client
+       LD_LIBRARY_PATH: /home/ansible/oracle_client/lib
+
+  tasks:
+
+   - name: Oracle Job Class
+     oracle_jobclass:
+       hostname: "{{ hostname }}"
+       service_name: "{{ service_name }}"
+       port: "{{ listener_port }}"
+       user: "{{ db_user }}"
+       password: "{{ db_password_cdb }}"
+       mode: "{{ db_mode }}"
+       state: "{{ state }}"
+       resource_group: "{{ resource_group }}"
+       name: "{{ class_name }}"
+       logging: "{{ logging }}"
+       history: "{{ history }}"
+     environment: "{{ oracle_env }}"
+     register: jobclass
+   - debug:
+       var: jobclass
