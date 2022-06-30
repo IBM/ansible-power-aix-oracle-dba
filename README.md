@@ -24,4 +24,4 @@ Getting started with the collection:
 - Clone this repository:
    `git clone --recursive https://github.com/IBM/ansible-power-aix-oracle-dba`
    
-- Readmes for each module is placed here: ansible-power-aix-oracle-dba/readmes
+- Readmes for each module are placed here: ansible-power-aix-oracle-dba/readmes
