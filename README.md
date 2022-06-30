@@ -1,7 +1,8 @@
 # ansible-power-aix-oracle-dba
 Automate Administration Tasks of Oracle DB on AIX
 
-Overview: These ansible modules are an orignal work of Oravirt https://github.com/oravirt/ansible-oracle. These have been tested on AIX. Following functionalities can be achieved with this repository.
+Overview: These ansible modules are based on the Oravirt collection https://github.com/oravirt/ansible-oracle. These have been modified and tested to work on AIX.
+Following functionalities can be achieved with this repository.
 - Database creation [Single Instance/RAC & Multitenant]
 - Apply RU Patches [Standalone DB/Database on ASM & RAC]
 - Manage Users [Create/drop users, grant/revoke privileges]
