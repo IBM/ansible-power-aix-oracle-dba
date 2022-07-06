@@ -25,3 +25,25 @@ Getting started with the collection:
    `git clone --recursive https://github.com/IBM/ansible-power-aix-oracle-dba`
    
 - Readmes for each module are placed here: ansible-power-aix-oracle-dba/readmes
+
+This playbook assumes the following:
+
+ - That the user is familiar with Ansible and has basic knowledge on YAML, for the purpose of running this playbook.
+ - That the user is familiar with Oracle Database Administration.
+ - That the user is familiar with the AIX Operating system.
+ - That the version of AIX is 7.2 TL4 SP1 or later. (It should work on other versions of AIX supported by the oracle database AIX OS requirements, but has not been tested).
+ - That the version of Oracle Standalone Database is version 19.3.0.0.
+ - Uses ibm.power_aix collection modules.
+
+To get started with Ansible refer
+
+https://docs.ansible.com/ansible/latest/user_guide/intro_getting_started.html
+
+To get started with Oracle Database on AIX refer
+
+https://docs.oracle.com/en/database/oracle/oracle-database/19/axdbi/index.html
+https://www.ibm.com/support/pages/oracle-db-rac-19c-ibm-aix-tips-and-considerations
+
+To get started with AIX refer
+
+https://www.ibm.com/support/knowledgecenter/ssw_aix_72/navigation/welcome.html
