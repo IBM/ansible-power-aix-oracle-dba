@@ -28,11 +28,11 @@ Getting started with the collection:
 
 This playbook assumes the following:
 
- - That the user is familiar with Ansible and has basic knowledge on YAML, for the purpose of running this playbook.
- - That the user is familiar with Oracle Database Administration.
- - That the user is familiar with the AIX Operating system.
- - That the version of AIX is 7.2 TL4 SP1 or later. (It should work on other versions of AIX supported by the oracle database AIX OS requirements, but has not been tested).
- - That the version of Oracle Standalone Database is version 19.3.0.0.
+ - The user is familiar with Ansible and has basic knowledge on YAML, for the purpose of running this playbook.
+ - The user is familiar with Oracle Database Administration.
+ - The user is familiar with the AIX Operating system.
+ - The version of AIX is 7.2 TL4 SP1 or later. (It should work on other versions of AIX supported by the oracle database AIX OS requirements, but has not been tested).
+ - The version of Oracle Standalone Database is 19.3.0.0.
  - Uses ibm.power_aix collection modules.
 
 To get started with Ansible refer
