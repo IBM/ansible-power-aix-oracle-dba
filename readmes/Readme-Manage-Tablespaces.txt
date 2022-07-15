@@ -1,6 +1,6 @@
 # Manage Tablespaces - Readme
 # ===========================
-# Description: This module is used to manage tablespaces in Standalone & RAC environments. It uses a python library located here: ansible_oracle_aix/library/oracle_tablespaces. 
+# Description: This module is used to manage tablespaces in Standalone & RAC environments. It uses a python library located here: ansible-power-aix-oracle-dba/library/oracle_tablespaces. 
 # It can create, drop, put in read only/read write, offline/online.
 # More information on managing tablespaces: https://docs.oracle.com/cd/A57673_01/DOC/server/doc/SCN73/ch4.htm
 
@@ -8,7 +8,7 @@
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file ansible_oracle_aix/roles/oradb-manage-tablespace/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_tablespace/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 oracle_base: /u01/app/oracle	# Oracle base location
 hostname: ansible_db            # AIX hostname
@@ -44,27 +44,27 @@ listener_port_template: "{% if item.0.listener_port is defined %}{{ item.0.liste
 listener_port: 1521			# Database listener port number.
 
 # Executing the playbook: This playbook executes a role.
-# Name of the Playbook: ansible_oracle_aix/manage-tablespaces.yml
-# Change directory to ansible_oracle_aix
+# Name of the Playbook: ansible-power-aix-oracle-dba/manage-tablespaces.yml
+# Change directory to ansible-power-aix-oracle-dba
 # ansible-playbook manage-tablespaces.yml
 # The following task will be executed which will call out a role.
 
 - hosts: localhost
   connection: local
   roles:
-     - { role: oradb-manage-tablespace }
+     - { role: oradb_manage_tablespace }
 
 # Sample Output
 # =============
 
-[ansible@x134vm232 ansible_oracle_aix]$ ansible-playbook tablespace.yml
+[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook tablespace.yml
 
 PLAY [localhost] **********************************************************************************************************************
 
 TASK [Gathering Facts] ****************************************************************************************************************
 ok: [localhost]
 
-TASK [oradb-manage-tablespace : Manage tablespaces] ***********************************************************************************
+TASK [oradb_manage_tablespace : Manage tablespaces] ***********************************************************************************
 changed: [localhost] => (item=port: 1521 service: ansible.pbm.ihost.com tablespace: testtbs2 content: __omit_place_holder__b8805138655ad69cd93d525b85dbbab4986eb7b7 state: present)
 [WARNING]: Both option datafile and its alias datafile are set.
 

@@ -10,7 +10,7 @@
 # 1) Drop ASM diskgroups
 # ======================
 
-# Set the Variables for Oracle to execute the task to Drop Diskgroup: Open the file ansible_oracle_aix/roles/drop-asmdg-disk-aix/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables for Oracle to execute the task to Drop Diskgroup: Open the file ansible-power-aix-oracle-dba/roles/drop_asmdg_disk_aix/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 grid_install_user: "{{ ansible_user_id }}"
 oracle_group: oinstall                        # Grid owner's primary user group.
@@ -34,7 +34,7 @@ drop_diskgroup: True                          # If diskgroup needs to be dropped
 drop_disk: False                              # If a disk from diskgroup needs to be dropped, set it to True otherwise set it False.
 
 # Executing the playbook: This playbook executes a role. Before running the playbook, open the playbook and update the hostname & remote user details which as shown with the comments below. Do NOT change other parts of the script.
-# Change directory to ansible_oracle_aix
+# Change directory to ansible-power-aix-oracle-dba
 # Name of the Playbook: asm-dg-manage.yml
 # Content of the playbook
 
@@ -43,14 +43,14 @@ drop_disk: False                              # If a disk from diskgroup needs t
    hosts: ansible_db                 # AIX Lpar Hostname where the Diskgroup/Disk has to be dropped.
    remote_user: oracle               # Grid Home Owner
    roles:
-      - {role: drop-asmdg-disk-aix }
+      - {role: drop_asmdg_disk_aix }
 
 # ansible-playbook asm-dg-disk-drop.yml
 
 # Sample Output to drop diskgroup
 # ===============================
 
-[ansible@x134vm232 ansible_oracle_aix]$ ansible-playbook asm-dg-disk-drop.yml
+[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook asm-dg-disk-drop.yml
 
 PLAY [Manage ASM Diskgroup/Disk] ******************************************************************************************************
 
@@ -60,19 +60,19 @@ another Python interpreter could change this. See https://docs.ansible.com/ansib
 for more information.
 ok: [129.40.76.82]
 
-TASK [drop-asmdg-disk-aix : Diskgroup check] ******************************************************************************************
+TASK [drop_asmdg_disk_aix : Diskgroup check] ******************************************************************************************
 changed: [129.40.76.82] => (item={'diskgroup': 'PQSTDB', 'disk': 'PQSTDB_0001'})
 
-TASK [drop-asmdg-disk-aix : Dismount ASM diskgroup] ***********************************************************************************
+TASK [drop_asmdg_disk_aix : Dismount ASM diskgroup] ***********************************************************************************
 skipping: [129.40.76.82] => (item={'diskgroup': 'PQSTDB', 'disk': 'PQSTDB_0001'})
 
-TASK [drop-asmdg-disk-aix : Drop ASM diskgroup] ***************************************************************************************
+TASK [drop_asmdg_disk_aix : Drop ASM diskgroup] ***************************************************************************************
 changed: [129.40.76.82] => (item={'diskgroup': 'PQSTDB', 'disk': 'PQSTDB_0001'})
 
-TASK [drop-asmdg-disk-aix : Drop ASM Disk] ********************************************************************************************
+TASK [drop_asmdg_disk_aix : Drop ASM Disk] ********************************************************************************************
 skipping: [129.40.76.82] => (item={'diskgroup': 'PQSTDB', 'disk': 'PQSTDB_0001'})
 
-TASK [drop-asmdg-disk-aix : debug] ****************************************************************************************************
+TASK [drop_asmdg_disk_aix : debug] ****************************************************************************************************
 ok: [129.40.76.82] => {
     "dropdisk": {
         "changed": false,
@@ -99,7 +99,7 @@ PLAY RECAP *********************************************************************
 # =================
 
 # Reference: https://docs.oracle.com/database/121/OSTMG/GUID-44160C76-20B6-40C8-82F8-FF332A28899E.htm#OSTMG10222
-# Set the Variables for Oracle to execute the task to Drop Disk: Open the file ansible_oracle_aix/roles/drop-asmdg-disk-aix/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables for Oracle to execute the task to Drop Disk: Open the file ansible-power-aix-oracle-dba/roles/drop_asmdg_disk_aix/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 grid_install_user: "{{ ansible_user_id }}"
 oracle_group: oinstall                        # Grid owner's primary user group
@@ -125,7 +125,7 @@ drop_disk: True                              # If a disk from diskgroup needs to
 # Sample Output to drop disk
 # ==========================
 
-[ansible@x134vm232 ansible_oracle_aix]$ ansible-playbook asm-dg-disk-drop.yml
+[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook asm-dg-disk-drop.yml
 
 PLAY [Manage ASM Diskgroup/Disk] ******************************************************************************************************
 
@@ -135,16 +135,16 @@ another Python interpreter could change this. See https://docs.ansible.com/ansib
 for more information.
 ok: [129.40.76.82]
 
-TASK [drop-asmdg-disk-aix : Diskgroup check] ******************************************************************************************
+TASK [drop_asmdg_disk_aix : Diskgroup check] ******************************************************************************************
 changed: [129.40.76.82] => (item={'diskgroup': 'PQSTDB', 'disk': 'PQSTDB_0001'})
 
-TASK [drop-asmdg-disk-aix : Dismount ASM diskgroup] ***********************************************************************************
+TASK [drop_asmdg_disk_aix : Dismount ASM diskgroup] ***********************************************************************************
 skipping: [129.40.76.82] => (item={'diskgroup': 'PQSTDB', 'disk': 'PQSTDB_0001'})
 
-TASK [drop-asmdg-disk-aix : Drop ASM diskgroup] ***************************************************************************************
+TASK [drop_asmdg_disk_aix : Drop ASM diskgroup] ***************************************************************************************
 skipping: [129.40.76.82] => (item={'diskgroup': 'PQSTDB', 'disk': 'PQSTDB_0001'})
 
-TASK [drop-asmdg-disk-aix : Drop ASM Disk] ********************************************************************************************
+TASK [drop_asmdg_disk_aix : Drop ASM Disk] ********************************************************************************************
 changed: [129.40.76.82] => (item={'diskgroup': 'PQSTDB', 'disk': 'PQSTDB_0001'})
 
 PLAY RECAP ****************************************************************************************************************************

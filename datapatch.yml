@@ -1,0 +1,6 @@
+- name: Datapatch
+  gather_facts: yes
+  hosts: ansible_db     # AIX lpar hostname, make sure it's set in the inventory.
+  remote_user: oracle   # AIX lpar Oracle home user.
+  roles:
+     - {role: oradb_datapatch }

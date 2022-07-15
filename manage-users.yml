@@ -1,4 +1,4 @@
 - hosts: localhost
   connection: local
   roles:
-     - { role: oradb-manage-users }
+     - { role: oradb_manage_users }

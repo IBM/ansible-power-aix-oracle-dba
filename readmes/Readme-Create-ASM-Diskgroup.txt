@@ -36,7 +36,7 @@
 
 # Refer Oracle ASM Configuration Assistant Command-Line Interface section in https://docs.oracle.com/cd/E11882_01/server.112/e18951/asmca.htm#OSTMG60000
 
-# Set the Variables for Oracle to execute this task: Open the file ansible_oracle_aix/roles/create-asmdg-aix/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/create_asmdg_aix/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 oracle_home_gi: /u01/app/19c/grid            	# Grid Home Location
 oracle_rsp_stage: /u01/app/stage             	# Any accessible location on remote host to stage scripts. Must be created manually.
@@ -57,7 +57,7 @@ asm_diskgroups:
 #      - {device: diskn}			# Raw disk name n, more number of disks can be added to the list.      
 
 # Executing the playbook: This playbook executes a role. Before running the playbook, open the playbook and update the hostname & remote user details as shown below. Do NOT change other parts of the script.
-# Change directory to ansible_oracle_aix
+# Change directory to ansible-power-aix-oracle-dba
 # Name of the Playbook: asm-dg-create.yml
 # Content of the playbook
 
@@ -66,14 +66,14 @@ asm_diskgroups:
    hosts: ansible_db                                   # AIX Lpar Hostname where the Diskgroup has to be created.
    remote_user: oracle                                 # Grid Home Owner
    roles:
-      - {role: create-asmdg-aix }
+      - {role: create_asmdg_aix }
 
 # ansible-playbook asm-dg-create.yml
 
 # Sample Output:
 # =============
 
-[ansible@x134vm232 ansible_oracle_aix]$ ansible-playbook asm-dg-create.yml
+[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook asm-dg-create.yml
 
 PLAY [Create ASM Diskgroup] ***********************************************************************************************************
 
@@ -83,13 +83,13 @@ another Python interpreter could change this. See https://docs.ansible.com/ansib
 for more information.
 ok: [129.40.76.82]
 
-TASK [create-asmdg-aix : ASMCA | Create script to build asm-diskgroups] ***************************************************************
+TASK [create_asmdg_aix : ASMCA | Create script to build asm-diskgroups] ***************************************************************
 changed: [129.40.76.82] => (item={'diskgroup': 'PQSTDB', 'properties': [{'redundancy': 'external', 'ausize': 1}], 'attributes': [{'name': 'compatible.rdbms', 'value': '19.0.0.0'}, {'name': 'compatible.asm', 'value': '19.0.0.0'}], 'disk': [{'device': 'rhdiskasm13'}]})
 
-TASK [create-asmdg-aix : ASMCA | Create ASM diskgroups] *******************************************************************************
+TASK [create_asmdg_aix : ASMCA | Create ASM diskgroups] *******************************************************************************
 changed: [129.40.76.82] => (item={'diskgroup': 'PQSTDB', 'properties': [{'redundancy': 'external', 'ausize': 1}], 'attributes': [{'name': 'compatible.rdbms', 'value': '19.0.0.0'}, {'name': 'compatible.asm', 'value': '19.0.0.0'}], 'disk': [{'device': 'rhdiskasm13'}]})
 
-TASK [create-asmdg-aix : Print Results] ***********************************************************************************************
+TASK [create_asmdg_aix : Print Results] ***********************************************************************************************
 ok: [129.40.76.82] => (item=['', '[DBT-30001] Disk groups created successfully. Check /u01/base/cfgtoollogs/asmca/asmca-220622AM032455.log for details.']) => {
     "ansible_loop_var": "item",
     "item": [
@@ -98,10 +98,10 @@ ok: [129.40.76.82] => (item=['', '[DBT-30001] Disk groups created successfully. 
     ]
 }
 
-TASK [create-asmdg-aix : ASMCA | List ASM diskgroups] *********************************************************************************
+TASK [create_asmdg_aix : ASMCA | List ASM diskgroups] *********************************************************************************
 changed: [129.40.76.82] => (item={'diskgroup': 'PQSTDB', 'properties': [{'redundancy': 'external', 'ausize': 1}], 'attributes': [{'name': 'compatible.rdbms', 'value': '19.0.0.0'}, {'name': 'compatible.asm', 'value': '19.0.0.0'}], 'disk': [{'device': 'rhdiskasm13'}]})
 
-TASK [create-asmdg-aix : list diskgroups] *********************************************************************************************
+TASK [create_asmdg_aix : list diskgroups] *********************************************************************************************
 ok: [129.40.76.82] => (item=['Disk Group PQSTDB is running on p125n82']) => {
     "ansible_loop_var": "item",
     "item": [

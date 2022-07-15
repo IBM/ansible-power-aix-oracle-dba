@@ -2,13 +2,13 @@
 # =====================
 
 # Description: This module is used to create, drop, lock, unlock & expire user accounts. For privileges refer "grants" readme of our ansible collection.
-# It uses a python library: ansible_oracle_aix/library/oracle_users
+# It uses a python library: ansible-power-aix-oracle-dba/library/oracle_users
 
 # Prerequisites:
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file ansible_oracle_aix/roles/oradb-manage-users/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_users/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 db_user: sys
 db_password_cdb: oracle         # CDB Password (SYS)
@@ -44,28 +44,28 @@ oracle_databases:
         state: present
 
 # Executing the playbook: This playbook executes a role.
-# Change directory to ansible_oracle_aix
+# Change directory to ansible-power-aix-oracle-dba
 # Name of the Playbook: manage-users.yml
 # Contents of playbook:
 
 - hosts: localhost
   connection: local
   roles:
-     - { role: oradb-manage-users }
+     - { role: oradb_manage_users }
 
 # ansible-playbook manage-users.yml
 
 # Sample output:
 # =============
 
-[ansible@x134vm232 ansible_oracle_aix]$ ansible-playbook manage-users.yml
+[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook manage-users.yml
 
 PLAY [localhost] **********************************************************************************************************************
 
 TASK [Gathering Facts] ****************************************************************************************************************
 ok: [localhost]
 
-TASK [oradb-manage-users : Manage users (pdb)] ****************************************************************************************
+TASK [oradb_manage_users : Manage users (pdb)] ****************************************************************************************
 changed: [localhost] => (item=port: 1521 service: ansipdb4.pbm.ihost.com schema: DBUser1 state:present)
 changed: [localhost] => (item=port: 1521 service: db19cpdb.pbm.ihost.com schema: DBUser2 state:present)
 [WARNING]: Module did not set no_log for update_password

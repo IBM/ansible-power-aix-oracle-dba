@@ -16,7 +16,7 @@
 # 1. Patch Standalone GI #
 ##########################
 
-# Set the Variables to execute the task: Open the file ansible_oracle_aix/roles/oraswgi-manage-patches/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables to execute the task: Open the file ansible-power-aix-oracle-dba/roles/oraswgi_manage_patches/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 hostgroup: "{{ group_names[0] }}"
 cluster_master: "{{play_hosts[0]}}"
@@ -88,7 +88,7 @@ oracle_home_gi_cl: "/u01/app/19c/grid" # ORACLE_HOME for Grid Infrastructure (Cl
 oracle_home_gi_so: "/u01/grid19c" # ORACLE_HOME for Grid Infrastructure (Stand Alone)
 
 # Executing the playbook: This playbook executes a role. Before running the playbook, open the playbook and update the hostname & remote user details as below. Do NOT change other parts of the script.
-# Change directory to ansible_oracle_aix
+# Change directory to ansible-power-aix-oracle-dba
 # Name of the Playbook: gi-si-opatchauto.yml
 # Content of the playbook
 
@@ -97,7 +97,7 @@ oracle_home_gi_so: "/u01/grid19c" # ORACLE_HOME for Grid Infrastructure (Stand A
   remote_user: oracle                   # Grid Home Owner.
   become: yes                           # For root access.
   roles:
-     - {role: oraswgi-manage-patches }
+     - {role: oraswgi_manage_patches }
 
 # ansible-playbook gi-si-opatchauto.yml --ask-become-pass
 
@@ -105,13 +105,13 @@ oracle_home_gi_so: "/u01/grid19c" # ORACLE_HOME for Grid Infrastructure (Stand A
 # 2. Patch RAC GI #
 ###################
 
-# Set the Variables to execute the task: Open the file ansible_oracle_aix/roles/oraswgi-manage-patches/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables to execute the task: Open the file ansible-power-aix-oracle-dba/roles/oraswgi_manage_patches/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 # All the variables are same as in above section except the following.
 
 configure_cluster: True                # Set this to True in case of Grid Infrstructure RAC. Set it to False in case of Standalone Grid Infrstructure (Oracle Restart).
 
 # Executing the playbook: This playbook executes a role. Before running the playbook, open the playbook and update the hostname & remote user details as below. Do NOT change other parts of the script.
-# Change directory to ansible_oracle_aix
+# Change directory to ansible-power-aix-oracle-dba
 # Name of the Playbook: gi-rac-opatchauto.yml
 # Content of the playbook
 
@@ -121,6 +121,6 @@ configure_cluster: True                # Set this to True in case of Grid Infrst
    remote_user: grid    # Remote AIX Lpar username.
    serial: 1
    roles:
-      - {role: oraswgi-manage-patches }
+      - {role: oraswgi_manage_patches }
       
 # ansible-playbook gi-rac-opatchauto.yml --ask-become-pass

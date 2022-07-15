@@ -1,6 +1,6 @@
 ---
 #Instructions to set AWR retention using this file.
-#Playbook: ansible_oracle_aix/awr-task.yml
+#Playbook: awr-task.yml
 #This is a standalone task. Set the variables in the file itself.
 #Modify the variables under "vars" section. Do NOT change other sections of this file.
 

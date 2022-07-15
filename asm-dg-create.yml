@@ -3,4 +3,4 @@
    hosts: ansible_db                                   # AIX Lpar Hostname where the Diskgroup has to be created.
    remote_user: oracle                                 # Grid Home Owner
    roles:
-      - {role: create-asmdg-aix }
+      - {role: create_asmdg_aix }

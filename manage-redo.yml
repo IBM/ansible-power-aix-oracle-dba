@@ -1,5 +1,5 @@
-# Playbook to create redo log groups. Supports ASM file system only. Local file system is not supported.
+# Playbook to create redo log groups. Supports ASM file system only. Local Non-ASM file system is not supported.
 - hosts: localhost
   connection: local
   roles:
-     - { role: oradb-manage-redo }
+     - { role: oradb_manage_redo }

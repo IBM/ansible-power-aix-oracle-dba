@@ -4,4 +4,4 @@
    remote_user: grid    # Remote AIX Lpar username.
    serial: 1
    roles:
-      - {role: oraswgi-manage-patches }
+      - {role: oraswgi_manage_patches }

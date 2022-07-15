@@ -2,13 +2,13 @@
 # =====================
 
 # Description: This module is used to create or drop roles. To add privileges to the roles please refer 
-# It uses a python library: ansible_oracle_aix/library/oracle_users
+# It uses a python library: ansible-power-aix-oracle-dba/library/oracle_users
 
 # Prerequisites:
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file ansible_oracle_aix/roles/oradb-manage-roles/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_roles/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 db_user: sys
 db_mode: sysdba
@@ -45,37 +45,37 @@ oracle_pdbs:
         state: absent                                   # present|absent
 
 # Executing the playbook: This playbook executes a role.
-# Change directory to ansible_oracle_aix
+# Change directory to ansible-power-aix-oracle-dba
 # Name of the Playbook: manage-roles.yml
 # Contents of playbook:
 
 - hosts: localhost
   connection: local
   roles:
-     - { role: oradb-manage-roles }
+     - { role: oradb_manage_roles }
 
 # ansible-playbook manage-roles.yml
 
 # Sample output:
 # =============
 
-[ansible@x134vm232 ansible_oracle_aix]$ ansible-playbook manage-roles.yml
+[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook manage-roles.yml
 
 PLAY [localhost] **********************************************************************************************************************
 
 TASK [Gathering Facts] ****************************************************************************************************************
 ok: [localhost]
 
-TASK [oradb-manage-roles : Manage roles (cdb)] ****************************************************************************************
+TASK [oradb_manage_roles : Manage roles (cdb)] ****************************************************************************************
 ok: [localhost] => (item=port: 1521, service: ANSIPDB4.pbm.ihost.com, role: ansirole, state: present)
 
-TASK [oradb-manage-roles : Manage roles (pdb)] ****************************************************************************************
+TASK [oradb_manage_roles : Manage roles (pdb)] ****************************************************************************************
 ok: [localhost] => (item=port: 1521, service: ansipdb4.pbm.ihost.com, role: ansirole, state: present)
 
-TASK [oradb-manage-roles : Manage roles (cdb)] ****************************************************************************************
+TASK [oradb_manage_roles : Manage roles (cdb)] ****************************************************************************************
 skipping: [localhost] => (item=port: 1521, service: ANSIPDB4.pbm.ihost.com, role: ansirole, state: present)
 
-TASK [oradb-manage-roles : Manage roles (pdb)] ****************************************************************************************
+TASK [oradb_manage_roles : Manage roles (pdb)] ****************************************************************************************
 skipping: [localhost] => (item=port: 1521, service: ansipdb4.pbm.ihost.com, role: ansirole, state: present)
 
 PLAY RECAP ****************************************************************************************************************************

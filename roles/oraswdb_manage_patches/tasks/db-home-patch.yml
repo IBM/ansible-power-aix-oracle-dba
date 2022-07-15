@@ -1,0 +1,174 @@
+- set_fact:
+       oracle_home_db: "{%- if db_homes_config[dbh.home]['oracle_home'] is defined  -%}
+                            {{db_homes_config[dbh.home]['oracle_home']}}
+                        {%- else -%}
+                             {{oracle_base}}/{{db_homes_config[dbh.home]['home']}}
+                        {%- endif -%}"
+
+- name: Check PatchID
+  shell: "export ORACLE_HOME={{ oracle_home_db }}; {{ oracle_home_db }}/OPatch/opatch lspatches | grep {{ item.patchid }} | awk '{ print substr($1,1,8)}'"
+  register: patch_version
+  with_items:
+      - "{{db_homes_config[dbh.home]['opatch']}}"
+  when:
+    - db_homes_config[dbh.home]['opatch'] is defined
+
+- set_fact: ptid="{{item.stdout}}"
+  loop: "{{patch_version.results}}"
+  when:
+    - db_homes_config[dbh.home]['opatch'] is defined
+
+- set_fact: ptid2="{{item.patchid}}"
+  with_items:
+      - "{{db_homes_config[dbh.home]['opatch']}}"
+  when:
+    - db_homes_config[dbh.home]['opatch'] is defined
+
+- name: Stop DB for rollback
+  environment: "{{ oracle_env }}"
+  shell: "export PATH=${ORACLE_HOME}/bin:${PATH}; echo 'shut immediate' | sqlplus -S '/ as sysdba'"
+  tags: stopdb
+  register: stopdb
+  with_items:
+      - "{{db_homes_config[dbh.home]['opatch']}}"
+  when:
+    - ptid == ptid2
+    - db_homes_config[dbh.home]['opatch'] is defined
+    - item.state == "absent"
+    - not acfs_used
+
+- debug: msg="Managing patches for {{ oracle_home_db}}"
+  when: apply_patches_db and not acfs_used
+
+- include_tasks: transfer-files.yml
+  when: oracle_sw_copy
+
+- include_tasks: unpack-files.yml
+  when: apply_patches_db
+
+- include_tasks: opatch-upgrade.yml
+  when: apply_patches_db
+
+- name: Stop Home | Stop Oracle Home on RAC nodes
+  environment:
+     ORACLE_HOME: "{{ oracle_home_db }}"
+  shell: "{{ oracle_home_db }}/bin/srvctl stop home -o {{ oracle_home_db }} -n {{ item.node }} -f -stopoption IMMEDIATE -s /tmp/{{ item.node }}"
+  with_items: "{{ node_list }}"
+  when: apply_patches_db and acfs_used
+  register: oracle_stop
+- debug:
+    var: oracle_stop      
+
+- name: db-opatch | Remove unwanted patches from DB
+  oracle_opatch:
+      oracle_home={{ oracle_home_db }}
+      patch_base={{ oracle_patch_install }}/{{ db_version}}/{{ item.path | default (item.patchid)}}/
+      patch_id={{item.patchid}}
+      patch_version={{ item.patchversion |default(omit)}}
+      opatchauto=False
+      conflict_check=True
+      stop_processes={{item.stop_processes |default(False)}}
+      ocm_response_file={{ ocm_response_file | default(omit)}}
+      output=verbose
+      state={{ item.state}}
+  with_items:
+      - "{{db_homes_config[dbh.home]['opatch']}}"
+  become: yes
+  become_user: "{{ oracle_user }}"
+  tags:
+    - apply_patch_db
+  when:
+    - apply_patches_db|bool
+    - db_homes_config[dbh.home]['opatch'] is defined
+    - item.state == "absent"
+  register: psuapplym
+
+- name: db-opatch | Manage opatchauto patches for DB (non-gi)
+  oracle_opatch:
+      oracle_home={{ oracle_home_db }}
+      patch_base={{ oracle_patch_install }}/{{ db_version}}/{{ item.0.path | default (item.0.patchid)}}/{{ item.1}}
+      patch_id={{item.1}}
+      patch_version={{ item.1.patchversion |default(omit)}}
+      opatchauto=False
+      conflict_check=True
+      ocm_response_file={{ ocm_response_file | default(omit)}}
+      output=verbose
+      state={{ item.0.state }}
+  with_subelements:
+      - "{{db_homes_config[dbh.home]['opatchauto']}}"
+      - subpatches
+      - flags:
+        skip_missing: True
+  become: yes
+  become_user: "{{ oracle_user }}"
+  tags:
+    - apply_patch_db
+  when: apply_patches_db and db_homes_config[dbh.home]['opatchauto'] is defined and item.1 is defined and not olrloc.stat.exists
+  register: psuapplym
+
+- name: db-opatch | Manage opatchauto patches for DB (gi)
+  oracle_opatch:
+      oracle_home={{ oracle_home_db }}
+      patch_base={{ oracle_patch_install }}/{{ db_version}}/{{ item.path | default (item.patchid)}}/
+      patch_id={{item.patchid}}
+      patch_version={{ item.patchversion |default(omit)}}
+      opatchauto=True
+      conflict_check=True
+      ocm_response_file={{ ocm_response_file | default(omit)}}
+      output=verbose
+      state={{ item.state}}
+  with_items:
+      - "{{db_homes_config[dbh.home]['opatchauto']}}"
+  become: yes
+  tags:
+    - apply_patch_db
+  when: apply_patches_db and db_homes_config[dbh.home]['opatchauto'] is defined and olrloc.stat.exists
+  register: psuapplym
+
+- name: db-opatch | Manage patches for DB
+  oracle_opatch:
+      oracle_home={{ oracle_home_db }}
+      patch_base={{ oracle_patch_install }}/{{ db_version}}/{{ item.path | default (item.patchid)}}/
+      patch_id={{item.patchid}}
+      patch_version={{ item.patchversion |default(omit)}}
+      opatchauto=False
+      conflict_check=True
+      stop_processes={{item.stop_processes |default(False)}}
+      ocm_response_file={{ ocm_response_file | default(omit)}}
+      output=verbose
+      state={{ item.state}}
+  with_items:
+      - "{{db_homes_config[dbh.home]['opatch']}}"
+  become: yes
+  become_user: "{{ oracle_user }}"
+  tags:
+    - apply_patch_db
+  when: apply_patches_db and db_homes_config[dbh.home]['opatch'] is defined
+  register: psuapplym
+
+- name: db-opatch | Check patches
+  shell: "{{ oracle_home_db}}/OPatch/opatch lspatches -oh {{ oracle_home_db}}"
+  become: yes
+  become_user: "{{ oracle_user }}"
+  changed_when: False
+  register: dbhome_patches
+
+- name: db-opatch | Check patches
+  debug: var=dbhome_patches.stdout_lines
+
+- name: Start Home | Start Oracle Home on RAC nodes
+  environment:
+     ORACLE_HOME: "{{ oracle_home_db }}"
+  shell: "{{ oracle_home_db }}/bin/srvctl start home -o {{ oracle_home_db }} -n {{ item.node }} -s /tmp/{{ item.node }}"
+  with_items: "{{ node_list }}"
+  when: apply_patches_db and acfs_used
+  register: oracle_start
+  run_once: True
+
+- name: Remove stat files
+  file:
+    path: /tmp/{{ item.node }}
+    state: absent
+  with_items: "{{ node_list }}"
+  run_once: True
+  when: acfs_used

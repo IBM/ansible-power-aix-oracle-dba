@@ -2,13 +2,13 @@
 # =====================
 
 # Description: This module is used to grant/Revoke privileges to Users/Roles.
-# It uses a python library: ansible_oracle_aix/library/oracle_grants
+# It uses a python library: ansible-power-aix-oracle-dba/library/oracle_grants
 
 # Prerequisites:
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file ansible_oracle_aix/roles/oradb-manage-grants/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_grants/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 db_user: sys
 db_mode: sysdba
@@ -64,14 +64,14 @@ oracle_pdbs:
       - role: ansirole2                # role name
 
 # Executing the playbook: This playbook executes a role.
-# Change directory to ansible_oracle_aix
+# Change directory to ansible-power-aix-oracle-dba
 # Name of the Playbook: manage-grants.yml
 # Contents of playbook:
 
 - hosts: localhost
   connection: local
   roles:
-     - { role: oradb-manage-grants }
+     - { role: oradb_manage_grants }
 
 # Sample Output:
 # =============
@@ -83,14 +83,14 @@ PLAY [localhost] ***************************************************************
 TASK [Gathering Facts] ****************************************************************************************************************
 ok: [localhost]
 
-TASK [oradb-manage-grants : Manage role grants (cdb)] *********************************************************************************
+TASK [oradb_manage_grants : Manage role grants (cdb)] *********************************************************************************
 changed: [localhost] => (item=port: 1521, service: ansipdb4.pbm.ihost.com, role: none, grants: ['connect', 'resource'], state: present)
 
-TASK [oradb-manage-grants : Manage role grants (pdb)] *********************************************************************************
+TASK [oradb_manage_grants : Manage role grants (pdb)] *********************************************************************************
 
-TASK [oradb-manage-grants : Manage schema grants (cdb)] *******************************************************************************
+TASK [oradb_manage_grants : Manage schema grants (cdb)] *******************************************************************************
 
-TASK [oradb-manage-grants : Manage schema grants (pdb)] *******************************************************************************
+TASK [oradb_manage_grants : Manage schema grants (pdb)] *******************************************************************************
 changed: [localhost] => (item=port: 1521, service: ansipdb4.pbm.ihost.com, schema: DBuser1, grants: ['dba'], state: present)
 
 PLAY RECAP ****************************************************************************************************************************

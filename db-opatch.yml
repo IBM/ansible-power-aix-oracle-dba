@@ -1,13 +1,12 @@
-# This playbook executes "oraswdb-manage-patches" role. Opatch option must be set in the variables file & opatchauto must be disabled in order to avoid conflict. 
+# This playbook executes "oraswdb_manage_patches" role. Opatch option must be set in the variables file & opatchauto must be disabled in order to avoid conflict. 
 # Make sure to set the variables appropriately to avoid failure(s) or patching of unintended instances.
 # Make sure to setup passwordless ssh between the Ansible conrtoller user & Oracle Home user on the AIX lpar.
 
 # This module can patch one oracle home hosting one database. In case, there are more than one databases running under the Oracle home, they should be stopped manually before the patching activity. Datapatch should be run manually in case of more than one database. 
-# Variables file path: ansible_oracle_aix/roles/oraswdb-manage-patches/defaults/main.yml
 #
 - name: Apply binary patches
   gather_facts: yes
   hosts: ansible_db     # AIX lpar hostname, make sure it's set in the inventory.
   remote_user: oracle   # AIX lpar Oracle home user.
   roles:
-     - {role: oraswdb-manage-patches }
+     - {role: oraswdb_manage_patches }

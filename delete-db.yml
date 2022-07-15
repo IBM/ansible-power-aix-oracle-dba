@@ -2,4 +2,4 @@
   hosts: ansible_db                     # Target Lpar hostname.
   remote_user: oracle                   # Remote username.
   roles:
-     - { role: oradb-delete }
+     - { role: oradb_delete }

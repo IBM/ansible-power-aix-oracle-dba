@@ -5,4 +5,4 @@
   hosts: rac91                  # AIX Lpar hostgroup defined in ansible inventory.
   remote_user: grid             # Grid Home owner.
   roles:
-     - {role: create-acfs-rac }
+     - {role: create_acfs_rac }

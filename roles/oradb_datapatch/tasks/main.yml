@@ -1,0 +1,14 @@
+- name: oradb-datapatch | Start database
+  environment: "{{ oracle_env }}"
+  shell: "export PATH=${ORACLE_HOME}/bin:${PATH}; echo 'startup' | sqlplus -S '/ as sysdba'"
+  tags: startdb
+  register: startdb
+
+- name: oradb-datapatch | Run datapatch
+  environment: "{{ oracle_env }}"
+  shell: "{{ oracle_db_home }}/OPatch/datapatch -verbose"
+  tags: datapatch
+  register: datapatch
+
+- debug:
+    var: datapatch

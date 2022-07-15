@@ -3,4 +3,4 @@
   remote_user: oracle                   # Grid Home Owner.
   become: yes                           # For root access.
   roles:
-     - {role: oraswgi-manage-patches }  
+     - {role: oraswgi_manage_patches }  

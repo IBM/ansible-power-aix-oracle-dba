@@ -1,8 +1,8 @@
-# This playbook executes "oraswdb-manage-patches" role. Opatchauto option must be set in the variables file & opatchauto must be disabled in order to avoid conflict.
+# This playbook executes "oraswdb_manage_patches" role. Opatchauto option must be set in the variables file & opatchauto must be disabled in order to avoid conflict.
 # Make sure to set the variables appropriately to avoid failure(s) or patching of unintended instances.
 # Make sure to setup passwordless ssh between the Ansible conrtoller user & Oracle Home user on the AIX lpar.
 # 
-# Variables file path: ansible_oracle_aix/roles/oraswdb-manage-patches/defaults/main.yml
+# Variables file path: ansible_oracle_aix/roles/oraswdb_manage_patches/defaults/main.yml
 
 - name: Apply binary patches
   gather_facts: yes
@@ -10,4 +10,4 @@
   remote_user: oracle   # AIX lpar Oracle home user.
   serial: 1
   roles:
-     - {role: oraswdb-manage-patches }
+     - {role: oraswdb_manage_patches }
