@@ -1,6 +1,6 @@
 # PowerODBA Ansible Collection
 
-Overview: The Power Oracle Database Automation (PowerODBA) Collection modules are based on the Oravirt collection https://github.com/oravirt/ansible-oracle which automate Oracle DBA activities running on AIX. These have been modified and tested to work on AIX.
+Overview: The Power Oracle Database Automation (PowerODBA) Collection modules are based on the Oravirt collection https://github.com/oravirt/ansible-oracle which automate Oracle DBA activities running on AIX. These have been modified and tested exclusively to work on AIX. 
 Following functionalities can be achieved with this repository.
 - Database creation [Single Instance/RAC & Multitenant]
 - Apply RU Patches [Standalone DB/Database on ASM & RAC]
@@ -12,6 +12,22 @@ Following functionalities can be achieved with this repository.
 - Manage ASM
 - Manage ACFS
 - Manage DBMS jobs
+
+# Additional features distinguished from Oravirt collection
+
+1. Patching
+- Added support for patching Oracle Home on ACFS.
+- Backup existing OPatch and creates a latest one.
+- Added support to stop database before patch rollback when using opatch option.
+
+2. Automatic storage management (ASM)
+- Add and drop disks to/from diskgroups.
+- Drop disks/diskgroups.
+
+3. ASM Cluster Filesystem (ACFS)
+- Create/Drop ACFS volumes
+
+4. Underscores have been used instead of hyphens for role names.
 
 Getting started with the collection:
 

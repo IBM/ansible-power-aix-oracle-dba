@@ -10,10 +10,23 @@
      group={{ oracle_group }}
      state=directory
   with_items:
-      - "{{ db_homes_installed }}"
+      - "{{db_homes_config[dbh.home]['opatchauto']}}"
   tags:
     - directories
   when: apply_patches_db and item.apply_patches |default (False) 
+
+- name: db-opatch | Create patch-base directory (version specific)
+  file:
+     dest={{ oracle_patch_stage }}/{{ db_version }}
+     mode=775
+     owner={{ oracle_user }}
+     group={{ oracle_group }}
+     state=directory
+  with_items:
+      - "{{db_homes_config[dbh.home]['opatch']}}"
+  tags:
+    - directories
+  when: apply_patches_db and item.apply_patches |default (False)
 
 - include_tasks: db-home-patch.yml
   with_items:

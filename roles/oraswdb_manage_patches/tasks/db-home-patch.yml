@@ -5,6 +5,20 @@
                              {{oracle_base}}/{{db_homes_config[dbh.home]['home']}}
                         {%- endif -%}"
 
+- name: Check OPatch
+  shell: "export ORACLE_HOME={{ oracle_home_db }}; {{ oracle_home_db }}/OPatch/opatch version"
+  with_items:
+    - "{{db_homes_config[dbh.home]['opatch']}}"
+  when:
+    - db_homes_config[dbh.home]['opatch'] is defined
+
+- name: Check OPatch
+  shell: "export ORACLE_HOME={{ oracle_home_db }}; {{ oracle_home_db }}/OPatch/opatch version"
+  with_items:
+    - "{{db_homes_config[dbh.home]['opatchauto']}}"
+  when:
+    - db_homes_config[dbh.home]['opatchauto'] is defined
+
 - name: Check PatchID
   shell: "export ORACLE_HOME={{ oracle_home_db }}; {{ oracle_home_db }}/OPatch/opatch lspatches | grep {{ item.patchid }} | awk '{ print substr($1,1,8)}'"
   register: patch_version

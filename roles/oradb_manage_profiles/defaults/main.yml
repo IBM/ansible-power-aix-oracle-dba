@@ -27,7 +27,6 @@ oracle_env:
 attr_name:  "{% if item.1.attributes is defined %}{{item.1.attributes |default (omit) | map(attribute='name') | list }}{% else %}None{%endif%}"
 attr_value: "{% if item.1.attributes is defined %}{{item.1.attributes |default (omit) | map(attribute='value') | list }}{% else %}None{%endif%}"
 
-
 # This is an example of how the profile configuration should look like
 
 # oracle_databases:
@@ -41,4 +40,3 @@ attr_value: "{% if item.1.attributes is defined %}{{item.1.attributes |default (
 #               attributes:
 #                    - {name: password_reuse_max, value: 7}
 #                    - {name: password_reuse_time, value: 500}
-

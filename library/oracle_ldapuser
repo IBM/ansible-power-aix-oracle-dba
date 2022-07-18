@@ -1,6 +1,3 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-
 DOCUMENTATION = '''
 module: oracle_ldapuser
 short_description: Syncronises user accounts from LDAP/Active directory to Oracle database and maps group membership to Oracle roles

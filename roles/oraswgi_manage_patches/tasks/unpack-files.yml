@@ -1,5 +1,3 @@
-
-
 - name: gi-opatch | Extract GI psu files to patch base
   unarchive:
       src={{ oracle_stage }}/{{ item[0].filename }}

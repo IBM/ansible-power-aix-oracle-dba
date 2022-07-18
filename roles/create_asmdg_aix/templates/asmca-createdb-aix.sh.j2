@@ -1,5 +1,3 @@
-#!/bin/bash
-
 {{ oracle_home_gi }}/bin/asmca -silent -createDiskGroup \
        -diskGroupName {{ item.diskgroup }} \
      {% for disk in  item.disk    %}

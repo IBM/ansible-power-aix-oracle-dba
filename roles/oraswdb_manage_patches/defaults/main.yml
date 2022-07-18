@@ -1,19 +1,18 @@
 #########
 # Basic #
 #########
-role_separation: false                          # If Oracle Home & Grid home owners are not same, set it to True. Not applicable for standalone DB.
+role_separation: false                  # If Oracle Home & Grid home owners are not same, set it to True. Not applicable for standalone DB.
 hostgroup: "{{ group_names[0] }}"
 cluster_master: "{{play_hosts[0]}}"
-configure_cluster: False                        # Set it to False in case of Standalone DB, Set it to True in case of RAC DB.
+configure_cluster: False                # Set it to False in case of Standalone DB, Set it to True in case of RAC DB.
 oracle_user: "{{ ansible_user_id }}"
-oracle_group: oinstall                          # Primary group for oracle/grid user.
-apply_patches_db: True                          # Don't change this.
-datapatch: True                                 # Set this to True when DB is standalone and opatch is being used.
+oracle_group: oinstall                  # Primary group for oracle/grid user.
+apply_patches_db: True                  # Don't change this.
 
 #######################
 # Staging Patch files #
 #######################
-oracle_sw_source_local: /home/ansible/ansible_test/patches              # This is the location on Ansible controller, place the appropriate OPatch & patch zip files.
+oracle_sw_source_local: /home/ansible/ansible_test/patches         # This is the location on Ansible controller, place the appropriate OPatch & patch zip files.
 is_sw_source_local: True                        # Set this to True to utilize the patches mentioned in the above parameter oracle_sw_source_local. "install_from_nfs" must be set to False when this parameter is set to True.
 install_from_nfs: False                         # Set this parameter to True if you want to use NFS mount point to stage the patches. Associated parameter is "nfs_server_sw_path".
 oracle_sw_copy: "{% if install_from_nfs %}False{% else %}True{% endif %}"
@@ -47,40 +46,40 @@ oracle_opatch_patch:
 # Oracle Home environment Variables #
 #####################################
 
-oracle_inventory_loc: /u01/app/oraInventory		# Oracle Home Inventory location
-
+oracle_inventory_loc: /u01/app/oraInventory # Oracle Home Inventory location
+db_version: 19.3.0.0
 db_homes_config:
-  19300-base:						# Any name for identification.
-    oracle_home: /u01/19.3.0.0/19c_ansible      	# 1st Oracle Home Location.
-    version: 19.3.0.0           			# Oracle version.
-    edition: EE                 			# Oracle edition.
-    opatch_minversion: 12.2.0.1.29      		# Minimum opatch version required to apply required patches.
+  19300-base: # Any name for identification.
+    oracle_home: /u01/19.3.0.0/19c_ansible      # 1st Oracle Home Location.
+    db_version: 19.3.0.0       # Oracle version.
+    edition: EE      # Oracle edition (Standard/Enterprise)
+    opatch_minversion: 12.2.0.1.29      # Minimum opatch version required to apply required patches.
     opatchauto: []
-     # - patchid: 33509923				# Patch ID. Example: given patch id is 19.14 Release update patch for Database.
-     #   patchversion: 19.14.0.0.220118			# Minimum opatch version required to apply required patches.
-     #   state: absent					# Set to present (applies the patch). Set to absent (rolls back the patch).
+     # - patchid: 33509923 # Patch ID. Example: given patch id is 19.14 Release update patch for Database.
+     #   patchversion: 19.14.0.0.220118 # Minimum opatch version required to apply required patches.
+     #   state: absent # Set to present (applies the patch). Set to absent (rolls back the patch).
      #   subpatches:
      #     - 33515361
      #     - 33529556
-    opatch: 					# Here, "opatch: []" means opatch option is NOT defined. Also the 4 parameters must be commented as shown below.
-      - patchid: 33515361       			# Patch ID. Example: given patch id is 19.14 Release update patch for Database.
-        patchversion: 19.14.0.0.220118  		# Release update patch version
-        state: present           			# Set to present (applies the patch). Set to absent (rolls back the patch).
-        stop_processes: True    			# This should be set to True, stops the DB before patch apply/rollback.
-  19300-base2:  					# Any name for identification.
-    oracle_home: /u01/19.3.0.0/home19c			      	# 2nd Oracle Home Location
-    version: 19.3.0.0           			# Oracle version.
-    edition: EE                 			# Oracle edition.
-    opatch_minversion: 12.2.0.1.29      		# Minimum opatch version required to apply required patches.
-    opatchauto: []                              	
-     # - patchid: 33509923				# Patch ID. Example: given patch id is 19.14 Release update patch for Database.
-     #   patchversion: 19.14.0.0.220118			# Release update patch version.
-     #   state: absent					# Set to present (applies the patch). Set to absent (rolls back the patch).
+    opatch: # Here, "opatch: []" means opatch option is NOT defined. Also the 4 parameters must be commented using # as shown below.
+      - patchid: 33515361                               # Patch ID. Example: given patch id is 19.14 Release update patch for Database.
+        patchversion: 19.14.0.0.220118 # Release update patch version
+        state: present      # Set to present (applies the patch). Set to absent (rolls back the patch).
+        stop_processes: True  # This should be set to True, stops the DB before patch apply/rollback.
+  19300-base2: # Any name for identification.
+    oracle_home: /u01/19.3.0.0/home19c # 2nd Oracle Home Location
+    db_version: 19.3.0.0      # Oracle version.
+    edition: EE # Oracle edition.
+    opatch_minversion: 12.2.0.1.29  # Minimum opatch version required to apply required patches.
+    opatchauto: []                                      
+     # - patchid: 33509923 # Patch ID. Example: given patch id is 19.14 Release update patch for Database.
+     #   patchversion: 19.14.0.0.220118 # Release update patch version.
+     #   state: absent # Set to present (applies the patch). Set to absent (rolls back the patch).
      #   subpatches:
      #     - 33515361
      #     - 33529556
-    opatch:                                           # Here, "opatch: []" means opatch option is NOT defined. Also the 4 parameters must be commented as shown below.
-      - patchid: 33515361                              # Patch ID. Example: given patch id is 19.14 Release update patch for Database.
+    opatch:            # Here, "opatch: []" means opatch option is NOT defined. Also the 4 parameters must be commented as shown below.
+      - patchid: 33515361             # Patch ID. Example: given patch id is 19.14 Release update patch for Database.
         patchversion: 19.14.0.0.220118                 # Release update patch version
         state: present                                  # Set to present (applies the patch). Set to absent (rolls back the patch).
         stop_processes: True                           # This should be set to True, stops the DB before patch apply/rollback.
