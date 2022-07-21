@@ -30,8 +30,6 @@ Following functionalities can be achieved with this repository.
 
 4. Underscores have been used instead of hyphens for role names.
 
-Getting started with the collection:
-=======
 # Getting started with the collection:
 
 - Install Ansible >= 2.9 on any x86 platform.
@@ -41,7 +39,7 @@ Getting started with the collection:
 - Install Oracle 19c client on the Ansible controller.
 
 - Readmes for each module are placed here: ansible-power-aix-oracle-dba/docs
-=======
+
 - Clone this repository:
    `git clone --recursive https://github.com/IBM/ansible-power-aix-oracle-dba`
 
