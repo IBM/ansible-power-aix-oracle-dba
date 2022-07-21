@@ -1,0 +1,10 @@
+{
+    "docs": "https://docs.ansible.com/ansible/2.9/dev_guide/testing/sanity/shebang.html",
+    "results": [
+        {
+            "message": "The test `ansible-test sanity --test shebang` [[explain](https://docs.ansible.com/ansible/2.9/dev_guide/testing/sanity/shebang.html)] failed with 6 errors:",
+            "output": "playbooks/library/oracle_redo:1:1: unexpected non-module shebang: b'#!/usr/bin/python'\nplaybooks/roles/asm_add_disk_aix/templates/asmca-diskadd-aix.sh.j2:1:1: unexpected non-module shebang: b'#!/bin/bash'\nplaybooks/roles/create_asmdg_aix/templates/asmca-createdb-aix.sh.j2:1:1: unexpected non-module shebang: b'#!/bin/bash'\nplaybooks/roles/drop_asmdg_disk_aix/templates/asmca-diskadd-aix.sh.j2:1:1: unexpected non-module shebang: b'#!/bin/bash'\nplaybooks/roles/oraswdb_manage_patches/templates/ocmrsp.expect.j2:1:1: unexpected non-module shebang: b'#!/usr/bin/expect -f'\nplaybooks/roles/oraswgi_manage_patches/templates/ocmrsp.expect.j2:1:1: unexpected non-module shebang: b'#!/usr/bin/expect -f'"
+        }
+    ],
+    "verified": false
+}

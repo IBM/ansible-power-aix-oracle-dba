@@ -1,0 +1,18 @@
+{{ oracle_home_gi }}/bin/asmca -silent -createDiskGroup \
+       -diskGroupName {{ item.diskgroup }} \
+     {% for disk in  item.disk    %}
+       {% if disk.failgroup is defined %} \
+           -diskList '{{ oracle_asm_disk_string }}/{{ disk.device }}' \
+               -failuregroup {{ item.disk.failgroup }} \
+       {% else %}
+         -disk '{{ oracle_asm_disk_string }}{{ disk.device }}' \
+       {% endif %}
+     {% endfor %}
+\
+{% for a in item.properties %}
+        -redundancy {{ a.redundancy }} \
+        -au_size {{ a.ausize}} \
+{% endfor %}
+{% for attr in item.attributes %}
+        -{{ attr.name }} '{{ attr.value }}' \
+{% endfor %}

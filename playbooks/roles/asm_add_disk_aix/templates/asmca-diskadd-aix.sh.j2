@@ -1,0 +1,10 @@
+{{ oracle_home_gi }}/bin/asmca -silent -addDisk \
+       -diskGroupName {{ item.diskgroup }} \
+     {% for disk in  item.disk %}
+       {% if disk.failgroup is defined %} \
+           -diskList '{{ oracle_asm_disk_string }}/{{ disk.device }}' \
+               -failuregroup {{ item.disk.failgroup }} \
+       {% else %}
+         -disk '{{ oracle_asm_disk_string }}{{ disk.device }}' \
+       {% endif %}
+     {% endfor %}
