@@ -1,7 +1,6 @@
 # PowerODBA Ansible Collection
 
 Overview: The Power Oracle Database Automation (PowerODBA) Collection modules are based on the Oravirt collection https://github.com/oravirt/ansible-oracle which automate Oracle DBA activities running on AIX. These have been modified and tested exclusively to work on AIX. 
-=======
 
 Following functionalities can be achieved with this repository.
 - Database creation [Single Instance/RAC & Multitenant]
