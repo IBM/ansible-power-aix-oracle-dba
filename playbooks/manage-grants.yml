@@ -1,4 +1,4 @@
 - hosts: localhost
   connection: local
   roles:
-     - { role: oradb_manage_grants }
+     - { role: ibm.ansible_power_aix_oracle_dba.oradb_manage_grants }

@@ -3,4 +3,4 @@
    hosts: ansible_db
    remote_user: oracle
    roles:
-      - {role: asm_add_disk_aix }
+      - {role: ibm.ansible_power_aix_oracle_dba.asm_add_disk_aix }

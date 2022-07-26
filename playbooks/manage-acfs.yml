@@ -7,4 +7,4 @@
   hosts: ansible_db                     # AIX Lpar Hostname defined in ansible inventory.
   remote_user: oracle                   # Grid home owner.
   roles:
-     - {role: create_acfs }
+     - {role: ibm.ansible_power_aix_oracle_dba.create_acfs }
