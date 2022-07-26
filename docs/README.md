@@ -1,7 +1,6 @@
 # PowerODBA Ansible Collection
 
 Overview: The Power Oracle Database Automation (PowerODBA) Collection modules are based on the Oravirt collection https://github.com/oravirt/ansible-oracle which automate Oracle DBA activities running on AIX. These have been modified and tested exclusively to work on AIX. 
-=======
 
 Following functionalities can be achieved with this repository.
 - Database creation [Single Instance/RAC & Multitenant]
@@ -31,8 +30,6 @@ Following functionalities can be achieved with this repository.
 
 4. Underscores have been used instead of hyphens for role names.
 
-Getting started with the collection:
-=======
 # Getting started with the collection:
 
 - Install Ansible >= 2.9 on any x86 platform.
@@ -42,7 +39,7 @@ Getting started with the collection:
 - Install Oracle 19c client on the Ansible controller.
 
 - Readmes for each module are placed here: ansible-power-aix-oracle-dba/docs
-=======
+
 - Clone this repository:
    `git clone --recursive https://github.com/IBM/ansible-power-aix-oracle-dba`
 
