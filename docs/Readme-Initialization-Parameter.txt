@@ -1,8 +1,8 @@
 # Manage Initialization Parameters - Readme
 # =========================================
 
-# Description: # This module is used to set/alter & unset database initialization parameters. It uses a python library located here: ansible-power-aix-oracle-dba/library/oracle_parameter.
-# Playbook: ansible-power-aix-oracle-dba/parameter-task.yml
+# Description: # This module is used to set/alter & unset database initialization parameters. It uses a python library located here: power-aix-oracle-dba/library/oracle_parameter.
+# Playbook: power-aix-oracle-dba/parameter-task.yml
 # More information of what AWR policy is can be found here: https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/initialization-parameters-2.html#GUID-FD266F6F-D047-4EBB-8D96-B51B1DCA2D61
 https://docs.oracle.com/en/database/oracle/oracle-database/19/admin/creating-and-configuring-an-oracle-database.html#GUID-2004E26A-3C24-4D0C-9EF4-F2854BCD6664
 
@@ -10,7 +10,7 @@ https://docs.oracle.com/en/database/oracle/oracle-database/19/admin/creating-and
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/parameter-task.yml and modify the variables under "vars" section. Do NOT change other sections of the file.
+# Set the Variables for Oracle to execute this task: Open the file power-aix-oracle-dba/parameter-task.yml and modify the variables under "vars" section. Do NOT change other sections of the file.
 
      name: Global Variables
      hostname: ansible_db               # AIX hostname.
@@ -27,8 +27,8 @@ https://docs.oracle.com/en/database/oracle/oracle-database/19/admin/creating-and
        LD_LIBRARY_PATH: /home/ansible/oracle_client/lib # Oracle client library path on Ansible controller.
 
 # Executing the playbook: This playbook runs using a single file where it contain both Oracle related variables as well as ansible task. The connection mode will be "local". The cx_Oracle & Oracle client must be installed on ansible controller before executing this playbook.
-# Playbook name: ansible-power-aix-oracle-dba/parameter-task.yml
-# Change directory to ansible-power-aix-oracle-dba
+# Playbook name: power-aix-oracle-dba/parameter-task.yml
+# Change directory to power-aix-oracle-dba
 # ansible-playbook parameter-task.yml
 # The following task will get executed.
 
@@ -52,7 +52,7 @@ https://docs.oracle.com/en/database/oracle/oracle-database/19/admin/creating-and
 # Sample output:
 ================
 
-[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook parameter-task.yml
+[ansible@x134vm232 power-aix-oracle-dba]$ ansible-playbook parameter-task.yml
 [WARNING]: Found variable using reserved name: name
 
 PLAY [localhost] **********************************************************************************************************************

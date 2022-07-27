@@ -6,7 +6,7 @@
 # Prerequisites:
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
-# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oradb_datapatch/defaults/main.yml and modify the variables which are provided with comments on the right.
+# Set the Variables for Oracle to execute this task: Open the file power-aix-oracle-dba/roles/oradb_datapatch/defaults/main.yml and modify the variables which are provided with comments on the right.
 
 hostgroup: "{{ group_names[0] }}"
 oracle_user: "{{ remote_user_id }}"
@@ -39,7 +39,7 @@ autostartup_service: false
 fail_on_db_not_exist: False
 
 # Executing the playbook: This playbook executes a role. Before running the playbook, open the playbook and update the hostname & remote user details as shown below. Do NOT change other parts of the script.
-# Change directory to ansible-power-aix-oracle-dba
+# Change directory to power-aix-oracle-dba
 # Name of the Playbook: datapatch.yml
 # Content of the playbook
 

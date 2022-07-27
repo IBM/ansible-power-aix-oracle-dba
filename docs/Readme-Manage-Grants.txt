@@ -2,13 +2,13 @@
 # =====================
 
 # Description: This module is used to grant/Revoke privileges to Users/Roles.
-# It uses a python library: ansible-power-aix-oracle-dba/library/oracle_grants
+# It uses a python library: power-aix-oracle-dba/library/oracle_grants
 
 # Prerequisites:
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_grants/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables for Oracle to execute this task: Open the file power-aix-oracle-dba/roles/oradb_manage_grants/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 db_user: sys
 db_mode: sysdba
@@ -64,7 +64,7 @@ oracle_pdbs:
       - role: ansirole2                # role name
 
 # Executing the playbook: This playbook executes a role.
-# Change directory to ansible-power-aix-oracle-dba
+# Change directory to power-aix-oracle-dba
 # Name of the Playbook: manage-grants.yml
 # Contents of playbook:
 
@@ -76,7 +76,7 @@ oracle_pdbs:
 # Sample Output:
 # =============
 
-[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook manage-grants.yml
+[ansible@x134vm232 power-aix-oracle-dba]$ ansible-playbook manage-grants.yml
 
 PLAY [localhost] **********************************************************************************************************************
 

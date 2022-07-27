@@ -1,7 +1,7 @@
 # Manage Database directories  - Readme 
 # =====================================
 
-# Description: # This module is used to create/drop database directories. It uses python library located here: ansible-power-aix-oracle-dba/library/oracle_directory
+# Description: # This module is used to create/drop database directories. It uses python library located here: power-aix-oracle-dba/library/oracle_directory
 # More information on Create directory can be found here: https://docs.oracle.com/cd/B19306_01/server.102/b14200/statements_5007.htm
 # More information on Drop directory can be found here: https://docs.oracle.com/cd/B19306_01/server.102/b14200/statements_8012.htm
 
@@ -9,7 +9,7 @@
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/db-directory-task.yml and modify the variables under "vars" section. Do NOT change other sections of the file.
+# Set the Variables for Oracle to execute this task: Open the file power-aix-oracle-dba/db-directory-task.yml and modify the variables under "vars" section. Do NOT change other sections of the file.
 
    - name: Global Variables
      hostname: ansible_db                       # AIX Lpar hostname.
@@ -27,8 +27,8 @@
       LD_RUN_PATH: /home/ansible/oracle_client/lib      # Oracle Client Home Library on Ansible Controller.
 
 # Executing the playbook: This playbook runs using a single file where it contain both Oracle related variables and ansible task. The connection mode will be "local". The cx_Oracle & Oracle client must be installed on ansible controller before executing this playbook.
-# Playbook name: ansible-power-aix-oracle-dba/db-directory-task.yml
-# Change directory to ansible-power-aix-oracle-dba
+# Playbook name: power-aix-oracle-dba/db-directory-task.yml
+# Change directory to power-aix-oracle-dba
 # ansible-playbook db-directory-task.yml
 
 # The following task will get executed.
@@ -72,7 +72,7 @@
 # Sample output to create a directory
 =====================================
 
-[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook db-directory-task.yml
+[ansible@x134vm232 power-aix-oracle-dba]$ ansible-playbook db-directory-task.yml
 [WARNING]: Found variable using reserved name: name
 
 PLAY [localhost] **********************************************************************************************************************

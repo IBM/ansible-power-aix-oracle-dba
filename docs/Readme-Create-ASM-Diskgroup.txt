@@ -36,7 +36,7 @@
 
 # Refer Oracle ASM Configuration Assistant Command-Line Interface section in https://docs.oracle.com/cd/E11882_01/server.112/e18951/asmca.htm#OSTMG60000
 
-# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/create_asmdg_aix/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables for Oracle to execute this task: Open the file power-aix-oracle-dba/roles/create_asmdg_aix/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 oracle_home_gi: /u01/app/19c/grid            	# Grid Home Location
 oracle_rsp_stage: /u01/app/stage             	# Any accessible location on remote host to stage scripts. Must be created manually.
@@ -57,7 +57,7 @@ asm_diskgroups:
 #      - {device: diskn}			# Raw disk name n, more number of disks can be added to the list.      
 
 # Executing the playbook: This playbook executes a role. Before running the playbook, open the playbook and update the hostname & remote user details as shown below. Do NOT change other parts of the script.
-# Change directory to ansible-power-aix-oracle-dba
+# Change directory to power-aix-oracle-dba
 # Name of the Playbook: asm-dg-create.yml
 # Content of the playbook
 
@@ -73,7 +73,7 @@ asm_diskgroups:
 # Sample Output:
 # =============
 
-[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook asm-dg-create.yml
+[ansible@x134vm232 power-aix-oracle-dba]$ ansible-playbook asm-dg-create.yml
 
 PLAY [Create ASM Diskgroup] ***********************************************************************************************************
 

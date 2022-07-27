@@ -38,12 +38,10 @@ Following functionalities can be achieved with this repository.
 - cx_Oracle must be installed on Ansible controller. Reference: https://cx-oracle.readthedocs.io/en/latest/user_guide/installation.html
 - Install Oracle 19c client on the Ansible controller.
 
-- Readmes for each module are placed here: ansible-power-aix-oracle-dba/docs
+- Readmes for each module are placed here: power-aix-oracle-dba/docs
 
 - Clone this repository:
-   `git clone --recursive https://github.com/IBM/ansible-power-aix-oracle-dba`
-
-- Readmes for each module are placed here: ansible-power-aix-oracle-dba/readmes
+   `git clone --recursive https://github.com/IBM/power-aix-oracle-dba`
 
 # Assumptions
 

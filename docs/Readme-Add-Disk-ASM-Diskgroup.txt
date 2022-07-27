@@ -36,9 +36,9 @@
 # Set ownership. Command: chown grid:oinstall /dev/rhdisk8
 # Change permissions. Command: chmod 660 /dev/rhdisk8
 
-# Set the variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/asm_add_disk_aix/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the variables for Oracle to execute this task: Open the file power-aix-oracle-dba/roles/asm_add_disk_aix/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
-[ansible@x134vm232 ansible-power-aix-oracle-dba]$ cat roles/asm_add_disk_aix/defaults/main.yml
+[ansible@x134vm232 power-aix-oracle-dba]$ cat roles/asm_add_disk_aix/defaults/main.yml
 oracle_home_gi: /u01/grid19c                    # Grid Home Location
 oracle_rsp_stage: /u01/app/stage                # Any accessible location on remote host to stage scripts. Must be created manually.
 grid_install_user: "{{ ansible_user_id }}"
@@ -51,7 +51,7 @@ asm_diskgroups:
 #      - {device: rhdiskasm17}                  # If there are additional disks, it can be added to the list.
 
 # Executing the playbook: This playbook executes a role. Before running the playbook, open the playbook and update the hostname & remote user details as below. Do NOT change other parts of the script.
-# Change directory to ansible-power-aix-oracle-dba
+# Change directory to power-aix-oracle-dba
 # Name of the Playbook: asm-add-disk.yml
 # Content of the playbook
 
@@ -67,7 +67,7 @@ asm_diskgroups:
 # Sample Output
 # =============
 
-[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook asm-disk-add.yml
+[ansible@x134vm232 power-aix-oracle-dba]$ ansible-playbook asm-disk-add.yml
 
 PLAY [Add disk to ASM Diskgroup] ******************************************************************************************************
 

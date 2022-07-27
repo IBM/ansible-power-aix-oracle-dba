@@ -10,7 +10,7 @@
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oradb_create/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables for Oracle to execute this task: Open the file power-aix-oracle-dba/roles/oradb_create/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
   hostgroup: "{{ group_names[0] }}"
   oracle_dbca_rsp: "dbca_{{ item.0.oracle_db_name }}.rsp"        # Name of responsefile used by dbca. One per database
@@ -83,7 +83,7 @@ default_dbpass: Oracle123				# Common passwords for the database users. [Sys, sy
           state: present                                        # present | absent
 
 # Executing the playbook: This playbook executes a role. Before running the playbook, open the playbook and update the hostname & remote user details as shown below. Do NOT change other parts of the script.
-# Change directory to ansible-power-aix-oracle-dba
+# Change directory to power-aix-oracle-dba
 # Name of the Playbook: create-db.yml
 # Content of the playbook
 
