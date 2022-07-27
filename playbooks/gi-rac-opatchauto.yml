@@ -4,4 +4,4 @@
    remote_user: grid    # Remote AIX Lpar username.
    serial: 1
    roles:
-      - {role: ibm.ansible_power_aix_oracle_dba.oraswgi_manage_patches }
+      - {role: ibm.power_aix_oracle_dba.oraswgi_manage_patches }

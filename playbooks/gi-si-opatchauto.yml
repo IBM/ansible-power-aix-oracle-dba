@@ -3,4 +3,4 @@
   remote_user: oracle                   # Grid Home Owner.
   become: yes                           # For root access.
   roles:
-     - {role: ibm.ansible_power_aix_oracle_dba.oraswgi_manage_patches }  
+     - {role: ibm.power_aix_oracle_dba.oraswgi_manage_patches }  

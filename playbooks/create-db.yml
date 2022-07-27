@@ -2,4 +2,4 @@
   hosts: rac91                  # Target Lpar hostname
   remote_user: oracle           # Remote username
   roles:
-     - { role: ibm.ansible_power_aix_oracle_dba.oradb_create }
+     - { role: ibm.power_aix_oracle_dba.oradb_create }
