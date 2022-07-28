@@ -1,12 +1,12 @@
 # Run Arbitrary SQL scripts - Readme
 # ==================================
-# Description: This module is used run arbitrary SQL Scripts. Single & multiple sql scripts can be run. It uses a python library located here: power-aix-oracle-dba/library/oracle_sql.
+# Description: This module is used run arbitrary SQL Scripts. Single & multiple sql scripts can be run. It uses a python library located here: ansible-power-aix-oracle-dba/library/oracle_sql.
 
 # Prerequisites:
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file power-aix-oracle-dba/arbitrarysql-task.yml and modify the variables under "vars" section. Do NOT change other sections of the file.
+# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/arbitrarysql-task.yml and modify the variables under "vars" section. Do NOT change other sections of the file.
 
  hostname: ansible_db             # AIX hostname
  service_name: db122c             # Service name of the database
@@ -23,7 +23,7 @@
     LD_LIBRARY_PATH: /home/ansible/oracle_client/lib      # Oracle client library location on Ansible controller.
     
 # Executing the playbook: This playbook runs using a single file where it contain both Oracle related variables as well as ansible task. The connection mode will be "local". The cx_Oracle & Oracle client must be installed on ansible controller before executing this playbook.
-# Change directory to power-aix-oracle-dba
+# Change directory to ansible-power-aix-oracle-dba
 # Name of the Playbook: arbitrarysql-task.yml
 # ansible-playbook arbitrarysql-task.yml
 # The following task will get executed.
@@ -46,7 +46,7 @@
 # Sample output:
 ================
 
-[ansible@x134vm232 power-aix-oracle-dba]$ ansible-playbook arbitrarysql-task.yml
+[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook arbitrarysql-task.yml
 
 PLAY [localhost] **********************************************************************************************************************
 

@@ -1,6 +1,6 @@
 # Manage Pluggable databases - Readme
 # ===================================
-# Description: This module is used to manage pluggable databases. It uses a python library located here: power-aix-oracle-dba/library/oracle_pdb. 
+# Description: This module is used to manage pluggable databases. It uses a python library located here: ansible-power-aix-oracle-dba/library/oracle_pdb. 
 # It can create, drop, plug & unplug pluggable databases in both Standalone & RAC databases.
 # Pluggable databases are a part of Multitenant database. More information on Multitenancy: https://docs.oracle.com/en/database/oracle/oracle-database/19/multi/introduction-to-the-multitenant-architecture.html#GUID-FC2EB562-ED31-49EF-8707-C766B6FE66B8
 
@@ -8,7 +8,7 @@
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file power-aix-oracle-dba/roles/oradb_manage_pdb/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_pdb/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 configure_cluster: false
 db_user: sys
@@ -57,8 +57,8 @@ drop_oracle_pdbs:                  # Set these parameters to create a new PDB us
 
 
 # Executing the playbook: This playbook executes a role.
-# Name of the Playbook: power-aix-oracle-dba/pdb_manage.yml
-# Change directory to power-aix-oracle-dba
+# Name of the Playbook: ansible-power-aix-oracle-dba/pdb_manage.yml
+# Change directory to ansible-power-aix-oracle-dba
 # ansible-playbook pdb_manage.yml
 # The following task will be executed which will call out a role.
 
@@ -71,7 +71,7 @@ drop_oracle_pdbs:                  # Set these parameters to create a new PDB us
 # =============
 # Creating a fresh pluggable database in a 12.2 database.
 
-[ansible@x134vm232 power-aix-oracle-dba]$ ansible-playbook pdb_manage.yml
+[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook pdb_manage.yml
 
 PLAY [localhost] **********************************************************************************************************************
 

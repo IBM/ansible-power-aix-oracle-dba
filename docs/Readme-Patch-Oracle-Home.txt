@@ -1,9 +1,9 @@
 # Patch Oracle database 19c
 # =========================
 # Description: This module can be used for the following patching scenarios. Each section is described in this readme file. This contains four sections.
-# It uses a python library located here: power-aix-oracle-dba/library/oracle_opatch.
+# It uses a python library located here: ansible-power-aix-oracle-dba/library/oracle_opatch.
 
-# 1. Standalone Oracle Home: This will patch one oracle home hosting one database, it uses "opatch" utility for patching. In case, there are more than one databases running under the Oracle home, they should be stopped manually before the patching activity. Datapatch to be run separately using datapatch module provided with this collection, please refer power-aix-oracle-dba/readmes/Readme-Datapatch.txt
+# 1. Standalone Oracle Home: This will patch one oracle home hosting one database, it uses "opatch" utility for patching. In case, there are more than one databases running under the Oracle home, they should be stopped manually before the patching activity. Datapatch to be run separately using datapatch module provided with this collection, please refer ansible-power-aix-oracle-dba/readmes/Readme-Datapatch.txt
 
 # 2. Standalone Oracle Home on Grid (Oracle restart): This will patch one oracle home hosting multiple database, uses "opatchauto" utility for patching. Multiple Oracle homes & databases can be patched. Requires sudo access for Orcle home user to run opatchauto.
 
@@ -17,13 +17,13 @@
 
 # Description: This playbook executes "oraswdb_manage_patches" role. Opatch option must be set in the variables file & opatchauto must be disabled in order to avoid conflict. The opatchauto option is already disabled in the following example.
 # Make sure to set the variables appropriately to avoid failure(s) or patching of unintended instances.
-# This module can patch one oracle home at a time. In case, there are more than one databases running under the Oracle home, they should be stopped manually before the patching activity. Datapatch to be run separately using datapatch module provided with this collection, please refer power-aix-oracle-dba/readmes/Readme-Datapatch.txt
+# This module can patch one oracle home at a time. In case, there are more than one databases running under the Oracle home, they should be stopped manually before the patching activity. Datapatch to be run separately using datapatch module provided with this collection, please refer ansible-power-aix-oracle-dba/readmes/Readme-Datapatch.txt
 
 # Prerequisites:
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file power-aix-oracle-dba/roles/oraswdb_manage_patches/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oraswdb_manage_patches/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 role_separation: false                          # If Oracle Home & Grid home owners are not same, set it to True. Not applicable for standalone DB.
 hostgroup: "{{ group_names[0] }}"
@@ -107,7 +107,7 @@ node_list:              # If the above parameter is True, mention all the nodes 
    - { node: rac94 }
 
 # Executing the playbook: This playbook executes a role. Before running the playbook, open the playbook and update the hostname & remote user details as shown below. Do NOT change other parts of the script.
-# Change directory to power-aix-oracle-dba
+# Change directory to ansible-power-aix-oracle-dba
 # Name of the Playbook: db-opatch.yml
 # Content of the playbook
 
@@ -132,7 +132,7 @@ node_list:              # If the above parameter is True, mention all the nodes 
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file power-aix-oracle-dba/roles/oraswdb_manage_patches/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oraswdb_manage_patches/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 role_separation: false                          # If Oracle Home & Grid home owners are not same, set it to True. Not applicable for standalone DB.
 hostgroup: "{{ group_names[0] }}"
@@ -237,7 +237,7 @@ node_list:              # If the above parameter is True, mention all the nodes 
    - { node: rac94 }
 
 # Executing the playbook: This playbook executes a role. Before running the playbook, open the playbook and update the hostname & remote user details as shown below. Do NOT change other parts of the script.
-# Change directory to power-aix-oracle-dba
+# Change directory to ansible-power-aix-oracle-dba
 # Name of the Playbook: db-opatch.yml
 # Content of the playbook
 
@@ -261,7 +261,7 @@ node_list:              # If the above parameter is True, mention all the nodes 
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file power-aix-oracle-dba/roles/oraswdb_manage_patches/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oraswdb_manage_patches/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 # Note: This change should be done when using Oracle Home configured on ACFS. 
 # Note: All the parameters are similar to Case 2 shown above, except "ACFS related variables" must be changed as shown below.
@@ -273,7 +273,7 @@ node_list:             # When the above parameter is set to True, mention all th
    - { node: rac94 }
 
 # Executing the playbook: This playbook executes a role. Before running the playbook, open the playbook and update the hostname & remote user details as shown below. Do NOT change other parts of the script.
-# Change directory to power-aix-oracle-dba
+# Change directory to ansible-power-aix-oracle-dba
 # Name of the Playbook: db-opatchauto.yml
 # Content of the playbook
 
@@ -297,11 +297,11 @@ node_list:             # When the above parameter is set to True, mention all th
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file power-aix-oracle-dba/roles/oraswdb_manage_patches/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oraswdb_manage_patches/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 # Note: Please refer case 2 to set the parameters.
 
 # Executing the playbook: This playbook executes a role. Before running the playbook, open the playbook and update the hostname & remote user details as shown below. Do NOT change other parts of the script.
-# Change directory to power-aix-oracle-dba
+# Change directory to ansible-power-aix-oracle-dba
 # Playbook Name: db-rac-opatchauto.yml
 # Content of the playbook
 

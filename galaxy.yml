@@ -27,3 +27,9 @@ documentation: "https://github.com/IBM/ansible-power-aix-oracle-dba"
 homepage: "https://github.com/IBM/ansible-power-aix-oracle-dba"
 
 issues: "https://github.com/IBM/ansible-power-aix-oracle-dba/issues"
+
+build_ignore:
+
+- builds
+- tests
+- '*.tar.gz'

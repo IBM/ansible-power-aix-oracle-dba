@@ -2,13 +2,13 @@
 # =====================
 
 # Description: This module is used to create, drop, lock, unlock & expire user accounts. For privileges refer "grants" readme of our ansible collection.
-# It uses a python library: power-aix-oracle-dba/library/oracle_users
+# It uses a python library: ansible-power-aix-oracle-dba/library/oracle_users
 
 # Prerequisites:
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file power-aix-oracle-dba/roles/oradb_manage_users/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_users/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 db_user: sys
 db_password_cdb: oracle         # CDB Password (SYS)
@@ -44,7 +44,7 @@ oracle_databases:
         state: present
 
 # Executing the playbook: This playbook executes a role.
-# Change directory to power-aix-oracle-dba
+# Change directory to ansible-power-aix-oracle-dba
 # Name of the Playbook: manage-users.yml
 # Contents of playbook:
 
@@ -58,7 +58,7 @@ oracle_databases:
 # Sample output:
 # =============
 
-[ansible@x134vm232 power-aix-oracle-dba]$ ansible-playbook manage-users.yml
+[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook manage-users.yml
 
 PLAY [localhost] **********************************************************************************************************************
 

@@ -8,7 +8,7 @@
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 # An ASM diskgroup needs to be created prior creating an acfs volume. Refer the "Readme - Create ASM Diskgroup"
 
-# Set the Variables for Oracle to execute this task: Open the file power-aix-oracle-dba/roles/create_acfs/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/create_acfs/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 grid_owner: grid
 oracle_home_gi: /u01/app/19c/grid    	# Grid Home location.
@@ -24,7 +24,7 @@ oracle_env:
 create_acfs: False               # True: Creates ACFS mount point | False: Deletes ACFS mount point.
 
 # Executing the playbook: This playbook executes a role. Before running the playbook, open the playbook and update the hostname & remote user details as shown below. Do NOT change other parts of the script.
-# Change directory to power-aix-oracle-dba
+# Change directory to ansible-power-aix-oracle-dba
 # Name of the Playbook: manage-acfs-rac.yml
 # Content of the playbook
 
