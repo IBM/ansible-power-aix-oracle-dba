@@ -17,12 +17,14 @@ tags:
 - power
 - aix
 - ibm
+- oracle
+- dba
 
 dependencies: {}
 
 repository: "https://github.com/IBM/ansible-power-aix-oracle-dba"
 
-documentation: "https://github.com/IBM/ansible-power-aix-oracle-dba"
+documentation: "https://github.com/IBM/ansible-power-aix-oracle-dba/tree/main/docs"
 
 homepage: "https://github.com/IBM/ansible-power-aix-oracle-dba"
 

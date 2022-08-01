@@ -21,6 +21,7 @@ Following functionalities can be achieved with this collection.
 - Added support for patching Oracle Home on ACFS.
 - Backup existing OPatch and creates a latest one.
 - Added support to stop database before patch rollback when using opatch option.
+- Note: Support for Oracle job role separation is under development.
 
 2. Automatic storage management (ASM)
 - Add and drop disks to/from diskgroups.
@@ -31,7 +32,7 @@ Following functionalities can be achieved with this collection.
 
 4. Underscores have been used instead of hyphens for role names.
 
-Getting started with the collection:
+# Getting started with the collection:
 
 - Install Ansible >= 2.9 on any x86 platform.
 - Works on AIX >= 7.2 
@@ -39,9 +40,21 @@ Getting started with the collection:
 - cx_Oracle must be installed on Ansible controller. Reference: https://cx-oracle.readthedocs.io/en/latest/user_guide/installation.html
 - Install Oracle 19c client on the Ansible controller.
 
-- Readmes for each module are placed in "docs" folder of this collection.
+# Installing this collection using tar ball:
 
-This playbook assumes the following:
+- Download the tar ball and place it in /tmp of the Ansible controller.
+- ansible-galaxy collection install /tmp/ibm-power_aix_oracle_dba-1.0.0.tar.gz
+
+# Installing this collection from github:
+
+- Use git clone or download the zip file. 
+- Extract the zip file and update your ansible.cfg file with role_path in this collection.
+
+# Documentation:
+
+- Readmes on how to execute each DBA tasks are placed in "docs" folder of this collection.
+
+# This collection assumes the following:
 
  - The user is familiar with Ansible and has basic knowledge on YAML, for the purpose of running this playbook.
  - The user is familiar with Oracle Database Administration.
