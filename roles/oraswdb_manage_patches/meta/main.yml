@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: oraswdb_manage_patches
+  description: Ansible role to manage DB patching
+  company: IBM
+
+  license: Apache-2.0
+
+  min_ansible_version: 2.9
+
+  platforms:
+  - name: AIX
+    versions:
+    - all
+
+  galaxy_tags: [aix]
+  dependencies: []

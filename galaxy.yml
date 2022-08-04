@@ -7,18 +7,21 @@ version: 1.0.0
 readme: "README.md"
 
 authors:
-- "Shiva Laveti <shiva.laveti@ibm.com>"
+  - "Shiva Laveti <shiva.laveti@ibm.com>"
 
-license_file:
-- "LICENSE"
-- "NOTICE"
+license:
+  - "Apache-2.0"
+
+license_file: ''
 
 tags:
-- power
-- aix
-- ibm
-- oracle
-- dba
+  [
+    power,
+    aix,
+    ibm,
+    oracle,
+    dba
+  ]
 
 dependencies: {}
 
@@ -29,9 +32,3 @@ documentation: "https://github.com/IBM/ansible-power-aix-oracle-dba/tree/main/do
 homepage: "https://github.com/IBM/ansible-power-aix-oracle-dba"
 
 issues: "https://github.com/IBM/ansible-power-aix-oracle-dba/issues"
-
-build_ignore:
-
-- builds
-- tests
-- '*.tar.gz'

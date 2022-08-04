@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: oradb_delete
+  description: Ansible role to drop DB
+  company: IBM
+
+  license: Apache-2.0
+
+  min_ansible_version: 2.9
+
+  platforms:
+  - name: AIX
+    versions:
+    - all
+
+  galaxy_tags: [aix]
+  dependencies: []

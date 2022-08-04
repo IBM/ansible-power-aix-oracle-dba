@@ -1,0 +1,7 @@
+Version 1.0.0
+-------------
+Notes
+  * Initial beta release of IBM Power ODBA collection
+
+Availability
+  * `GitHub v1.0.0`_
