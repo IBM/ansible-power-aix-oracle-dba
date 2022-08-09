@@ -75,3 +75,7 @@ https://www.ibm.com/support/pages/oracle-db-rac-19c-ibm-aix-tips-and-considerati
 To get started with AIX refer
 
 https://www.ibm.com/support/knowledgecenter/ssw_aix_72/navigation/welcome.html
+
+# Important Note:
+
+The playbooks require database user passwords to be stored in the variables file to perform certain DBA tasks. However, these passwords are NOT encrypted which could lead to a security concern. Users are requested NOT to leave the passwords out in the open once done with the playbooks execution.
