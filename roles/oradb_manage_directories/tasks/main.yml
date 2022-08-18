@@ -1,0 +1,35 @@
+- name: Create Directory
+  oracle_directory:
+        hostname: "{{ hostname }}"
+        service_name: "{{ service_name }}"
+        port: "{{ listener_port }}"
+        user: "{{ db_user }}"
+        password: "{{ db_password_cdb }}"
+        mode: "{{ db_mode }}"
+        directory_name: "{{ directory_name }}"
+        directory_path: "{{ path }}"
+        state: "{{ state }}"
+        directory_mode: "{{ mode }}"
+  register: crdir
+  when: state == 'present'
+  environment: "{{ oracle_env }}"
+- debug:
+    var: crdir
+
+- name: Drop Directory
+  oracle_directory:
+        hostname: "{{ hostname }}"
+        service_name: "{{ service_name }}"
+        port: "{{ listener_port }}"
+        user: "{{ db_user }}"
+        password: "{{ db_password_cdb }}"
+        mode: "{{ db_mode }}"
+        directory_name: "{{ directory_name }}"
+        directory_path: "{{ path }}"
+        state: "{{ state }}"
+        directory_mode: "{{ mode }}"
+  register: deldir
+  when: state == 'absent'
+  environment: "{{ oracle_env }}"
+- debug:
+    var: deldir

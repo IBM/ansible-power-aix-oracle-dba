@@ -11,14 +11,13 @@ db_service_name: "{% if item.0 is defined %}
                     {%- else %}{{ item.0.oracle_db_name }}
                     {%- endif %}
                   {%- endif %}"
-default_dbpass: oracle # Sys user password.
 oracle_env:
      ORACLE_HOME: /home/ansible/oracle_client           # Oracle Client Home on Ansible Controller.
      LD_LIBRARY_PATH: /home/ansible/oracle_client/lib   # Oracle Client Home Library on Ansible Controller.
 
 oracle_databases:                       
       - tablespaces:
-          - name: testtbs2      # Tablespace name for creation.
+          - name: ansitest      # Tablespace name for creation.
             datafile: +DATA     # Diskgroup name in which tablespace needs to be created.
             # datafile: /u01/app/oracle/oradata/testtbs2.dbf            # Specify datafile path & name in case of non ASM.
             size: 1g     # Desired size of the datafile.

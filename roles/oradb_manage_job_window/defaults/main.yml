@@ -1,0 +1,16 @@
+hostname: ansible_db		# Target hostname
+service_name: ansiblepdb.pbm.ihost.com		# Database service name
+db_user: sys
+db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+listener_port: 1521		# Database listener port number
+db_mode: sysdba
+state: enabled     		# enabled, disabled, absent
+resource_plan: DEFAULT_MAINTENANCE_PLAN
+window_name: ANSI_WINDOW
+interval: freq=daily;byday=SUN;byhour=6;byminute=0; bysecond=0
+comments: This is a window for Ansible testing
+duration_hour: 12
+oracle_env:
+  ORACLE_HOME: /home/ansible/oracle_client
+  LD_LIBRARY_PATH: /home/ansible/oracle_client/lib

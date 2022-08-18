@@ -1,0 +1,17 @@
+- name: Create Job
+  oracle_jobschedule:
+    hostname: "{{ hostname }}"
+    service_name: "{{ service_name }}"
+    port: "{{ listener_port }}"
+    user: "{{ db_user }}"
+    password: "{{ db_password_cdb }}"
+    mode: "{{ db_mode }}"
+    state: "{{ state }}"
+    repeat_interval: "{{ repeat_interval }}"
+    convert_to_upper: "{{ convert_to_upper }}"
+    comments: "{{ comments }}"
+    name: "{{ schedule_name }}"
+  environment: "{{ oracle_env }}"
+  register: job
+- debug:
+    var: job

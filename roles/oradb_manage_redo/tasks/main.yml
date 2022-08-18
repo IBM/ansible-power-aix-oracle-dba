@@ -2,7 +2,7 @@
   oracle_redo:
         hostname={{ hostname }}
         service_name={{ db_service_name }}
-        port={{ listener_port_template }}
+        port={{ listener_port }}
         user={{ db_user }}
         password={{ db_password_cdb }}
         mode={{ db_mode }}
@@ -10,8 +10,9 @@
         groups={{ item.redolog_groups }}
   with_items:
       - "{{oracle_databases}}"
+  environment: "{{ oracle_env }}"
   when: oracle_databases is defined and item.redolog_size is defined and item.redolog_groups is defined and item.state is defined
   loop_control:
-      label: "port: {{ listener_port_template }} service: {{ db_service_name }} groups: {{ item.redolog_groups }} size: {{ item.redolog_size }}"
+      label: "port: {{ listener_port }} service: {{ db_service_name }} groups: {{ item.redolog_groups }} size: {{ item.redolog_size }}"
   register: param_change
   tags: redolog

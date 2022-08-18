@@ -1,0 +1,14 @@
+- name: Modify AWR settings
+  oracle_awr:
+    hostname: "{{ hostname }}"
+    service_name: "{{ service_name }}"
+    port: "{{ listener_port }}"
+    user: "{{ db_user }}"
+    password: "{{ db_password_cdb }}"
+    mode: "{{ db_mode }}"
+    snapshot_interval_min: "{{ interval }}"
+    snapshot_retention_days: "{{ retention }}"
+  environment: "{{ oracle_env }}"
+  register: awr
+- debug:
+    var: awr

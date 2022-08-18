@@ -1,0 +1,15 @@
+- name: Manage Global preferences
+  oracle_stats_prefs:
+    hostname: "{{ hostname }}"
+    service_name: "{{ service_name }}"
+    port: "{{ listener_port }}"
+    user: "{{ db_user }}"
+    password: "{{ db_password_cdb }}"
+    mode: "{{ db_mode }}"
+    preference_name: "{{ preference_name }}"
+    preference_value: "{{ preference_value }}"
+    state: "{{ state }}"
+  environment: "{{ oracle_env }}"
+  register: stats
+- debug:
+    var: stats

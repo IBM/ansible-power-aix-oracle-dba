@@ -8,6 +8,18 @@
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
+# Go to the collection directory 
+# Decrypt the file (if it's already encrypted)
+# ansible-vault decrypt playbooks/vars/vars.yml
+Vault password:
+Decryption successful
+# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vars.yml.
+# Encrypt the file
+# ansible-vault encrypt playbooks/vars/vars.yml
+New Vault password:
+Confirm New Vault password:
+Encryption successful
+
 # Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_pdb/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 configure_cluster: false
@@ -18,7 +30,6 @@ hostname: ansible_db
 pdbadmin_user: pdbadmin
 pdbadmin_password: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][item[1].pdb_name] is defined and dbpasswords[item[1].cdb][item[1].pdb_name][pdbadmin_user] is defined%}{{dbpasswords[item[1].cdb][item[1].pdb_name][pdbadmin_user]}}{% else %}{{ default_dbpass}}{% endif%}"
 listener_port: 1521
-default_dbpass: oracle
 oracle_db_name: db122c                 # Database Service Name.
 oracle_home_db: /u01/db12.2c            # Oracle DB Home Location.
 oracle_env:
@@ -30,8 +41,8 @@ drop_pdb: False         #Set it to True to Drop a PDB. Otherwise, set False.
 plug_pdb: False         #Set it to True to Create a PDB from an XML file. Otherwise, set False.
 unplug_pdb: False       #Set it to True to Unplug a PDB to an XML file. Otherwise, set False.
 
-pdb_oradata_dest: /oradata/db122c/db122cpdb #Directory to store PDB datafiles, this needs to be created manually.
-pdb_seed_dest: /oradata/db122c/pdbseed  # PDB Seed datafiles location.
+pdb_oradata_dest: /oradata/db122c/db122cpdb #Directory to store PDB datafiles, this needs to be created manually on the target machine.
+pdb_seed_dest: /oradata/db122c/pdbseed  # PDB Seed datafiles location to replicate (location can be get from name of v$datafile)
 xml_file_dest:
 
 #PDB Creation Variables  [When the above "create_pdb" or "plug_pdb" are set to True]
@@ -57,21 +68,25 @@ drop_oracle_pdbs:                  # Set these parameters to create a new PDB us
 
 
 # Executing the playbook: This playbook executes a role.
-# Name of the Playbook: ansible-power-aix-oracle-dba/pdb_manage.yml
-# Change directory to ansible-power-aix-oracle-dba
-# ansible-playbook pdb_manage.yml
+# Name of the Playbook: pdb_manage.yml
+# Change directory to ansible-power-aix-oracle-dba/playbooks
+# ansible-playbook pdb_manage.yml --ask-vault-pass
 # The following task will be executed which will call out a role.
 
 - hosts: localhost
   connection: local
+  pre_tasks:
+     - name: include variables
+       include_vars: vars.yml
   roles:
-     - { role: oradb_manage_pdb }
+     - { role: ibm.power_aix_oracle_dba.oradb_manage_pdb }
 
 # Sample output:
 # =============
 # Creating a fresh pluggable database in a 12.2 database.
 
-[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook pdb_manage.yml
+[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook pdb_manage.yml --ask-vault-pass
+Vault password:
 
 PLAY [localhost] **********************************************************************************************************************
 

@@ -2,7 +2,7 @@ namespace: "ibm"
 
 name: "power_aix_oracle_dba"
 
-version: 1.0.0
+version: 1.0.1
 
 readme: "README.md"
 

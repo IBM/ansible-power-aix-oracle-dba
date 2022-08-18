@@ -6,12 +6,25 @@
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
+# Go to the collection directory 
+# Decrypt the file (if it's already encrypted)
+# ansible-vault decrypt playbooks/vars/vars.yml
+Vault password:
+Decryption successful
+# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vars.yml.
+# Encrypt the file
+# ansible-vault encrypt playbooks/vars/vars.yml
+New Vault password:
+Confirm New Vault password:
+Encryption successful
+
 # Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/arbitrarysql-task.yml and modify the variables under "vars" section. Do NOT change other sections of the file.
 
  hostname: ansible_db             # AIX hostname
  service_name: db122c             # Service name of the database
  user: sys
- password: oracle                 # sys user password
+db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
  db_mode: sysdba
  listener_port: 1521              # Listen port
  sqlfile:
@@ -22,31 +35,19 @@
     ORACLE_HOME: /home/ansible/oracle_client              # Oracle client home location on Ansible controller.
     LD_LIBRARY_PATH: /home/ansible/oracle_client/lib      # Oracle client library location on Ansible controller.
     
-# Executing the playbook: This playbook runs using a single file where it contain both Oracle related variables as well as ansible task. The connection mode will be "local". The cx_Oracle & Oracle client must be installed on ansible controller before executing this playbook.
-# Change directory to ansible-power-aix-oracle-dba
-# Name of the Playbook: arbitrarysql-task.yml
-# ansible-playbook arbitrarysql-task.yml
-# The following task will get executed.
+# Executing the playbook: This playbook runs using a Role.
+# Change directory to ansible-power-aix-oracle-dba/playbooks
+# Name of the Playbook: manage-arbitrarysql.yml
+# ansible-playbook manage-arbitrarysql.yml --ask-vault-pass
+# The following will get executed..
 
-- oracle_sql:
-    username: "{{ user }}"
-    password: "{{ password }}"
-    service_name: "{{ service_name }}"
-    hostname: "{{ hostname }}"
-    port: "{{ listener_port }}"
-    mode: "{{ db_mode }}"
-    script: "{{ item.script }}"
-  with_items:
-    - "{{ sqlfile }}"
-  environment: "{{ oracle_env }}"
-  register: output
-- debug:
-    var: output
+
     
 # Sample output:
 ================
 
-[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook arbitrarysql-task.yml
+[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook arbitrarysql-task.yml --ask-vault-pass
+Vault password:
 
 PLAY [localhost] **********************************************************************************************************************
 

@@ -8,7 +8,7 @@
           port={{ listener_port_template }}
           service_name={{ item.0.oracle_db_name }}
           user={{ db_user }}
-          password={{ item.0.db_password_cdb}}
+          password={{ db_password_cdb}}
           mode={{ db_mode }}
   with_subelements:
       - "{{ oracle_databases }}"
@@ -29,7 +29,7 @@
           port={{ listener_port_template }}
           service_name={{ item.0.service_name }}
           user={{ db_user }}
-          password={{ item.0.db_password_pdb}}
+          password={{ db_password_pdb}}
           mode={{ db_mode }}
   with_subelements:
       - "{{ oracle_pdbs }}"
@@ -50,7 +50,7 @@
           port={{ listener_port_template }}
           service_name={{ item.0.oracle_db_name }}
           user={{ db_user }}
-          password={{ item.0.db_password_cdb}}
+          password={{ db_password_cdb}}
           mode={{ db_mode }}
   with_subelements:
       - "{{ oracle_databases }}"
@@ -73,7 +73,7 @@
           port={{ listener_port_template }}
           service_name={{ item.0.service_name }}
           user={{ db_user }}
-          password={{ item.0.db_password_pdb}}
+          password={{ db_password_pdb}}
           mode={{ db_mode }}
   with_subelements:
       - "{{ oracle_pdbs }}"

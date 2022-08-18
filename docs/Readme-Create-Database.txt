@@ -10,6 +10,21 @@
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
+# Go to the collection directory 
+# Decrypt the file (if it's already encrypted)
+# ansible-vault decrypt playbooks/vars/vars.yml
+Vault password:
+Decryption successful
+# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vars.yml.
+# Encrypt the file
+# ansible-vault encrypt playbooks/vars/vars.yml
+New Vault password:
+Confirm New Vault password:
+Encryption successful
+
+# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vars.yml.
+# Set ASMSNMP password for "default_gipass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vars.yml.
+
 # Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oradb_create/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
   hostgroup: "{{ group_names[0] }}"
@@ -83,7 +98,7 @@ default_dbpass: Oracle123				# Common passwords for the database users. [Sys, sy
           state: present                                        # present | absent
 
 # Executing the playbook: This playbook executes a role. Before running the playbook, open the playbook and update the hostname & remote user details as shown below. Do NOT change other parts of the script.
-# Change directory to ansible-power-aix-oracle-dba
+# Change directory to ansible-power-aix-oracle-dba/playbooks
 # Name of the Playbook: create-db.yml
 # Content of the playbook
 
@@ -91,6 +106,6 @@ default_dbpass: Oracle123				# Common passwords for the database users. [Sys, sy
   hosts: rac91                  # Target Lpar hostname
   remote_user: oracle           # Remote username
   roles:
-     - { role: oradb_create }
+     - { role: ibm.power_aix_oracle_dba.oradb_create }
 
-# ansible-playbook create-db.yml
+# ansible-playbook create-db.yml --ask-vault-pass

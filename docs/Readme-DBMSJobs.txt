@@ -7,12 +7,24 @@
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/job-task.yml and modify the variables under "vars" section. Do NOT change other sections of the file.
+# Go to the collection directory 
+# Decrypt the file (if it's already encrypted)
+# ansible-vault decrypt playbooks/vars/vars.yml
+Vault password:
+Decryption successful
+# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vars.yml.
+# Encrypt the file
+# ansible-vault encrypt playbooks/vars/vars.yml
+New Vault password:
+Confirm New Vault password:
+Encryption successful
 
-name: Global Variables
+# Set the Variables for Oracle: Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_job/defaults/main.yml and modify the variables.
+
 hostname: ansible_db               # Aix Lpar hostname where the database is running
 service_name: db122cpdb            # Database service name
-db_password_cdb: oracle            # sys user password
+db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
 listener_port: 1521                # Listener port number
 state: present                     # present - creates a job, absent - drops a job.
 enabled: True                      # True - Enables the job, False, Disables the job.
@@ -24,40 +36,34 @@ oracle_env:
   ORACLE_HOME: /home/ansible/oracle_client # Oracle client s/w path on Ansible controller.
   LD_LIBRARY_PATH: /home/ansible/oracle_client/lib # Oracle client library path on Ansible controller.
 
-# Executing the playbook: This playbook runs using a single file where it contain both Oracle related variables as well as ansible task. The connection mode will be "local". The cx_Oracle & Oracle client must be installed on ansible controller before executing this playbook.
-# Change directory to ansible-power-aix-oracle-dba
-# Name of the Playbook: job-task.yml
-# ansible-playbook job-task.yml
-# The following task will get executed.
+# Executing the playbook: This playbook executes a role.
+# Change directory to ansible-power-aix-oracle-dba/playbooks
+# Name of the Playbook: manage-jobs.yml
+# ansible-playbook manage-jobs.yml
+# The following task will get executed which will call out a role.
 
-   - name: Create Job
-     oracle_job:
-       hostname: "{{ hostname }}"
-       service_name: "{{ service_name }}"
-       port: "{{ listener_port }}"
-       user: "{{ db_user }}"
-       password: "{{ db_password_cdb }}"
-       mode: "{{ db_mode }}"
-       state: "{{ state }}"
-       enabled: "{{ enabled }}"
-       job_name: "{{ job_name }}"
-       job_action: "{{ job_action }}"
-       job_type: "{{ job_type }}"
-       repeat_interval: "{{ repeat_interval }}"
-     environment: "{{ oracle_env }}"
-     register: job
-   - debug:
-       var: job
+- hosts: localhost
+  connection: local
+  pre_tasks:
+     - name: include variables
+       include_vars: vars.yml
+  roles:
+     - { role: ibm.power_aix_oracle_dba.oradb_manage_job }
 
 # Sample output:
 ================
 
-[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook job-task.yml
-[WARNING]: Found variable using reserved name: name
+[ansible@DESKTOP-DS5BJC2 playbooks]$ ansible-playbook manage-job.yml --ask-vault-pass
+Vault password:
+[WARNING]: Found both group and host with same name: ansible_db
+[WARNING]: running playbook inside collection ibm.power_aix_oracle_dba
 
-PLAY [localhost] **********************************************************************************************************************
+PLAY [localhost] ********************************************************************************************************************
 
-TASK [Gathering Facts] ****************************************************************************************************************
+TASK [Gathering Facts] **************************************************************************************************************
+ok: [localhost]
+
+TASK [include variables] ************************************************************************************************************
 ok: [localhost]
 
 TASK [Create Job] *********************************************************************************************************************

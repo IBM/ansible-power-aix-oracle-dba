@@ -1,0 +1,17 @@
+- name: Oracle Job Class
+  oracle_jobclass:
+    hostname: "{{ hostname }}"
+    service_name: "{{ service_name }}"
+    port: "{{ listener_port }}"
+    user: "{{ db_user }}"
+    password: "{{ db_password_cdb }}"
+    mode: "{{ db_mode }}"
+    state: "{{ state }}"
+    resource_group: "{{ resource_group }}"
+    name: "{{ class_name }}"
+    logging: "{{ logging }}"
+    history: "{{ history }}"
+  environment: "{{ oracle_env }}"
+  register: jobclass
+- debug:
+    var: jobclass

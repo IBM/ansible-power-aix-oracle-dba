@@ -1,5 +1,4 @@
 ---
-# defaults file for oradb-manage-grants
 configure_cluster: false
 oracle_base: /u01/app/oracle
 

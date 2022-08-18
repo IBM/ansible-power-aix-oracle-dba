@@ -2,6 +2,9 @@
 db_user: sys
 db_mode: sysdba
 
+db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+
 db_service_name: "{% if item.0 is defined %}
                     {%- if item.0.oracle_db_unique_name is defined %}{{ item.0.oracle_db_unique_name }}
                     {%- elif item.0.oracle_db_instance_name is defined %}{{ item.0.oracle_db_instance_name }}
@@ -21,8 +24,7 @@ oracle_env:
 oracle_databases:
       - roles:
           - name: ansirole                              # Name of the role to be created in CDB.
-        oracle_db_name: ANSIPDB4.pbm.ihost.com          # CDB service name.
-        db_password_cdb: oracle                         # Sys user password.
+        oracle_db_name: ansible.pbm.ihost.com          # CDB service name.
         grants:
           - create session                              # Privileges assigned to the role.
           - create public synonym                       # Privileges assigned to the role.
@@ -32,8 +34,7 @@ oracle_databases:
 oracle_pdbs:
       - roles:
           - name: ansirole                              # Name of the role to be created in PDB
-        service_name: ansipdb4.pbm.ihost.com            # PDB service name.
-        db_password_pdb: oracle                         # Sys user password.
+        service_name: ansipdb.pbm.ihost.com            # PDB service name.
         grants:
           - create session                              # Privilege 1 assigned to the role.
           - create any table                            # Privilege 2 assigned to the role.

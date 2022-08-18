@@ -1,0 +1,19 @@
+- name: Resource Consumer Groups
+  oracle_rsrc_consgroup:
+    hostname: "{{ hostname }}"
+    service_name: "{{ service_name }}"
+    port: "{{ listener_port }}"
+    user: "{{ db_user }}"
+    password: "{{ db_password_cdb }}"
+    mode: "{{ db_mode }}"
+    name: ansigroup1
+    state: "{{ state }}"
+    comments: This is a test consumer resource group
+    grant: "{{ grant }}"
+    map_oracle_user: "{{ map_oracle_user }}"
+    map_service_name: "{{ map_service_name }}"
+    map_client_machine: "{{ map_client_machine }}"
+  environment: "{{ oracle_env }}"
+  register: rsc
+- debug:
+    var: rsc

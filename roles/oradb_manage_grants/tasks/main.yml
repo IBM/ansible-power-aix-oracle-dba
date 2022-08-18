@@ -12,7 +12,7 @@
           port={{ listener_port_template }}
           service_name={{ db_service_name }}
           user={{ db_user }}
-          password={{ item.0.db_password_cdb}}
+          password={{ db_password_cdb}}
           mode={{ db_mode }}
   environment: "{{ oracle_env }}"
   with_subelements:
@@ -37,7 +37,7 @@
           port={{ listener_port_template }}
           service_name={{ item.0.pdb_name }}
           user={{ db_user }}
-          password={{ item.0.db_password_pdb}}
+          password={{ db_password_pdb}}
           mode={{ db_mode }}
   environment: "{{ oracle_env }}"
   with_subelements:
@@ -62,7 +62,7 @@
           port={{ listener_port_template }}
           service_name={{ db_service_name }}
           user={{ db_user }}
-          password={{ item.0.db_password_cdb}}
+          password={{ db_password_cdb}}
           mode={{ db_mode }}
   environment: "{{ oracle_env }}"
   with_subelements:
@@ -87,7 +87,7 @@
           port={{ listener_port_template }}
           service_name={{ item.0.service_name }}
           user={{ db_user }}
-          password={{ item.0.db_password_pdb}}
+          password={{ db_password_pdb}}
           mode={{ db_mode }}
   environment: "{{ oracle_env }}"
   with_subelements:

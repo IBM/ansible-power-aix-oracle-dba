@@ -1,0 +1,36 @@
+{
+ "collection_info": {
+  "namespace": "ibm",
+  "name": "power_aix_oracle_dba",
+  "version": "1.0.0",
+  "authors": [
+   "Shiva Laveti <shiva.laveti@ibm.com>"
+  ],
+  "readme": "README.md",
+  "tags": [
+   "power",
+   "aix",
+   "ibm",
+   "oracle",
+   "dba"
+  ],
+  "description": null,
+  "license": [
+   "Apache-2.0"
+  ],
+  "license_file": null,
+  "dependencies": {},
+  "repository": "https://github.com/IBM/ansible-power-aix-oracle-dba",
+  "documentation": "https://github.com/IBM/ansible-power-aix-oracle-dba/tree/main/docs",
+  "homepage": "https://github.com/IBM/ansible-power-aix-oracle-dba",
+  "issues": "https://github.com/IBM/ansible-power-aix-oracle-dba/issues"
+ },
+ "file_manifest_file": {
+  "name": "FILES.json",
+  "ftype": "file",
+  "chksum_type": "sha256",
+  "chksum_sha256": "1f8eb93391c4d3c63736c159765474c6dca13839ce392b87e112f749c691f6ef",
+  "format": 1
+ },
+ "format": 1
+}

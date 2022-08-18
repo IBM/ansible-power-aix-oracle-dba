@@ -7,13 +7,26 @@
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/globalstats-task.yml and modify the variables under "vars" section. Do NOT change other sections of the file.
+# Go to the collection directory 
+# Decrypt the file (if it's already encrypted)
+# ansible-vault decrypt playbooks/vars/vars.yml
+Vault password:
+Decryption successful
+# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vars.yml.
+# Encrypt the file
+# ansible-vault encrypt playbooks/vars/vars.yml
+New Vault password:
+Confirm New Vault password:
+Encryption successful
+
+# Set the Variables for Oracle : Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_stats/defaults/main.yml and modify the variables.
 
 name: Global Variables
 hostname: ansible_db		# AIX lpar hostname
 service_name: db122c		# Database service name in which we're setting AWR retention policy.
 db_user: sys
-db_password_cdb: oracle		# Sys user password 
+db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
 listener_port: 1521		# Listener port number
 db_mode: sysdba
 preference_name: CONCURRENT	# preference name (refer documentation)
@@ -23,33 +36,25 @@ oracle_env:
   ORACLE_HOME: /home/ansible/oracle_client		# Oracle client s/w path on Ansible controller.
   LD_LIBRARY_PATH: /home/ansible/oracle_client/lib	# Oracle client library path on Ansible controller.
 
-# Executing the playbook: This playbook runs using a single file where it contain both Oracle related variables as well as ansible task. The connection mode will be "local". The cx_Oracle & Oracle client must be installed on ansible controller before executing this playbook.
-# Name of the Playbook: ansible-power-aix-oracle-dba/globalstats-task.yml
-# Change directory to ansible-power-aix-oracle-dba
-# ansible-playbook globalstats-task.yml
+# Executing the playbook: This playbook executes a role.
+# Name of the Playbook: manage-globalstats.yml
+# Change directory to ansible-power-aix-oracle-dba/playbooks
+# ansible-playbook manage-globalstats.yml --ask-vault-pass
 # The following task will get executed.
 
-   - name: Manage Global preferences
-     oracle_stats_prefs:
-       hostname: "{{ hostname }}"
-       service_name: "{{ service_name }}"
-       port: "{{ listener_port }}"
-       user: "{{ db_user }}"
-       password: "{{ db_password_cdb }}"
-       mode: "{{ db_mode }}"
-       preference_name: "{{ preference_name }}"
-       preference_value: "{{ preference_value }}"
-       state: "{{ state }}"
-     environment: "{{ oracle_env }}"
-     register: stats
-   - debug:
-       var: stats
+- hosts: localhost
+  connection: local
+  pre_tasks:
+     - name: include variables
+       include_vars: vars.yml
+  roles:
+     - { role: ibm.power_aix_oracle_dba.oradb_manage_stats }
 
 # Sample output:
 ================
 
-[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook globalstats-task.yml
-[WARNING]: Found variable using reserved name: name
+[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook globalstats-task.yml --ask-vault-pass
+Vault password:
 
 PLAY [localhost] **********************************************************************************************************************
 

@@ -1,0 +1,15 @@
+- oracle_parameter:
+        hostname: "{{ hostname }}"
+        service_name: "{{ service_name }}"
+        port: "{{ listener_port }}"
+        user: "{{ db_user }}"
+        password: "{{ db_password_cdb }}"
+        mode: "{{ db_mode }}"
+        name: "{{ param_name }}"
+        value: "{{ param_value }}"
+        state: "{{ state }}"
+  environment: "{{ oracle_env }}"
+  register: parameter
+
+- debug:
+    var: parameter

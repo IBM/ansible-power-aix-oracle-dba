@@ -37,12 +37,6 @@
 # The file should be put in 'group_vars/<your-config>/passwords.yml'
 # This example will be broken out to a passwords.yml as soon as is allowed in ansible
 
-## Start of passwords.
-  default_gipass: Oracle123 # asmsnmpPassword.
-  default_dbpass: Oracle123 # Common passwords for the database users. [Sys, system, pdbadmin, dbsnmp].
-
-## End of passwords.
-
   dbca_templatename: General_Purpose.dbc
   dbca_initParams: "{% if '19.3' in item.0.oracle_version_db %} -initParams db_name={{item.0.oracle_db_name}}{% if item.0.oracle_db_unique_name is defined %},db_unique_name={{item.0.oracle_db_unique_name}}{% endif %}{% endif %}"
 

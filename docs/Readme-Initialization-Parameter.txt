@@ -10,72 +10,75 @@ https://docs.oracle.com/en/database/oracle/oracle-database/19/admin/creating-and
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/parameter-task.yml and modify the variables under "vars" section. Do NOT change other sections of the file.
+# Go to the collection directory 
+# Decrypt the file (if it's already encrypted)
+# ansible-vault decrypt playbooks/vars/vars.yml
+Vault password:
+Decryption successful
+# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vars.yml.
+# Encrypt the file
+# ansible-vault encrypt playbooks/vars/vars.yml
+New Vault password:
+Confirm New Vault password:
+Encryption successful
 
-     name: Global Variables
-     hostname: ansible_db               # AIX hostname.
-     service_name: db122c               # DB service name.
-     db_user: sys
-     db_password_cdb: oracle            # Sys user password.
-     listener_port: 1521                # DB port number.
-     db_mode: sysdba
-     param_name: log_archive_dest_state_2       # Initialization Parameter Name
-     param_value: enable                         # Initialization Parameter Value
-     state: present                              # Initialization Parameter state: present - sets the value, absent/reset - disables the parameter
-     oracle_env:
-       ORACLE_HOME: /home/ansible/oracle_client         # Oracle client s/w path on Ansible controller.
-       LD_LIBRARY_PATH: /home/ansible/oracle_client/lib # Oracle client library path on Ansible controller.
+# Set the Variables for Oracle: Open the file ansible-power-aix-oracle-dba/oradb_manage_directories/defaults/main.yml and modify the variables.
 
-# Executing the playbook: This playbook runs using a single file where it contain both Oracle related variables as well as ansible task. The connection mode will be "local". The cx_Oracle & Oracle client must be installed on ansible controller before executing this playbook.
-# Playbook name: ansible-power-aix-oracle-dba/parameter-task.yml
-# Change directory to ansible-power-aix-oracle-dba
-# ansible-playbook parameter-task.yml
-# The following task will get executed.
+hostname: ansible_db               # AIX hostname.
+service_name: ansible.pbm.ihost.com              # DB service name.
+db_user: sys
+db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+listener_port: 1521                # DB port number.
+db_mode: sysdba
+param_name: log_archive_dest_state_2       # Initialization Parameter Name
+param_value: defer                         # Initialization Parameter Value
+state: present                              # Initialization Parameter state: present - sets the value, absent/reset - disables the parameter
+oracle_env:
+  ORACLE_HOME: /home/ansible/oracle_client         # Oracle client s/w path on Ansible controller.
+  LD_LIBRARY_PATH: /home/ansible/oracle_client/lib # Oracle client library path on Ansible controller.
 
-  tasks:
-    - oracle_parameter:
-            hostname: "{{ hostname }}"
-            service_name: "{{ service_name }}"
-            port: "{{ listener_port }}"
-            user: "{{ db_user }}"
-            password: "{{ db_password_cdb }}"
-            mode: "{{ db_mode }}"
-            name: "{{ param_name }}"
-            value: "{{ param_value }}"
-            state: "{{ state }}"
-      environment: "{{ oracle_env }}"
-      register: parameter
+# Executing the playbook: This playbook executes a role.
+# Name of the Playbook: manage-init-parameters.yml
+# Change directory to ansible-power-aix-oracle-dba/playbooks
+# ansible-playbook manage-init-parameters.yml --ask-vault-pass
+# The following task will be executed which will call out a role.
 
-    - debug:
-        var: parameter
+- hosts: localhost
+  connection: local
+  pre_tasks:
+     - name: include variables
+       include_vars: vars.yml
+  roles:
+     - { role: ibm.power_aix_oracle_dba.oradb_manage_initparams }
 
-# Sample output:
+# Sample Output:
 ================
 
-[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook parameter-task.yml
-[WARNING]: Found variable using reserved name: name
+[ansible@localhost playbooks]$ ansible-playbook manage-init-parameters.yml --ask-vault-pass
+Vault password:
+[WARNING]: Found both group and host with same name: ansible_db
+[WARNING]: running playbook inside collection ibm.power_aix_oracle_dba
 
-PLAY [localhost] **********************************************************************************************************************
+PLAY [localhost] ********************************************************************************************************************
 
-TASK [Gathering Facts] ****************************************************************************************************************
+TASK [Gathering Facts] **************************************************************************************************************
 ok: [localhost]
 
-TASK [oracle_parameter] ***************************************************************************************************************
-[WARNING]: The value 1521 (type int) in a string field was converted to '1521' (type string). If this does not look like what you
-expect, quote the entire value to ensure it does not change.
+TASK [include variables] ************************************************************************************************************
+ok: [localhost]
+
+TASK [ibm.power_aix_oracle_dba.oradb_manage_initparams : oracle_parameter] **********************************************************
 changed: [localhost]
 
-TASK [debug] **************************************************************************************************************************
+TASK [ibm.power_aix_oracle_dba.oradb_manage_initparams : debug] *********************************************************************
 ok: [localhost] => {
     "parameter": {
         "changed": true,
         "failed": false,
-        "msg": "The parameter (log_archive_dest_state_2) has been changed successfully, new: defer, old: enable",
-        "warnings": [
-            "The value 1521 (type int) in a string field was converted to '1521' (type string). If this does not look like what you expect, quote the entire value to ensure it does not change."
-        ]
+        "msg": "The parameter (log_archive_dest_state_2) has been changed successfully, new: defer, old: enable"
     }
 }
 
-PLAY RECAP ****************************************************************************************************************************
-localhost                  : ok=3    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+PLAY RECAP **************************************************************************************************************************
+localhost                  : ok=4    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0

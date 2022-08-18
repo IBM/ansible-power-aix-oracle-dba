@@ -1,0 +1,13 @@
+hostname: ansible_db               # AIX hostname.
+service_name: ansible.pbm.ihost.com              # DB service name. 
+db_user: sys
+db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+listener_port: 1521                # DB port number.
+db_mode: sysdba
+param_name: log_archive_dest_state_2       # Initialization Parameter Name
+param_value: defer                         # Initialization Parameter Value
+state: present                              # Initialization Parameter state: present - sets the value, absent/reset - disables the parameter
+oracle_env:
+  ORACLE_HOME: /home/ansible/oracle_client         # Oracle client s/w path on Ansible controller.
+  LD_LIBRARY_PATH: /home/ansible/oracle_client/lib # Oracle client library path on Ansible controller.

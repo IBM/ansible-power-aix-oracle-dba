@@ -1,12 +1,17 @@
 db_user: sys
 db_mode: sysdba
 
-db_service_name: orcl           # DB service name
+db_service_name: ansible.pbm.ihost.com           # DB service name
 listener_port: 1521     # Database Listen port
-default_dbpass: oracle  # Sys user password
 
-hostname: rac91                  # AIX Hostname or SCAN address in case of RAC.
+db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+
+oracle_env:
+     ORACLE_HOME: /home/ansible/oracle_client           # Oracle Client Home on Ansible Controller.
+     LD_LIBRARY_PATH: /home/ansible/oracle_client/lib   # Oracle Client Home Library on Ansible Controller.
+
+hostname: ansible_db                  # AIX Hostname or SCAN address in case of RAC.
 oracle_databases:
-       redolog_groups: 2        # Number of additional redo log groups to add (If there are already 2 groups and need to create  2 more groups, set this value to 4. )
+       redolog_groups: 6        # Number of additional redo log groups to add (If there are already 2 groups and need to create  2 more groups, set this value to 4. )
        redolog_size: 200M       # Redo log file size. 
        state: present           # "present" - creates redo groups, "absent" - drops redo groups.

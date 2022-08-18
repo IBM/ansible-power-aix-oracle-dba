@@ -1,0 +1,2 @@
+default_dbpass: Oracle321          # SYS password
+default_gipass: Oracle123       # ASMSNMP password

@@ -1,0 +1,16 @@
+hostname: ansible_db               # Aix Lpar hostname where the database is running
+service_name: ansipdb.pbm.ihost.com            # Database service name
+db_user: sys
+db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+listener_port: 1521                # Listener port number
+db_mode: sysdba
+state: present                     # present - creates a job, absent - drops a job.
+enabled: True                      # True - Enables the job, False, Disables the job.
+job_name: ansiuser1.ansi_job       # Job name along with schema name prefixed.
+job_action: ansiuser1.PKG_TEST_SCHEDULER.JOB_PROC_STEP_1   # Job action
+job_type: stored_procedure         # Type of the job
+repeat_interval: FREQ=MINUTELY;INTERVAL=35 # Job interval
+oracle_env:
+   ORACLE_HOME: /home/ansible/oracle_client # Oracle client s/w path on Ansible controller.
+   LD_LIBRARY_PATH: /home/ansible/oracle_client/lib # Oracle client library path on Ansible controller.

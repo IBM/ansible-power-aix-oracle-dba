@@ -1,5 +1,8 @@
 # Playbook to create redo log groups. Supports ASM file system only. Local Non-ASM file system is not supported.
 - hosts: localhost
   connection: local
+  pre_tasks:
+     - name: include variables
+       include_vars: vars.yml
   roles:
      - { role: ibm.power_aix_oracle_dba.oradb_manage_redo }

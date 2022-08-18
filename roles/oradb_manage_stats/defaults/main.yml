@@ -1,0 +1,13 @@
+hostname: ansible_db
+service_name: db122c
+db_user: sys
+db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+listener_port: 1521
+db_mode: sysdba
+preference_name: CONCURRENT
+preference_value: ALL
+state: present
+oracle_env:
+  ORACLE_HOME: /home/ansible/oracle_client
+  LD_LIBRARY_PATH: /home/ansible/oracle_client/lib

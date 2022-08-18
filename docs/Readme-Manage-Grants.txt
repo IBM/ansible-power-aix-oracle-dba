@@ -8,6 +8,18 @@
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
+# Go to the collection directory 
+# Decrypt the file (if it's already encrypted)
+# ansible-vault decrypt playbooks/vars/vars.yml
+Vault password:
+Decryption successful
+# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vars.yml.
+# Encrypt the file
+# ansible-vault encrypt playbooks/vars/vars.yml
+New Vault password:
+Confirm New Vault password:
+Encryption successful
+
 # Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_grants/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 db_user: sys
@@ -71,7 +83,7 @@ oracle_pdbs:
 - hosts: localhost
   connection: local
   roles:
-     - { role: oradb_manage_grants }
+     - { role: ibm.power_aix_oracle_dba.oradb_manage_grants }
 
 # Sample Output:
 # =============

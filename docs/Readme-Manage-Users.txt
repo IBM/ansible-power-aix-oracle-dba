@@ -8,6 +8,18 @@
 # ==============
 # Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
+# Go to the collection directory 
+# Decrypt the file (if it's already encrypted)
+# ansible-vault decrypt playbooks/vars/vars.yml
+Vault password:
+Decryption successful
+# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vars.yml.
+# Encrypt the file
+# ansible-vault encrypt playbooks/vars/vars.yml
+New Vault password:
+Confirm New Vault password:
+Encryption successful
+
 # Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_users/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 db_user: sys
@@ -44,21 +56,25 @@ oracle_databases:
         state: present
 
 # Executing the playbook: This playbook executes a role.
-# Change directory to ansible-power-aix-oracle-dba
+# Change directory to ansible-power-aix-oracle-dba/playbooks
 # Name of the Playbook: manage-users.yml
 # Contents of playbook:
 
 - hosts: localhost
   connection: local
+  pre_tasks:
+     - name: include variables
+       include_vars: vars.yml
   roles:
-     - { role: oradb_manage_users }
+     - { role: ibm.power_aix_oracle_dba.oradb_manage_users }
 
-# ansible-playbook manage-users.yml
+# ansible-playbook manage-users.yml --ask-vault-pass
 
 # Sample output:
 # =============
 
-[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook manage-users.yml
+[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook manage-users.yml --ask-vault-pass
+Vault password:
 
 PLAY [localhost] **********************************************************************************************************************
 

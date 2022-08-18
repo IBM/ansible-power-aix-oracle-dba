@@ -43,7 +43,7 @@ Following functionalities can be achieved with this collection.
 # Installing this collection using tar ball:
 
 - Download the tar ball and place it in /tmp of the Ansible controller.
-- ansible-galaxy collection install /tmp/ibm-power_aix_oracle_dba-1.0.0.tar.gz
+- ansible-galaxy collection install /tmp/ibm-power_aix_oracle_dba-1.0.1.tar.gz
 
 # Installing this collection from github:
 
@@ -53,6 +53,10 @@ Following functionalities can be achieved with this collection.
 # Documentation:
 
 - Readmes on how to execute each DBA tasks are placed in "docs" folder of this collection.
+- This new version mitigates the issue of stored Database User passwords in variables file by using "Ansible Vault".
+- Place the SYS user passwords in playbooks/vars/vars.yml and encrypt the file using "ansible-vault encrypt" command. To decrypt the file, use "ansible-vault decrypt" command.
+- Ansible Vault Reference: https://docs.ansible.com/ansible/2.8/user_guide/vault.html#:~:text=Ansible%20Vault%20is%20a%20feature,or%20placed%20in%20source%20control.
+- To execute a playbook which uses the encrypted password file, use "--ask-vault-pass".
 
 # This collection assumes the following:
 
@@ -60,7 +64,7 @@ Following functionalities can be achieved with this collection.
  - The user is familiar with Oracle Database Administration.
  - The user is familiar with the AIX Operating system.
  - The version of AIX is 7.2 TL4 SP1 or later. (It should work on other versions of AIX supported by the oracle database AIX OS requirements, but has not been tested).
- - The version of Oracle Standalone Database is 19.3.0.0.
+ - The version of Oracle Standalone Database is 12.2c & 19c
  - Uses ibm.power_aix collection modules.
 
 To get started with Ansible refer
@@ -76,6 +80,3 @@ To get started with AIX refer
 
 https://www.ibm.com/support/knowledgecenter/ssw_aix_72/navigation/welcome.html
 
-# Important Note:
-
-The playbooks require database user passwords to be stored in the variables file to perform certain DBA tasks. However, these passwords are NOT encrypted which could lead to a security concern. Users are requested NOT to leave the passwords out in the open once done with the playbooks execution.

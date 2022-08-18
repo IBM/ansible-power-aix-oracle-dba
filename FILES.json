@@ -1,0 +1,2063 @@
+{
+ "files": [
+  {
+   "name": ".",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "CODE_OF_CONDUCT.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "dfca203ce0a4aedda2a4b9a5782940f1ef855dcca9bfee71de2503ff91b4bbcb",
+   "format": 1
+  },
+  {
+   "name": "collections",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "collections/requirements.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "3a1a03def684a8471c6b35d44f3fb7b20fcd8232bf244220cd92046c74f5124c",
+   "format": 1
+  },
+  {
+   "name": "CONTRIBUTING.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "ba33dd1e9603a64045539a8c8679b79723ad68d2a32a30f11435dbcaefa5b282",
+   "format": 1
+  },
+  {
+   "name": "docs",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-DeleteDatabase.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "0b8e53fefdee7e5f132a670d17e68433d867db6188ef5840dd53093e249757d5",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-Drop-ASM-Diskgroup-Disk.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "5490623cfd1258e9ce0508ecb5c01dc4479ef6f2f39070fb98feb484e437c4e3",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-GI-Facts.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "51171332c7c847fcb025460eca1e68c39633d23186b4ac9f8c77e634f81a0166",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-GlobalStatistics.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "8914dd77a347a29b4398d1c4d8de60cecc8b23e907d761ef38ed552153f77cc6",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-Initialization-Parameter.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "b16199a4f17a90ff52567db737dee1f4b666376185e5c10781f819cd1b4e0d56",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-Manage-ACFS-on-RAC.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "f0d52fca28674a990929f6707feff9e75682a3b98ce50fe4cf0a755cb437a0f5",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-Manage-ACFS.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "a520d04b28720b2963d7c5281f689ab6af3f94b69166a34e5f76b672f3706c03",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-Manage-Grants.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "207a3c2ee477d7ff88ff14f15c13d0cb36ad8431c5220a865f19a223b6ee64a9",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-Manage-Job-Class.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "49dab603951da5a0661805ef26b7d7b8b1078a32dd09b6f129acb83adcba9c13",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-Manage-Tablespaces.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "4a1976e819f40f6b72c8b5a12929b64b167cb8b2a09ade066ae3956545d52d7f",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-Manage-Users.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "1c432ca7af038d5cb91d4ae11feb1773af0dca01a672b7a9f45186889f33da37",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-SI-Grid-Patching.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "f4f333d486081820e042494b5a97609e04e5da3ab155b3f530d69c2afdb81410",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-Manage-Job-Schedule.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "d7d201fcce34ec87c2a2ea1553805851676215dd655376678d9257e12199cbd9",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-Manage-Job-Window.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "1e0c5c34c1931e54615063ea3f519993362912c29f068b0acf61d38e8b28b3df",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-Manage-PDB.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "4f8eba005aadc5d3a32be4e10c6cca5e76ac3a31672637e2b237fac40b6aae1f",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-DB-Directories.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "a2f2f75782932c82e7d086397d2dffbfee9067e601e3b86a25f107cb6b32eaab",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-Manage-Redo.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "732e967113980af3002e0c5646fea4db98949d01d95e734f24866aefd4d82fa6",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-Manage-Roles.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "6169dd60768905ac8d6e1f5e668e0848f476854e45db4cf990b928a08f5389f1",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-Add-Disk-ASM-Diskgroup.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "5b267a8ff2cf729bd936f25489acf67276960e3520127d0ceb1f2af70de5c1db",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-ArbitrarySQLQuery.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "b068861ef3192b2a53682890b1253c442b7d5c957b4d5a988edc122c556295a9",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-ArbitrarySQL.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "c336e414abbb6d96f3747f79e68e44ae3b68028173715c4a346621ee0cd8e766",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-AWR.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "cd4524741268cbe5adf084c249721c9f8a8cc58491b03b31e9fd0289444eba5b",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-Create-ASM-Diskgroup.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "7cb5a70f5f5d1f3cd1febf4328fe5a21e719e06aaa647adc21e825c41e0e30f3",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-Create-Database.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "1e60564e24ad7462787cffee685a578768d43f5b3e3166d1e5c44e820d119bd9",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-Datapatch.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "6d6b4556eb0814d83b1b20aa6d33e11ea346db83168f8884dbb2c26aa7b3d547",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-DB-Facts.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "5e6e268648b7383d69f915dd3568d8078e0ca96af2e4494643985a20afefaf4d",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-DBMSJobs.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "5e677785c948fdbfc789d427e1f6b9fd8f0f62a388645ce0f09ec80fedfaf595",
+   "format": 1
+  },
+  {
+   "name": "docs/Readme-Patch-Oracle-Home.txt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "44056dcac4e57f4f177d6f14d653dcbcb1691862443f669035bf07ca201750f0",
+   "format": 1
+  },
+  {
+   "name": "docs/source",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "docs/source/release_notes.srt",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "b909e1f937162ea96e2a6492dd1a9cfbc96a3c760aa093e4d25bd398604406af",
+   "format": 1
+  },
+  {
+   "name": "LICENSE",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9",
+   "format": 1
+  },
+  {
+   "name": "MAINTAINERS.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "394f17ac9225f4df0611d4dba13186cf80fd2d7c11d88bdc54ce052a5c15aac5",
+   "format": 1
+  },
+  {
+   "name": "NOTICE",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "2e99a4b01993891a33ba644d747dd1bb6f6f3386696ab94ddae6a64b9ca6e741",
+   "format": 1
+  },
+  {
+   "name": "playbooks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "playbooks/db-facts-task.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "59ecb0ab79779e0590396c1464d3cd8148bc678f68a6736ce3653f6fae5d478c",
+   "format": 1
+  },
+  {
+   "name": "playbooks/arbitrarysql-task.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "a9e54d598abfbe5624b35a3c08c62b9d7c4402c44424dd4c0284c4bac3ef232f",
+   "format": 1
+  },
+  {
+   "name": "playbooks/arbitrarysqlquery-task.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "185cd77dcccb1689bbee38e0e67f4e5a915752db3e7f7832052e74f9f99b5fbf",
+   "format": 1
+  },
+  {
+   "name": "playbooks/db-directory-task.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "2f95386a100e18825cf8d9416298bca14f49d3c8acec64dae08863cf674099ca",
+   "format": 1
+  },
+  {
+   "name": "playbooks/gi-facts-task.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e5386df8b550f64314acd087e46ee8ac99e4b64631d7a8b721c6ef526306ebcd",
+   "format": 1
+  },
+  {
+   "name": "playbooks/globalstats-task.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "703b3d95e2a926a12ae82c33c4f1edccba574a6c02b741668f57d0cf3754e61d",
+   "format": 1
+  },
+  {
+   "name": "playbooks/job-class-task.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "7db7c18c06813b2d34e9a77822a3e396d6ce995e1a432f3471bbab363c968f8c",
+   "format": 1
+  },
+  {
+   "name": "playbooks/job-schedule-task.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "1edd1c20553072b13810ba04e134e674f2e681e70a68837352f65d543b6f64cd",
+   "format": 1
+  },
+  {
+   "name": "playbooks/job-task.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "c901fbe393cf107960b352d9ad270c47f7c6b40a205dd1bf043c88bd6f9f97e5",
+   "format": 1
+  },
+  {
+   "name": "playbooks/job-window-task.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "175ded9d92ad729741d5d7525ea9718ae8d76cb0cc06737207195338c09dfe47",
+   "format": 1
+  },
+  {
+   "name": "playbooks/parameter-task.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "59e22a71ff0e73697dee58d5c5c5a9875ef26ae365023e67d2f23026defe7194",
+   "format": 1
+  },
+  {
+   "name": "playbooks/resource-consumer-group-task.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "cc2deda40181f131bf0de94bb3c6706eb243576bb67ee75aff42d47fddb6ba47",
+   "format": 1
+  },
+  {
+   "name": "playbooks/awr-task.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "fbe9254f1318d30268cf793a7346df6f5dafae72985ddc28cbf27339fe4fb611",
+   "format": 1
+  },
+  {
+   "name": "playbooks/gi-si-opatchauto.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "56a189fd55988758fb405221e398de340d407c373dff3d48523adabe49f2c6bb",
+   "format": 1
+  },
+  {
+   "name": "playbooks/manage-acfs.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "0e4f4409d62e5647b2491587c7b08a2cecbecac68d2d4600ad7b4b0e66c49864",
+   "format": 1
+  },
+  {
+   "name": "playbooks/manage-grants.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "d820566a98d5a6c4a853b7bef17f9f2a04c8e453d2c20932424e1c4a7c48487a",
+   "format": 1
+  },
+  {
+   "name": "playbooks/manage-redo.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "34f71b08fa378c87cd5fa93776a8242af194a122de6eff279c3223700c496cf3",
+   "format": 1
+  },
+  {
+   "name": "playbooks/manage-roles.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "6ea4fcdaecfbeaf056aa3bf8900bd3c6af39dc14401daa054ee0e06b1177339b",
+   "format": 1
+  },
+  {
+   "name": "playbooks/manage-tablespaces.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "527c651faa3351fd2a297c50ed39165786d8092e60875426f9bdcf2a7be7a2ac",
+   "format": 1
+  },
+  {
+   "name": "playbooks/pdb-manage.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "658b526ca6c660a15a69af7fbe1fe2452028a0e4864322c68988510a741dfa0b",
+   "format": 1
+  },
+  {
+   "name": "playbooks/manage-users.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "d18ad1305ba5d7c23b185d2dd337843f7ee860c6e8e7a61e98dbfbe8d18a80c4",
+   "format": 1
+  },
+  {
+   "name": "playbooks/gi-rac-opatchauto.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "d902832b4a8e5f0c1ae0a4fb04fd25e3a72db7dcf3e8370bef779dea25e6ee9d",
+   "format": 1
+  },
+  {
+   "name": "playbooks/asm-add-disk.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "ee75e6757bcd5ce955b98652795d9ec664537ae2b78ac4ba117ad4081f2f401b",
+   "format": 1
+  },
+  {
+   "name": "playbooks/asm-dg-create.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "439363af3ebdbb86c013621567bbce4b0e973b355844e812476c1b20466c1310",
+   "format": 1
+  },
+  {
+   "name": "playbooks/asm-dg-disk-drop.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "b29ced9c8102f262af271d53f07053ef4a36a6365d14d8337eb6e1377c5632a8",
+   "format": 1
+  },
+  {
+   "name": "playbooks/delete-db.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "348769cc868bfc980a3cbf8cfe6e997c87843973221b5c8c71ee6dd2dfcfa42d",
+   "format": 1
+  },
+  {
+   "name": "playbooks/create-db.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "1ef59e18abf9383c8cc9d8f50c1984cf2431fb3f9080a2a6f9706eec08dbbc79",
+   "format": 1
+  },
+  {
+   "name": "playbooks/db-rac-opatchauto.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "4072feea4ba13a90576c5f025705ab4a9d889574bca3e7db817b89adc317a75b",
+   "format": 1
+  },
+  {
+   "name": "playbooks/datapatch.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "1e5c923f0dcc7179bdbdf4baec81e182b5bd5b8f9c4b8d519b09556203e9cec4",
+   "format": 1
+  },
+  {
+   "name": "playbooks/create.sql",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "7a299b1870e3eaef9f91c849d2fe95617ee907710660033a2436d054ff862ccf",
+   "format": 1
+  },
+  {
+   "name": "playbooks/insert.sql",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "3161270fc18d15272ec6068267ea3e71e67ca11dd753e5259499d8bd42dd99d7",
+   "format": 1
+  },
+  {
+   "name": "playbooks/insert1.sql",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "189f2ea01729f5da1e4705907bcdb1956a7194273036c6d15a13c169f2f7dac1",
+   "format": 1
+  },
+  {
+   "name": "playbooks/manage-acfs-rac.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e97c5241d565d5974382832eeb772a6e1f0ad7f9892bcae42ade1110d37aace2",
+   "format": 1
+  },
+  {
+   "name": "playbooks/db-opatch.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "cdad403c5ad8e8c4b83e4819338cf5eb9774026cf237df414b7dfb862360f56a",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_pdb",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "11795cc94580e8aa6ed24082db3f30607858f6b155ea71ffbc1b9bba1a6636cb",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_parameter",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "daf1906ad28fe3b100ba3b9d9f9b83ab2bfe30cbc6f50136b4a85f3b6557d193",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_opatch",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "9073a62bd51fa96a814b8e271de96a99bcfcfcb7d963c4867b8b0092122e31bc",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_user",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "a2542eac0b4b56268fd88b1734ad019c5be0b839e0490e950304340ae48f5460",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_tablespace",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "0b1824ab412d52a91d93642d6122e3666965a15ccf6ff2a72cf6ae9ed0fb7034",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_stats_prefs",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "f37ce4316dddbdea88193742b29dc8f93ff077a7059e1b86c697cfda07c3755c",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_sqldba",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "697484b5e1e449117ee9d44612fdeed40a095d74716f482743d31ea56fffaece",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_sql",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "6d50ebc1d64d9ce7ad324f0de4f2e17cfa2da550535d96324d72f4f02e0da082",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_services",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "f057903654c453331661989b24d70d4837fbf917dfdabf265c5b102dddeabd26",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_facts",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "ca1e7aa05d36f953db9190adbf70c2a9debb7ec394e434802683f38877669a0d",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_acfs",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "f2804dd5c39a947b5fff084090f67790c5c26c4379456f385bff7acde90096c2",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_role",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "eff373e7d0c4a5a50940a8496401cb003e6985e1e9e652bc536c3acdbf4674d1",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_profile",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e7509d58443d82e654565761c863e055c02f387105c3cd653c06478d869c0449",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_privs",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "65518cc1848939eec5810118b732a3ea6fb7668ac327dcb0a0c4b9c697a2887c",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_gi_facts",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "a8c02d3c4746d37d1ddbe3936eea64ce1d46db3a8b5a9404b30c11d6d8954ed7",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/LICENSE",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "31f30875ae07bd40687b5ce27b08e1ff25cf0013dbb7b7fa176669ed5b050a9f",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "7196ed60c4d81f1ff18b5b3f174d48c85753f6792018de3add9d0bfbbe7fce4e",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_asmvol",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "7d4003f2690b526899b1af905b9d610d497a6974d7d1f9b334e464fe190a7d26",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_redo",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "ac48937f657ecc928cf70686e0f98fd471105f107064f33c434e68d29f3048d9",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_asmdg",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "acb34ed803ab09adec572ebca8510711a3e1203c68cb98f788e08a07d9ca1aa7",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_ldapuser",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e8377d822409e553eff405decf15b9e465d59c3e010ac7c71d9dd22ffedc5c4b",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_awr",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "3332ccff3cada2b7c605fa446f0a64811c5d9b70501a46d5483f1827bde4c467",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_datapatch",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "cf338f967d6af4bb62d09ec507d7012be9d1412240dfa75e448c405b99e4bca2",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_db",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "fbc027ac44c76017daa8ccde8fe5f921a40a55ddbeed35e5dd0e02060d44ccd4",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_directory",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "1071c4e4320a8fff8e45b3d36e7e43ef5ae858e44821ef0654f352a13edbd3a9",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_rsrc_consgroup",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "8227652a139e1c941cafc5585f9b16f39b5008332dd1d27a34cf7e3b45ae30cc",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_grants",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "26c240fdb77c823b0bd936ba9037e8a2afe3de6f6f842fea982143eced4be9ee",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_job",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "ecbfb36a2ad2056406362a5eb2fff84b3b0034ea4d311e192276f80adbced2e5",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_jobclass",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "8eb12f3f98cd0f1c5a6012c4ac3c2fd3b9f4a7629c20ef002305e0f56131b47e",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_jobschedule",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "4cd278bd18111217ce089ae473cbf42dfff27eac2ade69a312817091970199ee",
+   "format": 1
+  },
+  {
+   "name": "playbooks/library/oracle_jobwindow",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "93e9e275801c48fa45442bd6311a5fb159f202cffeebaca2db217b1908841fbc",
+   "format": 1
+  },
+  {
+   "name": "plugins",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_profiles",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_profiles/defaults",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_profiles/defaults/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e4df354ffb57057c32bcaafe2a150afab85a4236261e88fd419c7628c5684552",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_profiles/tasks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_profiles/tasks/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "68725dc04310330737a6c2ba6cee4e868ab549fd593b50183d1dbc03f8d02a76",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_profiles/meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_profiles/meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "bb4bb4cd5bb65560de2e781aecdf78bf1337fec0c05c2950e0f2e72c1b3ec7f9",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_profiles/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_grants",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_grants/tasks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_grants/tasks/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "46cda343de69a476e76cf6cb73bbf4665f488f994126a3abbf9f97eb86f15805",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_grants/defaults",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_grants/defaults/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "f5fb1e8b33a32c982bdcf5833160bfa66c55dc6eba4d0f2685ca726286a81456",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_grants/meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_grants/meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "ce391134db3f2fd9976f0f5af57c0bd3c20e257a7430e9043aacc07ce291f23f",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_grants/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_delete",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_delete/defaults",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_delete/defaults/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "a7894c3f5092c798ff58b551fbcf3f6bbad122242630979f4cbcf761623bab94",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_delete/tasks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_delete/tasks/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "13b6670284f75f30c95493c5b434ffd6c3697c00032a0f689640aa5cfe951599",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_delete/meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_delete/meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "1ef40b858948f8d291b9fa81d9b63a6bb26af0fbfd6415577d4345a64b05d0be",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_delete/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "roles/drop_asmdg_disk_aix",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/drop_asmdg_disk_aix/templates",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/drop_asmdg_disk_aix/templates/asmca-diskadd-aix.sh.j2",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "58392e67fcfab5178b902d6b4e64d8546d63b5f3c0397706c972c40c14fe74db",
+   "format": 1
+  },
+  {
+   "name": "roles/drop_asmdg_disk_aix/defaults",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/drop_asmdg_disk_aix/defaults/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "ebc06a72f17566e777e8f9571e3cb223c9c6cdd0f682bdaa332a0102575f7554",
+   "format": 1
+  },
+  {
+   "name": "roles/drop_asmdg_disk_aix/tasks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/drop_asmdg_disk_aix/tasks/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "a49e1cfb73854003f6f9d59af63af652dedfc041099ad53236f59ec26aed8531",
+   "format": 1
+  },
+  {
+   "name": "roles/drop_asmdg_disk_aix/meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/drop_asmdg_disk_aix/meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "9f6983c856ad8d1aea108d0ca5d78e2579a5d0eeca2280f17824f8898e9f6fda",
+   "format": 1
+  },
+  {
+   "name": "roles/drop_asmdg_disk_aix/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/templates",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/templates/dbca-create-db.rsp.11.2.0.3.j2",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "fec983d953e5489e545242db04c355dd1afc08377d600773c2b2bec842dabf55",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/templates/dbca-create-db.rsp.11.2.0.4.j2",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "f619b1736ca68b106c958d0460767333dccf3fda00844f20da94f1486e527c50",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/templates/dbca-create-db.rsp.12.1.0.1.j2",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e0b252b726d81741f3162a8cc6293e49fd897554bd6bd0a20700d13da009a908",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/templates/dbca-create-db.rsp.12.1.0.2.j2",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "160d961de59c3cdb47b5a20a2a02b128829d98909a6a4aa9ddaa9296402cc2b0",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/templates/dbca-create-db.rsp.12.2.0.1.j2",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "3b9851904ec375c9d947d311b1037761e0259e162ee13aeca9887d1e91ec142a",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/templates/dbca-create-db.rsp.19.3.0.0.j2",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "d738608f9293f3e165f22c4a92f7acbb1ec6207bf9b8c700e102f2d8d36cd161",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/templates/dotprofile-db.j2",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "fe7758b735dd24840fae2445181e8a0ae926c56f3ad1d4c18261f1ff95a9b19a",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/templates/netca.rsp.11.2.0.3.j2",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "72a755b3a00eaefac5cd1419096a3b61fd7877e909d05cceba85e4fd6ab25df6",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/templates/netca.rsp.11.2.0.4.j2",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "72a755b3a00eaefac5cd1419096a3b61fd7877e909d05cceba85e4fd6ab25df6",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/templates/netca.rsp.12.1.0.1.j2",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "8aae68ed888a165d2a183b64ee11b637685cb46793f291bbc706163944d5aef7",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/templates/netca.rsp.12.1.0.2.j2",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "8aae68ed888a165d2a183b64ee11b637685cb46793f291bbc706163944d5aef7",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/templates/netca.rsp.12.2.0.1.j2",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "b286a15211bcd060bb6bf84b8148187e6ba4c3c48395142e30453aa2ec401b5b",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/templates/netca.rsp.19.3.0.0.j2",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "babb7e5fcf8960e198098411f78defc815429397e10ad3f190e6abfefa7aaa4a",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/defaults",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/defaults/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "84aa769d0c03c19bd7598dfb06c2ec87b2bf651ee1ecebc3135a392195198fb9",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/tasks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/tasks/listener.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "ad1ce3507b29c17fdb1cc5ff3a1dad8eae6ccb76b4d580a5adff57fb8a55530d",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/tasks/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "1ae7f8fdc035427b421ab83c081d4d6ed03e7b048c8878f122248718465b213b",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "22318f97d138b5f3a7775f6a76b81e49b83c86eb3dcd43bcc67dba3c62f28a7e",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_create/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_datapatch",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_datapatch/tasks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_datapatch/tasks/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "fecec60e83c7ec5cb5cd507b98e4c491efe6c4cab0f3a0eb9aae4789315e8828",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_datapatch/defaults",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_datapatch/defaults/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "baa58274c0e4e2cfa462edeba530c07719861c167dbbbc6027bdc5cde41f0540",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_datapatch/meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_datapatch/meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "82a463f8965b765d3d6ead05344ff5fa618a19eb9cc92eef38180d6fd8731ed6",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_datapatch/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs/defaults",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs/defaults/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "bb5ed71f319ab86758b1db9b04c6e7c4d7b0aa6d67b924f1334ca45f2bf45d5f",
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs/tasks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs/tasks/create_acfs.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "9b97356265dfe1532150e312fca64ce6b5364cb875e0c88fdda7446a8cb65f4e",
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs/tasks/delete_acfs.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "77715e1a6cef885a16087499cbc74615914ef3fbfa5b5a0fc0a54bd149ca3b0b",
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs/tasks/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "16576491b0c4f7b1939f573994ae190af3f81e4d3a6aee1dcfcaf17ef58c98f8",
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs/meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs/meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "227731d5e2a12417101551ae413834020cbf99001f11281a61fa9584d5c619ab",
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_pdb",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_pdb/defaults",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_pdb/defaults/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "7e344dbef2e1f5df38e6ba0c1c5126b155c9041926b7083f240cf5fdbc7a7c79",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_pdb/tasks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_pdb/tasks/create_pdb.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "584aa907ea9beb08211864d662122f3541b587b16302bb6bfbce96b1efb04d6b",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_pdb/tasks/drop_pdb.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "892f84ffdda647aa7083a0d55021820252f97128a8cf5ce7dec46f88916f81a7",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_pdb/tasks/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e90b1867652e82dc546dff78a4030e61216aba7c0683344c3f0ce71d75ff3e9d",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_pdb/tasks/main.yml.bkup",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "3ed4736b153187ebbe20f8464bf0dfeb9fb37dc0ceb2350cbd632524462e62c3",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_pdb/tasks/main.yml.bkup2",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "1c6b18b8aac77e8e51452a5d10f32b43951a254456759b7b3a635fcea7758d61",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_pdb/meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_pdb/meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "2d953a7e021e7620ff795e1d07ffb37150fdb7d3ea05ef404ea85913c5b961e1",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_pdb/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_users",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_users/tasks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_users/tasks/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "cd7532f40d0900153723a92e75a8a7b263bddf0824b680b045aa5e3ac2793d55",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_users/defaults",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_users/defaults/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "a5481ba2aebbe4485e5ce123de56ed9cd2cf5fc02d8a4f5e1c9c452b61e93990",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_users/meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_users/meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "f80394a63795b30a593643d8216ac015ea3ec596fa23882261acdc9fdf06b918",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_users/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_tablespace",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_tablespace/tasks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_tablespace/tasks/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "0c4b3d1b16ea8e26d37c184c16dd8f7dd7d10e1edc7f83158f0d1e10c439efe0",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_tablespace/defaults",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_tablespace/defaults/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "82b2703d58d457189b716be4913f1885610cfe7237246bc07b6f4f4297f57c7d",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_tablespace/meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_tablespace/meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "2138fc1928cd0b7313b603819983e19f0da566e5981eb7424eedd1f1560df661",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_tablespace/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "roles/create_asmdg_aix",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/create_asmdg_aix/tasks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/create_asmdg_aix/tasks/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "63a11b081465bf6b03975220019106e211ac4851a1f35199bad72c5dad29e511",
+   "format": 1
+  },
+  {
+   "name": "roles/create_asmdg_aix/templates",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/create_asmdg_aix/templates/asmca-createdb-aix.sh.j2",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "dca850d2d23205173b2cb4507f5f2c5fff77cf9c7c03e01d0e4434d4d9eba8b2",
+   "format": 1
+  },
+  {
+   "name": "roles/create_asmdg_aix/defaults",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/create_asmdg_aix/defaults/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "70c349f0a7fbeea362751c5c8f2b7e776c37def061bcdd98ede32f0ca8af6cb8",
+   "format": 1
+  },
+  {
+   "name": "roles/create_asmdg_aix/meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/create_asmdg_aix/meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "a89144f8281a58cf4c0d2016e0ca6f74d411befb49fcd23a09b56d6e149e2c43",
+   "format": 1
+  },
+  {
+   "name": "roles/create_asmdg_aix/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "roles/oraswdb_manage_patches",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oraswdb_manage_patches/tasks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oraswdb_manage_patches/tasks/db-home-patch.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "4bb2f0cbdfa4e0d9fff525a227f201a6eedad395c130e24afd74b98448d282c7",
+   "format": 1
+  },
+  {
+   "name": "roles/oraswdb_manage_patches/tasks/transfer-files.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "33ca6b9645f9331ddb894e3d24bf8c2a0071377babbf572b0e1f152eac41da19",
+   "format": 1
+  },
+  {
+   "name": "roles/oraswdb_manage_patches/tasks/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "c4e4ec3f4094b739edd32357940cecf465b01edf32eed36a248a0200c998b24f",
+   "format": 1
+  },
+  {
+   "name": "roles/oraswdb_manage_patches/tasks/unpack-files.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "0a7e01ce2ec2d9fc8d33992a9a5fc40479dd8f3eff77ba44da5fb13558108e0d",
+   "format": 1
+  },
+  {
+   "name": "roles/oraswdb_manage_patches/tasks/opatch-upgrade.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "b62e5e0e8b5440a9864a62766937ffda4f7d0f6ccf21b7596f337da7eb63bfc3",
+   "format": 1
+  },
+  {
+   "name": "roles/oraswdb_manage_patches/templates",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oraswdb_manage_patches/defaults",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oraswdb_manage_patches/defaults/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "56f6465d034f2d919a8ec4e55c8650158b20c0ab810da74e8549aadf4dd14a73",
+   "format": 1
+  },
+  {
+   "name": "roles/oraswdb_manage_patches/meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oraswdb_manage_patches/meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "78e7c975761d74ccacb3cc43ed85db4637db846741aba1c8fe58c3a1c97d3c16",
+   "format": 1
+  },
+  {
+   "name": "roles/oraswdb_manage_patches/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_redo",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_redo/defaults",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_redo/defaults/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "902a284abeb553fd5aafce9ead8bf305551be9876bd05997898fe6fa70da4c66",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_redo/tasks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_redo/tasks/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "da50a8c883c019c3dda486ff5d4069605fd7b5974d076e49115c992c73d7dda7",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_redo/meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_redo/meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "f5d4ae7b00220f67533211df9e254eb4e72398c80b8bbbd18571021d42dac270",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_redo/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_parameters",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_parameters/defaults",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_parameters/defaults/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e58f237c70214383cdc0d1ad682a73cf012d0daa2ea9096603486b16a8b6a2b0",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_parameters/tasks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_parameters/tasks/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "5f1cf25b40796422a4b1f4ac7f6c018ee10af627d97ac65bf18ac2d81e42eb88",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_parameters/meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_parameters/meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "a13c7f4978c2586494f26a175f8d084e1e0f2311c4e5aa9771a5cba09cd8a45c",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_parameters/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_roles",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_roles/tasks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_roles/tasks/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e5f56d1408c8ebef09381632ca7f2099c130b71be9f98ad8fc6fbf62767fb16c",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_roles/defaults",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_roles/defaults/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "c02b8e01a135085afb2bd16c3232619b545d2ac40dcd8d0fdcec75ae6486814a",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_roles/meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_roles/meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "2aeb1a9129b6b6912f2d50bc2bdeded2bbb0ae7c6e9106b40eb1df05307ec6e5",
+   "format": 1
+  },
+  {
+   "name": "roles/oradb_manage_roles/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "roles/oraswgi_manage_patches",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oraswgi_manage_patches/templates",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oraswgi_manage_patches/defaults",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oraswgi_manage_patches/defaults/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "b48fbf3cdc260b9db9b6ec33a3994f324da954edd3e804bf30ec713f934d698d",
+   "format": 1
+  },
+  {
+   "name": "roles/oraswgi_manage_patches/tasks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oraswgi_manage_patches/tasks/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "76935070e75f32443013fbdb8ae37ae5a0a00b18587891bc75acc4dbe07638ae",
+   "format": 1
+  },
+  {
+   "name": "roles/oraswgi_manage_patches/tasks/opatch-upgrade.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "79d22e9bfdd0c06c3093848299efd65be7d7c16a6097e00ded9036bbb71cc8c7",
+   "format": 1
+  },
+  {
+   "name": "roles/oraswgi_manage_patches/tasks/transfer-files.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "384c54738009e97b6c40985cc5fb4a9cffb08badb4f9a72f1694011dec38f6f1",
+   "format": 1
+  },
+  {
+   "name": "roles/oraswgi_manage_patches/tasks/unpack-files.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "75963f5e3dbd0ccac8cf5689f8d795165a6090fcc088f635cc1220c4bfa583a3",
+   "format": 1
+  },
+  {
+   "name": "roles/oraswgi_manage_patches/meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/oraswgi_manage_patches/meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e5bf646e6935d20968d09de2c23147c33f7955e62205151f76b54a61ad107cbd",
+   "format": 1
+  },
+  {
+   "name": "roles/oraswgi_manage_patches/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "roles/asm_add_disk_aix",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/asm_add_disk_aix/templates",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/asm_add_disk_aix/templates/asmca-diskadd-aix.sh.j2",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "58392e67fcfab5178b902d6b4e64d8546d63b5f3c0397706c972c40c14fe74db",
+   "format": 1
+  },
+  {
+   "name": "roles/asm_add_disk_aix/defaults",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/asm_add_disk_aix/defaults/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "37187a20451bc6527b322671b90ecdc8bfb790b077f6d752de85fcbb9e85c7a2",
+   "format": 1
+  },
+  {
+   "name": "roles/asm_add_disk_aix/tasks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/asm_add_disk_aix/tasks/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "54c607f936f45b5a1c26e57b1c6b652817af259b3a46c0e814b8b24f8d5f22b5",
+   "format": 1
+  },
+  {
+   "name": "roles/asm_add_disk_aix/meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/asm_add_disk_aix/meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "f790929a87293d5dc0bf12cc7fd40fd2f3d1f9e62cd1513d98a2cf616230ad74",
+   "format": 1
+  },
+  {
+   "name": "roles/asm_add_disk_aix/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs_rac",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs_rac/tasks",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs_rac/tasks/create_acfs.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "d2afa0666314dff4d3384382069a6e0f83a510162765c878256b9f620ba1fa86",
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs_rac/tasks/delete_acfs.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "65cf6bf15ffd81836beef15b4fbf217dc4f9be952ad8a54576f3054a9f44fd7e",
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs_rac/tasks/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "16576491b0c4f7b1939f573994ae190af3f81e4d3a6aee1dcfcaf17ef58c98f8",
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs_rac/defaults",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs_rac/defaults/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "9a87f9e7775e1850eb815cab30115ca5088a96753638a818b8b1f910592c530e",
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs_rac/meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs_rac/meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "5153e392b66a1617454bb114599bf750f14cf9c52242f049343ae51e5ac9a8f5",
+   "format": 1
+  },
+  {
+   "name": "roles/create_acfs_rac/README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "format": 1
+  },
+  {
+   "name": "README.md",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "8d02bca10bd64d8cfa4fdfae4942f5a20593df22f3f9bad62c8d3502079d5d41",
+   "format": 1
+  },
+  {
+   "name": "meta",
+   "ftype": "dir",
+   "chksum_type": null,
+   "chksum_sha256": null,
+   "format": 1
+  },
+  {
+   "name": "meta/runtime.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "b53b9563b6860c6408f640595e9867e10157daa5a83f590ebc2e8352b77e2b65",
+   "format": 1
+  },
+  {
+   "name": "meta/main.yml",
+   "ftype": "file",
+   "chksum_type": "sha256",
+   "chksum_sha256": "4f99951c1206376edfc089963547c221e6a40f6ba36d71007179a7b9adc9aa41",
+   "format": 1
+  }
+ ],
+ "format": 1
+}

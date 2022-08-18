@@ -1,0 +1,14 @@
+- oracle_sql:
+    username: "{{ user }}"
+    password: "{{ password }}"
+    service_name: "{{ service_name }}"
+    hostname: "{{ hostname }}"
+    port: "{{ listener_port }}"
+    mode: "{{ db_mode }}"
+    sql: "{{ item.query }}"
+  with_items:
+    - "{{ sql_query }}"
+  environment: "{{ oracle_env }}"
+  register: output
+- debug:
+    var: output

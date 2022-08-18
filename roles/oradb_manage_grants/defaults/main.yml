@@ -1,5 +1,9 @@
 db_user: sys
 db_mode: sysdba
+
+db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+
 db_service_name: "{% if item.0 is defined %}
                     {%- if item.0.oracle_db_unique_name is defined %}{{ item.0.oracle_db_unique_name }}
                     {%- elif item.0.oracle_db_instance_name is defined %}{{ item.0.oracle_db_instance_name }}
@@ -32,15 +36,13 @@ oracle_databases:
         grants:
          - connect                      # Role/Grants to be assigned to the schema.
          - resource
-        oracle_db_name: db19cpdb.pbm.ihost.com         # Service name of the PDB.
-        db_password_cdb: oracle         # Sys user password.
+        oracle_db_name: ansible.pbm.ihost.com         # Service name of the PDB.
         state: present                   # present - adds privileges to the role|absent - removes grants from the role| REMOVEALL will remove ALL role/sys privileges.
 
 oracle_pdbs:
       - users:
          - schema: DBuser2            # PDB Schema user to be granter privileges.
-        service_name: db19cpdb.pbm.ihost.com         # Service name of the PDB.
-        db_password_pdb: oracle         # Sys user password.
+        service_name: ansipdb.pbm.ihost.com         # Service name of the PDB.
         grants_mode: enforce
         grants:
          - dba                          # Role/Grants to be assigned to the schema.
