@@ -2,7 +2,7 @@
  "collection_info": {
   "namespace": "ibm",
   "name": "power_aix_oracle_dba",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "authors": [
    "Shiva Laveti <shiva.laveti@ibm.com>"
   ],
