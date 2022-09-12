@@ -6,7 +6,7 @@
 
 - name: Apply binary patches
   gather_facts: yes
-  hosts: rachosts     # AIX lpar RAC hostnames, make sure it's set in the inventory.
+  hosts: rachosts     # AIX lpar RAC host group names, make sure it's set in the inventory.
   remote_user: oracle   # AIX lpar Oracle home user.
   serial: 1
   roles:
