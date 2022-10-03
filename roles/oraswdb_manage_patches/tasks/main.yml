@@ -10,7 +10,7 @@
      group={{ oracle_group }}
      state=directory
   with_items:
-      - "{{ db_homes_installed }}"
+     - "{{ db_homes_installed }}"
   tags:
     - directories
   when: apply_patches_db and item.apply_patches |default (False) 
