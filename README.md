@@ -80,3 +80,75 @@ To get started with AIX refer
 
 https://www.ibm.com/support/knowledgecenter/ssw_aix_72/navigation/welcome.html
 
+# Executing PowerODBA collection using Ansible Automation Platform 2 (AAP2)
+
+- This is the readme file to create an execution environment to execute the PowerODBA playbooks. 
+- Steps to create an execution environment
+
+1. In any present working directory, create a directory named "context".
+2. Inside the "context" directory place the extracted oracle client software directory with the name "oracle_client".
+3. Create a file with the following content. 
+
+- $ cat create_podba.yml
+```
+# Execution Environment
+---
+version: 1
+
+build_arg_defaults:
+  EE_BASE_IMAGE: 'quay.io/ansible/ansible-runner:latest'
+
+additional_build_steps:
+  prepend:
+   - RUN pip3 install cx_Oracle	# Installs cx_Oracle in the container
+   - RUN yum install libnsl -y	# Installs libnsl which is required by oracle client.
+   - RUN yum install libaio -y	# Installs libaio which is required by oracle client.
+  append:
+   - COPY oracle_client /oracle_client_sw	# Copies "oracle_client" directory into the container
+```
+4. Run the following command to build the execution environment image.
+
+```ansible-builder build -t <name of the image> -f <name of the file to build the image>
+
+ansible-builder build -t powerodba -f create_podba.yml
+Running command:
+  podman build -f context/Containerfile -t powerodba context
+Complete! The build context can be found at: /home/ansible/aap2/context
+```
+5. Listing the images
+```
+[ansible@x134vm236 aap2]$ podman images
+REPOSITORY                       TAG         IMAGE ID      CREATED         SIZE
+localhost/powerodba              latest      ea01cbbf4b64  56 minutes ago  1.45 GB
+<none>                           <none>      9a6f51f8bff9  57 minutes ago  816 MB
+quay.io/ansible/ansible-runner   latest      bec0dc171168  6 months ago    816 MB
+quay.io/ansible/ansible-builder  latest      b0348faa7f41  8 months ago    779 MB
+```
+
+6. Create a file called ansible-navigator.yml inside the playbooks directory with the following content.
+```
+$ cat ansible-navigator.yml
+---
+ansible-navigator:
+   execution-environment:
+     enabled: True
+     image: powerodba:latest	# Name of the REPOSITORY:TAG
+```
+7. Executing  playbook against execution environment/container image using ansible-navigator
+```
+ansible-navigator run <playbook name> --pp=missing --m stdout -i <name of the hosts inventory file>
+
+Before executing the playbook, make sure to update the oracle_env variables ORACLE_HOME & LD_RUN_PATH to "/oracle_client_sw" of the readme: https://github.com/IBM/ansible-power-aix-oracle-dba/blob/main/docs/Readme-DB-Directories.txt
+As shown below -
+
+oracle_env:
+      ORACLE_HOME: /oracle_client_sw      # Oracle Client Home in the execution environment.
+      LD_RUN_PATH: /oracle_client_sw      # Oracle Client Home Library in the execution environment.
+
+Example:
+ansible-navigator run manage-db-directories.yml --pp=missing --m stdout -i hosts.yml
+```
+
+Note: To use escalated privileges, please use "--playbook-artifact-enable false" at the end of the command.
+
+```ansible-navigator run db-opatch.yml --pp=missing --m stdout -i hosts.yml --ask-become-pass --playbook-artifact-enable false```
