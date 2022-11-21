@@ -5,38 +5,49 @@
 
 # Prerequisites:
 # ==============
-# Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/db-facts-task.yml and modify the variables under "vars" section. Do NOT change other sections of the file.
+# Go to the playbooks directory
+# Decrypt the file (if it's already encrypted)
+# ansible-vault decrypt vars/vault.yml
+Vault password:
+Decryption successful
+# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vault.yml.
+# Encrypt the file
+# ansible-vault encrypt vars/vault.yml
+New Vault password:
+Confirm New Vault password:
+Encryption successful
 
-vars:
-   hostname: ansible_db                               # AIX Hostname.
-   service_name: db122c                               # Service name of a PDB or CDB, based on the requirement.
-   db_user: sys
-   db_password_cdb: oracle                            # SYS user password.
-   listener_port: 1521                                # DB listener port.
-   db_mode: sysdba
-   oracle_env:
-     ORACLE_HOME: /home/ansible/oracle_client         # Oracle client s/w path on Ansible controller.
-     LD_LIBRARY_PATH: /home/ansible/oracle_client/lib # Oracle client library path on Ansible controller.
+# Setup the variables for Oracle:
+# Open the file vars/vars.yml and set the following variables:
+
+hostname: ansible_db			# AIX lpar hostname
+listener_port: 1521			# Database port number
+oracle_db_home: /tmp/oracle_client      # Oracle Client location on the ansible controller.
+oracle_env:
+     ORACLE_HOME: "{{ oracle_db_home }}"
+     LD_LIBRARY_PATH: "{{ oracle_db_home}}/lib"
+     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
+
+# Open the file ansible-power-aix-oracle-dba/roles/oradb_gather_dbfacts/defaults/main.yml and modify the variables.
+
+service_name: ansidb                               # Service name of a PDB or CDB.
+db_user: sys
+db_mode: sysdba
 
 # Executing the playbook: This playbook runs using a single file where it contain both Oracle related variables as well as ansible task. The connection mode will be "local". The cx_Oracle & Oracle client must be installed on ansible controller before executing this playbook.
-# Name of the Playbook: ansible-power-aix-oracle-dba/db-facts-task.yml
+# Name of the Playbook: ansible-power-aix-oracle-dba/gather-db-facts.yml
 # Change directory to ansible-power-aix-oracle-dba
-# ansible-playbook db-facts-task.yml
+# ansible-playbook gather-db-facts.yml --ask-vault-pass
 # The following task will get executed.
-     
-tasks:
- - name: gather database facts
-   oracle_facts:
-     hostname: "{{ hostname }}"
-     port: "{{ listener_port }}"
-     service_name: "{{ service_name }}"
-     user: "{{ db_user }}"
-     password: "{{ db_password_cdb }}"
-     mode: "{{ db_mode }}"
-   environment: "{{ oracle_env }}"
-   register: dbfacts
- - debug:
-     var: dbfacts
-    
+
+- hosts: localhost
+  connection: local
+  pre_tasks:
+   - name: include variables
+     include_vars:
+       dir: vars
+       extensions:
+         - 'yml'
+  roles:
+     - { role: oradb_gather_dbfacts } 

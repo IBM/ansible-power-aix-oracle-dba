@@ -5,48 +5,56 @@
 
 # Prerequisites:
 # ==============
-# Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Go to the collection directory 
+# Go to the playbooks directory 
 # Decrypt the file (if it's already encrypted)
-# ansible-vault decrypt playbooks/vars/vars.yml
+# ansible-vault decrypt vars/vault.yml
 Vault password:
 Decryption successful
-# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vars.yml.
+# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vault.yml.
 # Encrypt the file
-# ansible-vault encrypt playbooks/vars/vars.yml
+# ansible-vault encrypt vars/vault.yml
 New Vault password:
 Confirm New Vault password:
 Encryption successful
 
-# Set the Variables for Oracle: Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_job/defaults/main.yml and modify the variables.
+# Setup the variables for Oracle: 
+# Open the file vars/vars.yml and set the following variables:
 
-hostname: ansible_db               # Aix Lpar hostname where the database is running
+hostname: ansible_db			# AIX lpar hostname
+listener_port: 1521			# Database listener port
+oracle_db_home: /tmp/oracle_client	# Oracle Client location on the ansible controller.
+oracle_env:
+     ORACLE_HOME: "{{ oracle_db_home }}"
+     LD_LIBRARY_PATH: "{{ oracle_db_home}}/lib"
+     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
+
+# Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_job/defaults/main.yml and modify the variables.
+
 service_name: db122cpdb            # Database service name
 db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
 db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
-listener_port: 1521                # Listener port number
 state: present                     # present - creates a job, absent - drops a job.
 enabled: True                      # True - Enables the job, False, Disables the job.
 job_name: ansiuser1.ansi_job       # Job name along with schema name prefixed.
 job_action: ansiuser1.PKG_TEST_SCHEDULER.JOB_PROC_STEP_1   # Job action
 job_type: stored_procedure         # Type of the job
 repeat_interval: FREQ=MINUTELY;INTERVAL=35 # Job interval
-oracle_env:
-  ORACLE_HOME: /home/ansible/oracle_client # Oracle client s/w path on Ansible controller.
-  LD_LIBRARY_PATH: /home/ansible/oracle_client/lib # Oracle client library path on Ansible controller.
 
 # Executing the playbook: This playbook executes a role.
 # Change directory to ansible-power-aix-oracle-dba/playbooks
-# Name of the Playbook: manage-jobs.yml
-# ansible-playbook manage-jobs.yml
+# Name of the Playbook: manage-job.yml
+# ansible-playbook manage-job.yml
 # The following task will get executed which will call out a role.
 
 - hosts: localhost
   connection: local
   pre_tasks:
-     - name: include variables
-       include_vars: vars.yml
+   - name: include variables
+     include_vars:
+       dir: vars
+       extensions:
+         - 'yml'
   roles:
      - { role: ibm.power_aix_oracle_dba.oradb_manage_job }
 

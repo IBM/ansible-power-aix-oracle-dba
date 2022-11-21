@@ -8,35 +8,40 @@ https://docs.oracle.com/en/database/oracle/oracle-database/19/admin/creating-and
 
 # Prerequisites:
 # ==============
-# Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Go to the collection directory 
+# Go to the playbooks directory 
 # Decrypt the file (if it's already encrypted)
-# ansible-vault decrypt playbooks/vars/vars.yml
+# ansible-vault decrypt vars/vault.yml
 Vault password:
 Decryption successful
-# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vars.yml.
+# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vault.yml.
 # Encrypt the file
-# ansible-vault encrypt playbooks/vars/vars.yml
+# ansible-vault encrypt vars/vault.yml
 New Vault password:
 Confirm New Vault password:
 Encryption successful
 
-# Set the Variables for Oracle: Open the file ansible-power-aix-oracle-dba/oradb_manage_directories/defaults/main.yml and modify the variables.
+# Set the Variables for Oracle: 
+# Open the file vars/vars.yml and set the following variables:
 
-hostname: ansible_db               # AIX hostname.
+hostname: ansible_db                    # AIX lpar hostname
+listener_port: 1521                     # Database port number
+oracle_db_home: /tmp/oracle_client      # Oracle Client location on the ansible controller.
+oracle_env:
+     ORACLE_HOME: "{{ oracle_db_home }}"
+     LD_LIBRARY_PATH: "{{ oracle_db_home}}/lib"
+     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
+
+# Open the file ansible-power-aix-oracle-dba/oradb_manage_directories/defaults/main.yml and modify the variables.
+
 service_name: ansible.pbm.ihost.com              # DB service name.
 db_user: sys
 db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
 db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
-listener_port: 1521                # DB port number.
 db_mode: sysdba
 param_name: log_archive_dest_state_2       # Initialization Parameter Name
 param_value: defer                         # Initialization Parameter Value
 state: present                              # Initialization Parameter state: present - sets the value, absent/reset - disables the parameter
-oracle_env:
-  ORACLE_HOME: /home/ansible/oracle_client         # Oracle client s/w path on Ansible controller.
-  LD_LIBRARY_PATH: /home/ansible/oracle_client/lib # Oracle client library path on Ansible controller.
 
 # Executing the playbook: This playbook executes a role.
 # Name of the Playbook: manage-init-parameters.yml
@@ -48,7 +53,10 @@ oracle_env:
   connection: local
   pre_tasks:
      - name: include variables
-       include_vars: vars.yml
+       include_vars:
+         dir: vars
+         extensions:
+           - 'yml'
   roles:
      - { role: ibm.power_aix_oracle_dba.oradb_manage_initparams }
 

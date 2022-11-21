@@ -7,4 +7,4 @@
        extensions:
          - 'yml'
   roles:
-     - { role: oradb_manage_initparams }
+     - { role: oradb_gather_dbfacts }

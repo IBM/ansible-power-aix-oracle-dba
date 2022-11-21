@@ -7,34 +7,39 @@
 
 # Prerequisites:
 # ==============
-# Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Go to the collection directory 
+# Go to the playbooks directory 
 # Decrypt the file (if it's already encrypted)
-# ansible-vault decrypt playbooks/vars/vars.yml
+# ansible-vault decrypt vars/vault.yml
 Vault password:
 Decryption successful
-# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vars.yml.
+# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vault.yml.
 # Encrypt the file
-# ansible-vault encrypt playbooks/vars/vars.yml
+# ansible-vault encrypt vars/vault.yml
 New Vault password:
 Confirm New Vault password:
 Encryption successful
 
-# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_directories/defaults/main.yml and modify the variables
+# Setup the variables for Oracle:
+# Open the file vars/vars.yml and set the following variables:
 
-     hostname: ansible_db                       # AIX Lpar hostname.
+hostname: ansible_db                    # AIX lpar hostname
+listener_port: 1521                     # Database port number
+oracle_db_home: /tmp/oracle_client      # Oracle Client location on the ansible controller.
+oracle_env:
+     ORACLE_HOME: "{{ oracle_db_home }}"
+     LD_LIBRARY_PATH: "{{ oracle_db_home}}/lib"
+     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
+
+# Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_directories/defaults/main.yml and modify the variables.
+
      service_name: db122c                       # Service name for the database where the directory needs to be created.
      db_user: sys
-     listener_port: 1521                        # Database listener port number.
      db_mode: sysdba
      directory_name: TESTDIR                    # Desired directory name to be created.
      path: /u01/testdir                         # Path to which the database directory is to be created. This must be created manually.
      state: present                             # To create a directory - present. To drop a directory - absent.
      mode: enforce
-     oracle_env:
-      ORACLE_HOME: /home/ansible/oracle_client          # Oracle Client Home on Ansible Controller.
-      LD_RUN_PATH: /home/ansible/oracle_client/lib      # Oracle Client Home Library on Ansible Controller.
 
 # Executing the playbook: This playbook executes a role. Before running the playbook, open the playbook and update the hostname & remote user details as shown below. Do NOT change other parts of the script.
 # Change directory to ansible-power-aix-oracle-dba/playbooks
@@ -46,7 +51,10 @@ Encryption successful
   connection: local
   pre_tasks:
      - name: include variables
-       include_vars: vars.yml
+       include_vars:
+         dir: vars
+         extensions:
+           - 'yml'
   roles:
      - { role: ibm.power_aix_oracle_dba.oradb_manage_directories }
 

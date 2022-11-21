@@ -6,21 +6,32 @@
 
 # Prerequisites:
 # ==============
-# Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
 
-# Go to the collection directory 
+# Go to the playbooks directory 
 # Decrypt the file (if it's already encrypted)
-# ansible-vault decrypt playbooks/vars/vars.yml
+# ansible-vault decrypt vars/vault.yml
 Vault password:
 Decryption successful
-# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vars.yml.
+# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vault.yml.
 # Encrypt the file
-# ansible-vault encrypt playbooks/vars/vars.yml
+# ansible-vault encrypt vars/vault.yml
 New Vault password:
 Confirm New Vault password:
 Encryption successful
 
-# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_roles/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
+# Set the Variables for Oracle to execute this task: 
+
+# Open the file vars/vars.yml and set the following variables:
+
+hostname: ansible_db                    # AIX lpar hostname
+listener_port: 1521                     # Database port number
+oracle_db_home: /tmp/oracle_client      # Oracle Client location on the ansible controller.
+oracle_env:
+     ORACLE_HOME: "{{ oracle_db_home }}"
+     LD_LIBRARY_PATH: "{{ oracle_db_home}}/lib"
+     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
+
+# Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_roles/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 
 db_user: sys
 db_mode: sysdba
@@ -33,14 +44,7 @@ db_service_name: "{% if item.0 is defined %}
                   {%- endif %}"
 
 listener_port_template: "{% if item.0.listener_port is defined %}{{ item.0.listener_port }}{% else %}{{ listener_port }}{% endif %}"
-listener_port: 1521             # Database listener port number.
-hostname: ansible_db            # AIX hostname/SCAN Name in case of RAC.
 
-oracle_home_db: /home/ansible/oracle_client     # Oracle 19c Client Home location on Ansible controller.
-
-oracle_env:
-       ORACLE_HOME: "{{ oracle_home_db }}"
-       LD_LIBRARY_PATH: "{{ oracle_home_db }}/lib"
 oracle_databases:
       - roles:
           - name: ansirole                              # Name of the role to be created in CDB.
@@ -63,6 +67,12 @@ oracle_pdbs:
 
 - hosts: localhost
   connection: local
+  pre_tasks:
+   - name: include variables
+     include_vars:
+       dir: vars
+       extensions:
+         - 'yml'
   roles:
      - { role: oradb_manage_roles }
 

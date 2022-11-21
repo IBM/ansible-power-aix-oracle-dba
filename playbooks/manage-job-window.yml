@@ -1,7 +1,10 @@
 - hosts: localhost
   connection: local
   pre_tasks:
-     - name: include variables
-       include_vars: vars.yml  
+   - name: include variables
+     include_vars:
+       dir: vars
+       extensions:
+         - 'yml'
   roles:
-     - { role: ibm.power_aix_oracle_dba.oradb_manage_job_window }
+     - { role: oradb_manage_job_window }

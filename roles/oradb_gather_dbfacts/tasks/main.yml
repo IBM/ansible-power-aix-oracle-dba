@@ -1,0 +1,12 @@
+- name: gather database facts
+  oracle_facts:
+    hostname: "{{ hostname }}"
+    port: "{{ listener_port }}"
+    service_name: "{{ service_name }}"
+    user: "{{ db_user }}"
+    password: "{{ db_password_cdb }}"
+    mode: "{{ db_mode }}"
+  environment: "{{ oracle_env }}"
+  register: dbfacts
+- debug:
+    var: dbfacts

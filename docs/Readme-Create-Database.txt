@@ -12,18 +12,18 @@
 
 # Go to the collection directory 
 # Decrypt the file (if it's already encrypted)
-# ansible-vault decrypt playbooks/vars/vars.yml
+# ansible-vault decrypt playbooks/vars/vault.yml
 Vault password:
 Decryption successful
-# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vars.yml.
+# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vault.yml.
 # Encrypt the file
-# ansible-vault encrypt playbooks/vars/vars.yml
+# ansible-vault encrypt playbooks/vars/vault.yml
 New Vault password:
 Confirm New Vault password:
 Encryption successful
 
-# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vars.yml.
-# Set ASMSNMP password for "default_gipass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vars.yml.
+# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vault.yml.
+# Set ASMSNMP password for "default_gipass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vault.yml.
 
 # Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oradb_create/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
 

@@ -1,0 +1,4 @@
+- hosts: ansihost		# Grid Host
+  remote_user: oracle
+  roles:
+     - { role: oradb_gather_gifacts } 

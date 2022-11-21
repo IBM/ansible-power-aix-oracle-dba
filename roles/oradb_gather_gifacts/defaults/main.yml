@@ -1,0 +1,3 @@
+oracle_env:
+   ORACLE_HOME: /u01/grid19c                # Grid Home path on the remote lpar.
+   LD_LIBRARY_PATH: /u01/grid19c/lib         # Grid Home Library path on the remote lpar.
