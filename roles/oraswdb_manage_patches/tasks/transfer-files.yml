@@ -26,9 +26,6 @@
   tags:
   - oradbpatchpush
 
-- debug:
-    var: transfer
-
 - name: gi-opatch | Copy oracle opatch to server (www)
   get_url:
       url={{ oracle_sw_source_www }}/{{ item.filename }}
