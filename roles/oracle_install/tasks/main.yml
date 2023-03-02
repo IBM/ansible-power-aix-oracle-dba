@@ -1,0 +1,106 @@
+- name: Checking if Oracle 19c is already installed
+  ansible.builtin.stat:
+      path: "{{ temp_dir }}/oracle.install.done"
+  register: installdone
+- fail:
+     msg: Installation is already done. Exiting.
+  when: installdone.stat.exists
+
+- name: Checking for failed installations
+  ansible.builtin.stat:
+      path: "{{ db_oracle_home }}/install/patch"
+  register: patchfile
+
+- name: Cleaning up failed installations | Oracle DB Home
+  ansible.builtin.file:
+      path: "{{ db_oracle_home }}"
+      state: absent
+  when: patchfile.stat.exists
+
+- name: Cleaning up failed installations | podba_db_temp
+  ansible.builtin.file:
+      path: "{{ temp_dir }}"
+      state: absent
+  when: patchfile.stat.exists
+
+- name: Creating Temp Directory | {{ temp_dir }}
+  ansible.builtin.file:
+     dest={{ temp_dir }}
+     owner={{ db_oracle_user }}
+     group={{ db_oinstall_group }}
+     state=directory
+  changed_when: false
+
+- name: Checking if prechecks already run
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/prechecks.log"
+  register: prech
+
+- name: Copying prechecks.sh
+  template:
+    src:  prechecks.sh.j2
+    dest: "{{ temp_dir }}/prechecks.sh"
+    mode: '755'
+  when: not prech.stat.exists
+
+- name: Executing prechecks.sh
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/prechecks.sh"
+  become: yes
+  become_user: "{{ db_oracle_user }}"
+  register: precheck_out
+  when: not prech.stat.exists
+
+- debug: var=precheck_out.stdout_lines
+  when: not prech.stat.exists
+
+- name: Copying sw_extract.sh
+  template:
+    src:  sw_extract.sh.j2
+    dest: "{{ temp_dir }}/sw_extract.sh"
+    mode: '755'
+
+- name: Execute sw_extract.sh
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/sw_extract.sh"
+  register: sw_extract_out
+  become: yes
+  become_user: "{{ db_oracle_user }}"
+  changed_when: sw_extract_out.stdout is search('unzipped')
+
+- name: Checking freespace in Grid Install Path
+  ansible.builtin.shell: "df -g {{ db_oracle_home }} |tail -1|awk '{print $3}'"
+  register: grid_home_freespace
+  changed_when: false
+  when: apply_ru
+- fail:
+    msg: Insufficient freespace for {{ db_oracle_home }} (85GB freespace required).
+  when: grid_home_freespace.stdout|int < 80 and apply_ru
+
+- name: Executing rootpre.sh
+  shell: "{{ db_oracle_home }}/clone/rootpre.sh"
+
+- name: Copying Oracle RDBMS Install response file
+  template:
+    src: oracle_19c_install.rsp.j2
+    dest: "{{ temp_dir }}/{{ response_file }}"
+    owner: "{{ db_oracle_user }}"
+    group: "{{ db_oinstall_group }}"
+    mode: '0644'
+
+- name: Copying oracle_install.sh
+  template:
+    src: oracle_install.sh.j2
+    dest: "{{ temp_dir }}/oracle_install.sh"
+    owner: "{{ db_oracle_user }}"
+    group: "{{ db_oinstall_group }}"
+    mode: '0755'
+
+- name: Installing 19c RDBMS
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/oracle_install.sh"
+  register: oracle_install
+  become: yes
+  become_user: "{{ db_oracle_user }}"
+- debug: var=oracle_install.stdout
+
+- name: Executing root.sh
+  ansible.builtin.shell: "{{ db_oracle_home }}/root.sh"
+  register: execroot

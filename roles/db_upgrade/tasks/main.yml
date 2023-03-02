@@ -1,0 +1,7 @@
+- name: Full Database Upgrade
+  ansible.builtin.import_tasks: fulldb.yml
+  when: full_upgrade and not noncdb_pdb
+
+- name: Non CDB To PDB upgrade
+  ansible.builtin.import_tasks: noncdb_pdb.yml
+  when: noncdb_pdb and not full_upgrade

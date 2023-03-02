@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: oracle_install
+  author: Shiva Laveti
+  description: This role is to Install Oracle 19c RDBMS Home.
+  company: IBM
+
+  license: Apache-2.0
+
+  min_ansible_version: 2.9
+
+  platforms:
+  - name: AIX
+    versions:
+    - all
+
+  galaxy_tags: [aix]
+  dependencies: []

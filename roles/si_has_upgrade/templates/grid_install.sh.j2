@@ -1,0 +1,27 @@
+# Copyright (c) IBM Corporation 2023
+# This script performs Grid silent install with "upgrade" option along with release update using gridSetup.sh
+
+grid_home="{{ grid_home }}"
+apply_ru="{{ apply_ru }}"
+ru_zip="{{ ru_zip }}"
+ruid=$(expr "$ru_zip" : '^.*p\([0-9]*\)_.*$')
+install_log="{{ temp_dir }}/grid_install.out"
+if [ ! -f "{{ temp_dir }}/grid.install.done" ]; then
+    if [ $apply_ru == "True" ]; then
+        if [ `grep patched $grid_home/install/files.lst | wc -l` == 0 ]; then
+           export SKIP_ROOTPRE="TRUE" && $grid_home/gridSetup.sh -applyRU "{{ sw_stage }}/$ruid" -silent -responsefile "{{ temp_dir }}/{{ response_file }}" > $install_log 2>&1
+           else
+           export SKIP_ROOTPRE="TRUE" && $grid_home/gridSetup.sh -silent -responsefile "{{ temp_dir }}/{{ response_file }}" > $install_log 2>&1
+        fi
+    fi
+fi
+
+if grep -q 'Successfully Setup Software' $install_log; then
+  touch "{{ temp_dir }}/grid.install.done"
+  echo "Grid install done"
+else
+  echo "ERROR: gridSetup.sh failed. See $install_log for details."
+  exit 1
+fi
+  
+exit 0

@@ -32,6 +32,8 @@ Following functionalities can be achieved with this collection.
 
 4. Underscores have been used instead of hyphens for role names.
 
+5. Upgrade Oracle Single Instance Grid Infrastructure & Databases from 12c to 19c.
+
 # Getting started with the collection:
 
 - Install Ansible >= 2.9 on any x86 platform.
@@ -79,6 +81,53 @@ https://www.ibm.com/support/pages/oracle-db-rac-19c-ibm-aix-tips-and-considerati
 To get started with AIX refer
 
 https://www.ibm.com/support/knowledgecenter/ssw_aix_72/navigation/welcome.html
+
+# New release PODBA 2.0
+
+Introducing three new roles to upgrade Single Instance Grid Infrastructure & the databases from 12c to 19c.
+
+Playbook:
+```
+- hosts: ansible_db                        # Provide the name of the target lpar registered in ansible_inventory.
+  remote_user: root                      # This needs to be run by "root" user.
+  gather_facts: False
+  vars_files:
+      - /home/ansible/shiva/vars/globalvars.yml
+      - /home/ansible/shiva/vars/vault.yml
+  roles:
+     - role: si_has_upgrade
+       tags: si_has_upgrade
+     - role: oracle_install
+       tags: oracle_install
+     - role: db_upgrade
+```
+
+Roles used by the playbook:
+
+```
+-	si_has_upgrade: Upgrades Single Instance 12c Grid to 19c.
+-	oracle_install: Installs 19c Oracle database home with release update patch
+-	db_upgrade: Upgrades the database using autoupgrade.jar utility. Provides following upgrade features. 
+	o	Full Database upgrade: Existing 12c Non-CDB (or) CDB database upgrade to 19c.
+	o	Non-container to Pluggable Database upgrade: Existing 12c Non-CDB will be plugged and upgraded into 19c Container Database. It won’t create new databases in 19c environment, users have to create a new container database in 19c and use this feature.
+```
+
+Steps to execute:
+
+```
+1.	Open the variables file upgrade_si_vars.yml under - ansible-power-aix-oracle-dba/playbooks/vars/upgrade and update all the variables as per your environment. Instructions to update the variables are provided in the variables file itself.
+2.	Open vault.yml file under - ansible-power-aix-oracle-dba/playbooks/vars and update the asm sys password. Encrypt the file using ansible-encrypt. Ansible Vault is a security utility provided by Ansible to encrypt files which contain sensitive information such as passwords. Refer: A brief introduction to Ansible Vault | Enable Sysadmin (redhat.com)
+3.	Open the playbook file upgrade_si.yml under - ansible-power-aix-oracle-dba/playbooks and update your target lpar hostname as mentioned in your ansible inventory file.
+4.	For the database upgrade – we are using the following tags to segregate the execution between “Analyze” & “Deploy” modes.
+	a.	predbupgrade - this will perform prechecks.
+	b.	analyze - this will execute autoupgrade in analyze mode.
+	c.	deploy - this will execute autoupgrade in deploy mode.
+5.	The playbook should be executed twice as shown below. 1st time execution 5 (a) will run SIHA upgrade, Oracle Install & Database upgrade in analyze mode. Users should review the logs and act on the errors/recommendations reported by the autoupgrade tool and rerun the playbook 5 (b)
+	a.	ansible-playbook upgrade_si.yml -i inventory.yml --ask-vault-pass --tags si_upgrade,ora_install,predbupgrade,analyze
+	b.	ansible-playbook upgrade_si.yml -i inventory.yml --ask-vault-pass --tags deploy
+6.	To execute individual roles, kindly use tags. Each role has a tag with the same name. For example: To execute only SI Grid Upgrade, run the following command.
+	a.	ansible-playbook upgrade_si.yml -i inventory.yml --ask-vault-pass --tags si_upgrade
+```
 
 # Executing PowerODBA collection using Ansible Automation Platform 2 (AAP2)
 

@@ -1,0 +1,70 @@
+- block:
+   - name: Autoupgrade Non CDB to PDB | Checking Source database name in /etc/oratab file
+     shell: "grep {{ source_db_name }}:{{ source_db_home }} /etc/oratab |wc -l |sed 's/ //g'"
+     register: sdboratab
+   - fail:
+        msg: Source database {{ source_db_name }} not found in /etc/oratab. Please recheck.
+     when: sdboratab.stdout == "0"
+
+   - name: Autoupgrade Non CDB to PDB | Checking Target Container database name in /etc/oratab file
+     shell: "grep {{ target_cdb_name }}:{{ target_db_home }} /etc/oratab |wc -l |sed 's/ //g'"
+     register: tdboratab
+   - fail:
+        msg: Target Container database {{ target_cdb_name }} not found in /etc/oratab. Please recheck.
+     when: tdboratab.stdout == "0"
+
+   - name: Autoupgrade Non CDB to PDB | Checking the status of Source DB
+     ansible.builtin.shell: "ps -ef|grep pmon|grep -v grep |grep {{ source_db_name }} | wc -l"
+     register: sdbrun
+   - fail:
+        msg: The Source database {{ source_db_name }} is not up and running. Please start the DB to continue.
+     when: sdbrun.stdout == "0"
+
+   - name: Autoupgrade Non CDB to PDB | Checking the status of Container DB
+     ansible.builtin.shell: "ps -ef|grep pmon|grep -v grep |grep {{ target_cdb_name }} | wc -l"
+     register: cdbrun
+   - fail:
+        msg: The Target container database {{ target_cdb_name }} is not up and running. Please start the DB to continue.
+     when: cdbrun.stdout == "0"   
+
+   - name: Autoupgrade Non CDB to PDB | Creating Autoupgrade Stage directory
+     ansible.builtin.file:
+       path: "{{ oracle_rsp_stage }}"
+       state: directory
+
+   - name: Autoupgrade Non CDB to PDB |  Generating response file for autoupgrade
+     template:
+       src=noncdbtopdb.cfg.j2
+       dest="{{ oracle_rsp_stage }}/noncdbtopdb.cfg"
+       owner="{{ oracle_user }}"
+       group="{{ oracle_group }}"
+       mode=744
+       backup=no
+  when: noncdb_pdb
+  tags: predbupgrade
+
+- block:
+  - name: Autoupgrade Non CDB to PDB | Analyze
+    shell: "{{ jdk_home }}/java -jar {{ autoupgrade_stage }}/autoupgrade.jar -config {{ oracle_rsp_stage }}/noncdbtopdb.cfg -mode analyze -noconsole"
+    environment: "{{ env }}"
+    become: yes
+    become_user: "{{ oracle_user }}"
+    register: analyze
+  - debug:
+      var: analyze.stdout_lines
+  - debug:
+      msg: Review the specific job number logfiles of Autoupgrade analyze task under {{ log_dir }}/{{ source_db_name }} and take appropriate action before continuing. Fix any errors and follow the recommendations reported in the logs and rerun this playbook, once all the errors are fixed proceed with the upgrade using --tags deploy.
+  when: noncdb_pdb
+  tags: analyze
+
+- block:
+  - name: Autoupgrade Non CDB to PDB | Deploy
+    shell: "{{ jdk_home }}/java -jar {{ autoupgrade_stage }}/autoupgrade.jar -config {{ oracle_rsp_stage }}/noncdbtopdb.cfg -mode deploy -noconsole"
+    environment: "{{ env }}"
+    become: yes
+    become_user: "{{ oracle_user }}"    
+    register: deploy
+  - debug:
+      var: deploy.stdout_lines
+  when: noncdb_pdb
+  tags: deploy
