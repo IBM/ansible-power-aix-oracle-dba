@@ -88,6 +88,8 @@ Introducing three new roles to upgrade Single Instance Grid Infrastructure & the
 
 Readme : https://github.com/IBM/ansible-power-aix-oracle-dba/blob/main/docs/Readme-SI-GI-Upgrade.pdf
 
+![image](https://user-images.githubusercontent.com/103484886/222515953-87f65056-9af9-4c28-b5ee-d4d57ff1a086.png)
+
 Playbook:
 ```
 - hosts: ansible_db                        # Provide the name of the target lpar registered in ansible_inventory.
