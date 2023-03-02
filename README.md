@@ -86,6 +86,8 @@ https://www.ibm.com/support/knowledgecenter/ssw_aix_72/navigation/welcome.html
 
 Introducing three new roles to upgrade Single Instance Grid Infrastructure & the databases from 12c to 19c.
 
+Readme : https://github.com/IBM/ansible-power-aix-oracle-dba/blob/main/docs/Readme-SI-GI-Upgrade.pdf
+
 Playbook:
 ```
 - hosts: ansible_db                        # Provide the name of the target lpar registered in ansible_inventory.
