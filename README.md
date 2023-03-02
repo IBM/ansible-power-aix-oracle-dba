@@ -66,7 +66,7 @@ Following functionalities can be achieved with this collection.
  - The user is familiar with Oracle Database Administration.
  - The user is familiar with the AIX Operating system.
  - The version of AIX is 7.2 TL4 SP1 or later. (It should work on other versions of AIX supported by the oracle database AIX OS requirements, but has not been tested).
- - The version of Oracle Standalone Database is 12.2c & 19c
+ - The version of Oracle Standalone Database is 12c & 19c
  - Uses ibm.power_aix collection modules.
 
 To get started with Ansible refer
