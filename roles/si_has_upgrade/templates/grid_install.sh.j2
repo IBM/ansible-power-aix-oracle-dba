@@ -17,6 +17,7 @@ if [ ! -f "{{ temp_dir }}/grid.install.done" ]; then
 fi
 
 if grep -q 'Successfully Setup Software' $install_log; then
+  rm -rf "{{ temp_dir }}/{{ response_file }}"
   touch "{{ temp_dir }}/grid.install.done"
   echo "Grid install done"
 else

@@ -15,6 +15,10 @@ Following functionalities can be achieved with this collection.
 - Manage ACFS
 - Manage DBMS jobs
 
+PODBA v2.0 and later
+- Upgrade Single Instance Grid & Databases to 19c
+- Download Patches from My Oracle Support
+
 # Additional features distinguished from Oravirt collection
 
 1. Patching

@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: orasw_download_patches
+  author: bartowl <github@bartowl.eu>
+  description: Download patches from My Oracle Support.
+  company: OPITZ CONSULTING
+  license: Apache-2.0
+
+  min_ansible_version: 2.10
+
+  platforms:
+  - name: AIX
+    versions:
+    - all
+
+  galaxy_tags: [aix]
+  dependencies: []

@@ -1,0 +1,12 @@
+# Playbook to download patches from My Oracle Support
+# Supported to download single and multiple patches in one go.
+# Supported ansible version is 2.10 and higher.
+
+- hosts: localhost              # Provide the hostname from the ansible inventory onto which the patches needs to be downloaded. Either localhost or remote host.
+  remote_user: ansible          # Username of the local/remote host where passwordless ssh is setup.
+  gather_facts: False
+  vars_files:
+     - vars/vault_mos.yml       # Set your MOS credentials in this file. Make sure to encrypt this file using Ansible Vault.
+     - vars/vars.yml            # This file contains all the required variables. Update this file with required patchid and versions.
+  roles:
+     - role: orasw_download_patches
