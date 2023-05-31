@@ -70,7 +70,7 @@ PODBA v2.0 and later
  - The user is familiar with Oracle Database Administration.
  - The user is familiar with the AIX Operating system.
  - The version of AIX is 7.2 TL4 SP1 or later. (It should work on other versions of AIX supported by the oracle database AIX OS requirements, but has not been tested).
- - The version of Oracle Standalone Database is 12.2c & 19c
+ - The version of Oracle Standalone Database is 12c & 19c
  - Uses ibm.power_aix collection modules.
 
 To get started with Ansible refer
@@ -91,6 +91,8 @@ https://www.ibm.com/support/knowledgecenter/ssw_aix_72/navigation/welcome.html
 Introducing three new roles to upgrade Single Instance Grid Infrastructure & the databases from 12c to 19c.
 
 Readme : https://github.com/IBM/ansible-power-aix-oracle-dba/blob/main/docs/Readme-SI-GI-Upgrade.pdf
+
+![image](https://user-images.githubusercontent.com/103484886/222515953-87f65056-9af9-4c28-b5ee-d4d57ff1a086.png)
 
 Playbook:
 ```
