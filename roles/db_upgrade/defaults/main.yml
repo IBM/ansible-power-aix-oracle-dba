@@ -1,6 +1,1 @@
-autoupgrade_stage: "{{ autoupgrade_file_loc }}"
-jdk_home: "{{ target_db_home }}/jdk/bin"
-env:
-  ORACLE_HOME: "{{ source_db_home }}"
-  ORACLE_SID: "{{ source_db_name }}"
-  PATH: "{{ source_db_home }}/bin:{{ source_db_home }}/OPatch:$PATH:/bin:/usr/bin::/usr/ccs/bin"
+temp_dir: /tmp/podba_db_upgrade

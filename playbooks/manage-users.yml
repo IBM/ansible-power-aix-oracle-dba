@@ -1,10 +1,15 @@
-- hosts: localhost
-  connection: local
-  pre_tasks:
-   - name: include variables
-     include_vars:
-       dir: vars
-       extensions:
-         - 'yml'
+# Execute this playbook from collection_dir/playbooks
+# Update vars/vault.yml with DB sys password.
+# $ cat vars/vault.yml
+# default_gipass: Oracle4u
+# default_dbpass: Oracle4u
+
+- name: Create DB User
+  hosts: localhost              
+  remote_user: oracle           # Oracle Database Username
+  gather_facts: false
+  vars_files:
+   - vars/vault.yml
+   - vars/vars.yml
   roles:
      - { role: oradb_manage_users }

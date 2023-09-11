@@ -6,13 +6,13 @@
 # Variables
 
 grid_home="{{ grid_home }}"
-config_log="{{ temp_dir }}/config.log"
+config_log="{{ temp_dir }}/logs/config.log"
 
 # Main
 
-if [ -f {{ temp_dir }}/rootupgrade.done ]; then
-	if [ ! -f {{ temp_dir }}/configtools.done ]; then	
-		export SKIP_ROOTPRE="TRUE" && $grid_home/gridSetup.sh -silent -executeConfigTools -responseFile {{ temp_dir }}/{{ response_file }} > $config_log 2>&1
+if [ -f {{ temp_dir }}/done/rootupgrade.done ]; then
+	if [ ! -f {{ temp_dir }}/done/configtools.done ]; then	
+		export SKIP_ROOTPRE="TRUE" && $grid_home/gridSetup.sh -silent -executeConfigTools -responseFile {{ temp_dir }}/scripts/{{ response_file }} > $config_log 2>&1
 	fi
 else
 	echo "ERROR: rootupgrade.sh didn't complete successfully, not proceeding further. Exiting"
@@ -20,7 +20,7 @@ exit 1
 fi
 
 if grep -q "Successfully Configured Software" $config_log; then
-	touch "{{ temp_dir }}/configtools.done"
+	touch "{{ temp_dir }}/done/configtools.done"
 	echo "gridSetup.sh -executeConfigTools completed successfully"
 else
 	echo "ERROR: gridSetup.sh -executeConfigTools failed. See $config_log for details."

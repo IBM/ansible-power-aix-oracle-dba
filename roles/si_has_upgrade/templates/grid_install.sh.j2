@@ -2,24 +2,29 @@
 # This script performs Grid silent install with "upgrade" option along with release update using gridSetup.sh
 
 grid_home="{{ grid_home }}"
+temp_dir="{{ temp_dir }}"
+opatch_sw="{{ opatch_sw }}"
+is_sw_local="{{ is_sw_local }}"
 apply_ru="{{ apply_ru }}"
 ru_zip="{{ ru_zip }}"
 ruid=$(expr "$ru_zip" : '^.*p\([0-9]*\)_.*$')
-install_log="{{ temp_dir }}/grid_install.out"
-if [ ! -f "{{ temp_dir }}/grid.install.done" ]; then
+install_log="{{ temp_dir }}/logs/grid_install.out"
+
+# Installation
+
+if [ ! -f "{{ temp_dir }}/done/grid.install.done" ]; then
     if [ $apply_ru == "True" ]; then
         if [ `grep patched $grid_home/install/files.lst | wc -l` == 0 ]; then
-           export SKIP_ROOTPRE="TRUE" && $grid_home/gridSetup.sh -applyRU "{{ sw_stage }}/$ruid" -silent -responsefile "{{ temp_dir }}/{{ response_file }}" > $install_log 2>&1
+           export SKIP_ROOTPRE="TRUE" && $grid_home/gridSetup.sh -applyRU "{{ sw_stage }}/$ruid" -silent -responsefile "{{ temp_dir }}/scripts/{{ response_file }}" > $install_log 2>&1
            else
-           export SKIP_ROOTPRE="TRUE" && $grid_home/gridSetup.sh -silent -responsefile "{{ temp_dir }}/{{ response_file }}" > $install_log 2>&1
+           export SKIP_ROOTPRE="TRUE" && $grid_home/gridSetup.sh -silent -responsefile "{{ temp_dir }}/scripts/{{ response_file }}" > $install_log 2>&1
         fi
     fi
 fi
 
 if grep -q 'Successfully Setup Software' $install_log; then
-  rm -rf "{{ temp_dir }}/{{ response_file }}"
-  touch "{{ temp_dir }}/grid.install.done"
-  echo "Grid install done"
+  touch "{{ temp_dir }}/done/grid.install.done"
+  echo "gridSetup.sh completed successfully."
 else
   echo "ERROR: gridSetup.sh failed. See $install_log for details."
   exit 1

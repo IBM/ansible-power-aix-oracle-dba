@@ -1,3 +1,2 @@
 collections:
-  - ibm.power_aix
   - ibm.power_aix_oracle_dba

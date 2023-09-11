@@ -1,5 +1,13 @@
+# Execute this playbook from collection_dir/playbooks
+# Update vars/vault.yml with ASM sys password & DB sys password.
+# $ cat vars/vault.yml
+# default_gipass: Oracle4u
+# default_dbpass: Oracle4u
+
 - name: Create a Database
-  hosts: rac91                  # Target Lpar hostname
-  remote_user: oracle           # Remote username
+  hosts: rac93                  # Target LPAR hostname defined in the inventory
+  remote_user: oracle           # Oracle Database Username
+  vars_files:
+   - vars/vault.yml
   roles:
-     - { role: ibm.power_aix_oracle_dba.oradb_create }
+     - { role: oradb_create }

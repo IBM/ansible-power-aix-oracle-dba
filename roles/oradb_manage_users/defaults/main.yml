@@ -10,11 +10,6 @@ db_service_name: "{% if item.0 is defined %}
                   {%- endif %}"
 
 listener_port_template: "{% if item.0.listener_port is defined %}{{ item.0.listener_port }}{% else %}{{ listener_port }}{% endif %}"
-listener_port: 1521             # Database listener port.
-hostname: ansible_db
-oracle_env:
-  ORACLE_HOME: /home/ansible/oracle_client              # Oracle client path installed on Ansible controller.
-  LD_LIBRARY_PATH: /home/ansible/oracle_client/lib      # Oracle client library path installed on Ansible controller.
 
 oracle_databases:
       - users:

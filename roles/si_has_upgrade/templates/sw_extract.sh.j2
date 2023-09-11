@@ -23,18 +23,18 @@ if [ ! -d $grid_home ]; then
    mkdir -p $grid_home
 fi
 
-if [ ! -f "{{ temp_dir }}/sw.unzipped" ]; then
+if [ ! -f "{{ temp_dir }}/done/sw.unzipped" ]; then
    unzip -q $sw_stage/$grid_sw -d $grid_home
-   touch $temp_dir/sw.unzipped
+   touch $temp_dir/done/sw.unzipped
    echo "$grid_home unzipped"
 fi
 
 if [ $apply_ru == True ]; then
-   if [ ! -f "{{ temp_dir }}/opatch.unzipped" ]; then
+   if [ ! -f "{{ temp_dir }}/done/opatch.unzipped" ]; then
       if [ ! -d "$grid_home/OPatch.prev" ]; then
         mv $grid_home/OPatch $grid_home/OPatch.prev
         unzip -q $sw_stage/$opatch_sw -d $grid_home
-        touch "{{ temp_dir }}/opatch.unzipped"
+        touch "{{ temp_dir }}/done/opatch.unzipped"
         echo "$grid_home/OPatch unzipped."
       fi
    fi
@@ -42,9 +42,9 @@ fi
 
 if [ $apply_ru == True ]; then
    if [ $is_sw_local == False ]; then
-      if [ ! -f "$temp_dir/ru.unzipped" ]; then
+      if [ ! -f "$temp_dir/done/ru.unzipped" ]; then
       unzip -q $sw_stage/$ru_zip -d $sw_stage
-      touch "{{ temp_dir }}/ru.unzipped"
+      touch "{{ temp_dir }}/done/ru.unzipped"
       fi
    fi
 fi   

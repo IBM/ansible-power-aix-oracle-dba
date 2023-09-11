@@ -1,14 +1,16 @@
 - name: Checking if Upgrade Task was already done
   ansible.builtin.stat:
-      path: "{{ temp_dir }}/configtools.done"
+      path: "{{ temp_dir }}/done/configtools.done"
   register: upgradedone
-- fail:
+
+- name: Fail if Upgrade Task was already done
+  ansible.builtin.fail:
      msg: Upgrade is already done. Exiting.
   when: upgradedone.stat.exists
 
-- name: Checking if 19c Grid Infra is already setup
+- name: Checking if 19c Grid Infra is installed
   ansible.builtin.stat:
-      path: "{{ temp_dir }}/grid.install.done"
+      path: "{{ temp_dir }}/done/grid.install.done"
   register: installdone
 
 - name: Checking for failed installations
@@ -22,7 +24,7 @@
       state: absent
   when: patchfile.stat.exists
 
-- name: Cleaning up failed installations | podba_temp
+- name: Cleaning up failed installations | {{ temp_dir }}
   ansible.builtin.file:
       path: "{{ temp_dir }}"
       state: absent
@@ -30,68 +32,73 @@
 
 - name: Creating Temp Directory
   ansible.builtin.file:
-     dest={{ temp_dir }}
+     dest={{ temp_dir }}/{{ item }}
      owner={{ grid_user }}
      group={{ grid_group }}
      state=directory
+  with_items:
+     - logs
+     - done
+     - scripts
   changed_when: false
 
-- name: Checking if prechecks already run
+- name: Checking if prechecks script is already run
   ansible.builtin.stat:
-   path: "{{ temp_dir }}/prechecks.log"
+   path: "{{ temp_dir }}/logs/prechecks.log"
   register: prech
 
-- name: Check HAS Version
+- name: Checking current HAS Version
   ansible.builtin.shell: "export ORACLE_HOME={{ grid_home_prev }}; {{ grid_home_prev }}/bin/crsctl query has releaseversion |awk '{print $12}' | sed 's/[][]//g'"
   register: hasversion
   changed_when: false
 
-- name: Getting HAS Version
+- name: Setting fact - HAS Version
   ansible.builtin.set_fact:
     has_version: "{{ hasversion.stdout }}"
 
-- name: Copying prechecks.sh
+- name: Templating out prechecks.sh script
   template:
     src:  prechecks.sh.j2
-    dest: "{{ temp_dir }}/prechecks.sh"
+    dest: "{{ temp_dir }}/scripts/prechecks.sh"
     mode: '755'
   when: not prech.stat.exists
 
-- name: Executing prechecks.sh
-  ansible.builtin.command: "ksh93 {{ temp_dir }}/prechecks.sh"
+- name: Executing prechecks.sh script
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/prechecks.sh"
   become: yes
   become_user: "{{ grid_user }}"
   register: precheck_out
   when: not prech.stat.exists
 
-- debug: var=precheck_out.stdout_lines
+- name: Prechecks Script Output
+  debug: var=precheck_out.stdout_lines
   when: not prech.stat.exists
 
-- name: Copying sw_extract.sh
+- name: Templating out sw_extract.sh
   template:
     src:  sw_extract.sh.j2
-    dest: "{{ temp_dir }}/sw_extract.sh"
+    dest: "{{ temp_dir }}/scripts/sw_extract.sh"
     mode: '755'
 
-- name: Execute sw_extract.sh
-  ansible.builtin.command: "ksh93 {{ temp_dir }}/sw_extract.sh"
+- name: Executing sw_extract.sh
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/sw_extract.sh"
   register: sw_extract_out
   become: yes
   become_user: "{{ grid_user }}"
   changed_when: sw_extract_out.stdout is search('unzipped')
 
-- name: Checking freespace in Grid Install Path
+- name: Checking freespace in Grid Installation Path {{ grid_home }}
   ansible.builtin.shell: "df -g {{ grid_home }} |tail -1|awk '{print $3}'"
   register: grid_home_freespace
   changed_when: false
   when: not installdone.stat.exists and apply_ru
 - fail:
     msg: Insufficient freespace for {{ grid_home }} (85GB freespace required).
-  when: grid_home_freespace.stdout|int < 80 and apply_ru
+  when: not installdone.stat.exists and grid_home_freespace.stdout|int < 80 and apply_ru
 
 - name: Checking if cluvfy already executed
   ansible.builtin.stat:
-   path: "{{ temp_dir }}/grid.install.done"
+   path: "{{ temp_dir }}/done/grid.install.done"
   register: grid_in
 
 - name: Running Cluvfy
@@ -108,7 +115,8 @@
     - not grid_in.stat.exists
     - cluvfy_results is defined and cluvfy_results.stdout_lines | length !=0
 
-- ansible.builtin.pause:
+- name: Pausing to Print Any Cluvfy Errors
+  ansible.builtin.pause:
     prompt: runcluvfy.sh resulted in errors. If unzip is already installed and it still reports an error, it can be ignored safely. Press 'C' to continue the play or 'A' to abort.
   when: 
     - not grid_in.stat.exists
@@ -116,85 +124,87 @@
 - name: Executing rootpre.sh
   shell: "{{ grid_home }}/clone/rootpre.sh"
 
-- name: Copying grid response file
+- name: Templating out Grid Infra Response File
   template:
     src: grid_19c_upgrade.rsp.j2
-    dest: "{{ temp_dir }}/{{ response_file }}"
+    dest: "{{ temp_dir }}/scripts/{{ response_file }}"
     owner: "{{ grid_user }}"
     group: "{{ grid_group }}"
     mode: '0644'
 
-- name: Copying grid_install.sh
+- name: Templating out grid_install.sh Script
   template:
     src: grid_install.sh.j2
-    dest: "{{ temp_dir }}/grid_install.sh"
+    dest: "{{ temp_dir }}/scripts/grid_install.sh"
     owner: "{{ grid_user }}"
     group: "{{ grid_group }}"
     mode: '0755'
 
-- name: Setting Up new 19c Grid for HAS
-  ansible.builtin.command: "ksh93 {{ temp_dir }}/grid_install.sh"
+- name: Setting Up New 19c Grid Infra for HAS
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/grid_install.sh"
   register: new_grid_out
   become: yes
   become_user: "{{ grid_user }}"
 - debug: var=new_grid_out.stdout
 
-- name: Checking if rootupgrade is already executed
+- name: Checking if rootupgrade.sh script is already executed
   ansible.builtin.stat:
-   path: "{{ temp_dir }}/rootupgrade.done"
+   path: "{{ temp_dir }}/done/rootupgrade.done"
   register: configdone
 
-- name: Stopping database services before Root Upgrade
-  ansible.builtin.shell: "export ORACLE_HOME={{ grid_home_prev }} && {{ grid_home_prev }}/bin/srvctl stop database -d {{ item }}"
+- name: Stopping database services before running rootupgrade.sh
+  ansible.builtin.shell: "export ORACLE_HOME={{ grid_home_prev }} && {{ grid_home_prev }}/bin/srvctl stop database -d {{ item.source_db_name }}"
   register: stop_dbs
   failed_when: (stop_dbs.rc not in [0,1,2])
   with_items:
       - "{{ databases }}"  
   when: not configdone.stat.exists 
 
-- name: Copying grid_upgrade.sh
+- name: Templating out grid_upgrade.sh (rootupgrade.sh) script
   template:
     src: grid_upgrade.sh.j2
-    dest: "{{ temp_dir }}/grid_upgrade.sh"
+    dest: "{{ temp_dir }}/scripts/grid_upgrade.sh"
     owner: "{{ grid_user }}"
     group: "{{ grid_group }}"
     mode: '0755'    
 
 - name: Executing grid_upgrade.sh
-  ansible.builtin.command: "ksh93 {{ temp_dir }}/grid_upgrade.sh"
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/grid_upgrade.sh"
   register: grid_upgrade_out
 - ansible.builtin.debug: var=grid_upgrade_out.stdout
 
 - name: Post Grid Upgrade Steps | Copying config_tools.sh
   template:
     src: config_tools.sh.j2
-    dest: "{{ temp_dir }}/config_tools.sh"
+    dest: "{{ temp_dir }}/scripts/config_tools.sh"
     owner: "{{ grid_user }}"
     group: "{{ grid_group }}"
     mode: '0755'
 
 - name: Post Grid Upgrade Steps| Executing Config Tools
-  ansible.builtin.command: "ksh93 {{ temp_dir }}/config_tools.sh"
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/config_tools.sh"
   register: config_tools_out
   become: yes
   become_user: "{{ grid_user }}"
 - ansible.builtin.debug: var=config_tools_out.stdout
 
-- name: Post Grid Upgrade Steps| Checking the Grid Services
+- name: Post Grid Upgrade Steps | Checking if Config Tools is successful.
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/configtools.done"
+  register: postupgrd
+  tags: poststep
+
+- name: Post Grid Upgrade Steps| Status of GI Services
   ansible.builtin.shell: "export ORACLE_HOME={{ grid_home }} && {{ grid_home }}/bin/crsctl stat res ora.cssd"
   register: check_services
   failed_when: check_services.rc not in [0,1,2]
 - ansible.builtin.debug: var=check_services.stdout_lines
 
 - name: Post Grid Upgrade Steps | Starting database services
-  ansible.builtin.stat:
-   path: "{{ temp_dir }}/configtools.done"
-  register: postupgrd
-
-- name: Starting database services
-  ansible.builtin.shell: "export ORACLE_HOME={{ grid_home_prev }} && {{ grid_home_prev }}/bin/srvctl start database -d {{ item }}"
+  ansible.builtin.shell: "export ORACLE_HOME={{ grid_home_prev }} && {{ grid_home_prev }}/bin/srvctl start database -d {{ item.source_db_name }}"
   register: start_dbs
   failed_when: (start_dbs.rc not in [0,1,2])
   with_items:
       - "{{ databases }}"
   when: postupgrd.stat.exists
+  tags: startdbs

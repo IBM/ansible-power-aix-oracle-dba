@@ -1,0 +1,130 @@
+###############################################################################
+# This File contain all the Global Variables required to do the Upgrade.
+# Please update the variables by reading the comments provided at the 
+# beginning of each section.
+# This variables file contain 4 sections:
+#      A - Common Variables.
+#      B - Single Instance HAS Upgrade.
+#      C - Oracle 19c RDBMS installation.
+#      D - Oracle Database Upgrade.
+# Note: When doing the Single Instance Grid Upgrade, provide the Database
+# Names in "source_db_name" of Section - D. Those DBs will be stopped.
+###############################################################################
+
+## Section A - Common Variables
+
+# sw_stage - Provide the path on the AIX lpar where 19c Grid, RDBMS & Release Update patches are placed.
+# db_oracle_sw - Provide 19c RDBMS s/w zipfile name, which is placed in "sw_stage" path on target lpar.
+# grid_sw - Provide 19c Grid s/w zipfile name, which is placed in "sw_stage" path on target lpar.
+# apply_ru - When apply_ru is set to "True", the Grid & RDBMS homes will be patched prior to the installation using "-applyRU <RU number>". Set it to False when only the base version (19.3) needs to be installed.
+# opatch_sw - Provide latest OPatch zipfile name, which is placed in "sw_stage" path on target lpar.
+# ru_zip - Release Update patch zipfile, which is placed in "sw_stage" path on target lpar.
+# is_sw_local -Set to True - if RU patch is already unzipped. Set to False - If Release Update patch zipfile needs to be extracted automatically.
+# ora_inventory - Provide the Central inventory path on the AIX lpar.
+# mgmt_opt - Update CLOUD_CONTROL when you want to manage your Oracle Grid Infrastructure with Enterprise Manager Cloud Control. Leave it blank otherwise.
+# oms_host - Enterprise Cloud Control Hostname. Response file parameter: oracle.install.config.omsHost=
+# oms_port - Enterprise Cloud Control Host Port number. Response file parameter: oracle.install.config.omsPort=
+# oms_em_user - Enterprise Cloud Control Admin Username. Response file parameter: oracle.install.config.emAdminUser=
+
+
+sw_stage: /backup/stage
+db_oracle_sw: V982583-01_193000_db.zip
+grid_sw: V982588-01_193000_grid.zip
+apply_ru: True
+opatch_sw: p6880880_210000_AIX64-5L.zip
+ru_zip: RU19.17-p34416665_190000_AIX64-5L.zip
+is_sw_local: True
+
+ora_inventory: /u01/app/oraInventory
+mgmt_opt:
+oms_host:
+oms_port:
+oms_em_user:
+
+## Section B - Single Instance Grid Variables
+
+# grid_home_prev - Provide the 12c Grid Home Path.
+# grid_home - Provide a new path for 19c Grid home; DON'T create this directory, Ansible will create it.
+# gi_oracle_base - Provide the Base path for the new 19c Grid Home.
+# grid_user - Provide the Grid software owner.
+# grid_group - Provide the Grid software owner's primary group.
+# gi_osdba_group - Provide the Grid software owner's secondary group.
+# gi_osasm_group - Provide asm group (osasm group name).
+# gi_osoper_group - Provide osoper group name, leave it blank if not being used.
+# gi_cluster_name - Leave it blank if it's unavailable.
+
+grid_home_prev: /u01/base/grid12c
+grid_home: /u02/base/grid19c
+
+gi_oracle_base: /u02/base
+grid_user: oracle
+grid_group: oinstall
+gi_osdba_group: dba
+gi_osasm_group: oinstall
+gi_osoper_group:
+gi_cluster_name:
+
+## Section - C
+# Variables for Oracle 19c RDBMS installation
+
+# db_oracle_base - Provide Base path for the new 19c RDBMS Home.
+# db_oracle_user - Provide the RDBMS software owner, ex: oracle.
+# db_oinstall_group - Provide the RDBMS software owner's primary group, ex: oinstall.
+# db_osdba_group - The OSDBA_GROUP is the OS group which is to be granted SYSDBA privileges.
+# db_osoper_dba - The OSOPER_GROUP is the OS group which is to be granted SYSOPER privileges (optional).
+# db_osbkup_dba - The OSBACKUPDBA_GROUP is the OS group which is to be granted SYSBACKUP privileges.
+# db_osdg_dba - The OSDGDBA_GROUP is the OS group which is to be granted SYSDG privileges.
+# db_oskm_dba - The OSKMDBA_GROUP is the OS group which is to be granted SYSKM privileges.
+# db_osrac_dba - The OSRACDBA_GROUP is the OS group which is to be granted SYSRAC privileges.
+
+db_oracle_base: /u02/base
+db_oracle_user: oracle
+db_oinstall_group: oinstall
+db_osdba_group: dba
+db_osoper_dba:
+db_osbkup_dba:
+db_osdg_dba:
+db_oskm_dba:
+db_osrac_dba:
+
+## Section - D
+# Variables for Database
+# 
+# autoupgrade_stage - Provide the path to the latest autoupgrade.jar utility on the target lpar.
+# global_log_dir - Autoupgrade Global Directory. Provide an empty path on the AIX lpar.
+# databases:  # Based on the requirement, more number of databases can be added as a list with the following set of variables.
+#     - source_db_name - Provide 12c Database Name, which needs to be upgraded.
+#       source_db_home - Provide 12c Oracle Home.
+#       target_db_home - Provide 19c Oracle Home, Provide a Non existent path if 19c RDBMS is not already installed.
+#       log_dir - Provide a Non existent path on AIX lpar for Autoupgrade logs files.
+#       start_time: NOW
+#       restoration -  If yes, creates a restore point before upgrade, Flashback must be ON for this option. Set to 'no', if you don't want a restore point to be created.
+# upgrade_node: localhost
+#       run_utlrp: 'yes'
+#       timezone_upg: 'yes'
+#       target_cdb_name - This is only required when upgrading 12c Non CDB into a 19c CDB.
+#       target_pdb_name - This is an optional parameter which will rename the 12c Non-CDB and plugin into 19c CDB. To be used when "target_cdb_name" is set.
+
+autoupgrade_stage: /home/oracle
+global_log_dir: /u02/base/autoupgrade_cdb
+databases:  
+      - source_db_name: devdb
+        source_db_home: /u01/base/db12c
+        target_db_home: /u02/db19c
+        log_dir: /u02/base/autoupgrade_3/dbupgrdlogs
+        start_time: NOW
+        restoration: 'yes'
+        upgrade_node: localhost
+        run_utlrp: 'yes'
+        timezone_upg: 'yes'
+        target_cdb_name:
+        target_pdb_name:
+      - source_db_name: testdb
+        source_db_home: /u01/base/db12c
+        target_db_home: /u02/db19c
+        log_dir: /u02/base/autoupgrade_3/dbupgrdlogs
+        start_time: NOW                 
+        restoration: 'yes'
+        upgrade_node: localhost
+        run_utlrp: 'yes'
+        timezone_upg: 'yes'

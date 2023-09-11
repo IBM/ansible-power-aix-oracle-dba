@@ -10,7 +10,7 @@
 
 # Prerequisites:
 - Needs Patch ID & Oracle Version to download the patches.
-- Go to the collections directory and update vault_mos.yml file under playbooks/vars directory.
+- Go to the collections directory and update vault.yml file under playbooks/vars directory.
 
 ```
 # Provide MOS Username & Password here
@@ -19,10 +19,10 @@ mos_login:
 mos_password:
 ```
 
-- Encrypt the vault_mos.yml file using ansible-vault
+- Encrypt the vault.yml file using ansible-vault
 
 ```
-ansible_vault encrypt vault_mos.yml
+ansible_vault encrypt vault.yml
 ```
  
 - Go to the collections directory and update vars.yml file under playbooks/vars directory as shown below. 
@@ -51,7 +51,7 @@ oracle_sw_patches:                     # Provide the patchid & relevant version 
   remote_user: ansible          # Username of the local/remote host where passwordless ssh is setup.
   gather_facts: False
   vars_files:
-     - vars/vault_mos.yml       # Set your MOS credentials in this file. Make sure to encrypt this file using Ansible Vault.
+     - vars/vault.yml       # Set your MOS credentials in this file. Make sure to encrypt this file using Ansible Vault.
      - vars/vars.yml            # This file contains all the required variables. Update this file with required patchid and versions.
   roles:
      - role: orasw_download_patches

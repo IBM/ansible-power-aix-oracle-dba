@@ -1,2 +1,5 @@
-asm_password: abc
-root_password: abc
+default_gipass: Oracle4u        # ASM sys user password
+default_dbpass: Oracle4u             # Sys user password
+
+mos_login:                      # My Oracle Support username.
+mos_password:                   # My Oracle Support password.

@@ -1,23 +1,56 @@
 # Copyright (c) IBM Corporation 2023
 # This script performs Oracle silent installation along with release update.
 
-oracle_home="{{ db_oracle_home }}"
+db_oracle_home="{{ item.oracle_home }}"
+oh="{{ item.oh }}"
+temp_dir="{{ temp_dir }}"
+sw_stage="{{ sw_stage }}"
+db_oracle_sw="{{ db_oracle_sw }}"
 apply_ru="{{ apply_ru }}"
+opatch_sw="{{ opatch_sw }}"
 ru_zip="{{ ru_zip }}"
 ruid=$(expr "$ru_zip" : '^.*p\([0-9]*\)_.*$')
-install_log="{{ temp_dir }}/oracle_install.out"
-if [ ! -f "{{ temp_dir }}/oracle.install.done" ]; then
+install_log="{{ temp_dir }}/logs/oracle_install.$oh.out"
+response_file=oracle_19c_install_"{{ item.oh }}".rsp
+
+# Main
+# SW Extract
+if [ ! -d $db_oracle_home ]; then
+   mkdir -p $db_oracle_home
+fi
+
+if [ ! -f "{{ temp_dir }}/done/sw.$oh.unzipped" ]; then
+   unzip -q $sw_stage/$db_oracle_sw -d $db_oracle_home
+   touch $temp_dir/done/sw.$oh.unzipped
+   echo "Extraced 19c software in $db_oracle_home"
+fi
+
+if [ $apply_ru == True ]; then
+   if [ ! -f "{{ temp_dir }}/done/opatch.$oh.unzipped" ]; then
+      if [ ! -d "$db_oracle_home/OPatch.prev" ]; then
+        mv $db_oracle_home/OPatch $db_oracle_home/OPatch.prev
+        unzip -q $sw_stage/$opatch_sw -d $db_oracle_home
+        touch "{{ temp_dir }}/done/opatch.$oh.unzipped"
+        echo "$db_oracle_home/OPatch unzipped."
+      fi
+   fi
+fi
+
+# Installation
+
+if [ ! -f "{{ temp_dir }}/done/oracle.install.$oh.done" ]; then
     if [ $apply_ru == "True" ]; then
-        if [ `grep patched $oracle_home/install/files.lst | wc -l` == 0 ]; then
-           export SKIP_ROOTPRE="TRUE" && $oracle_home/runInstaller -applyRU "{{ sw_stage }}/$ruid" -silent -responsefile "{{ temp_dir }}/{{ response_file }}" > $install_log 2>&1
+        if [ `grep patched $db_oracle_home/install/files.lst | wc -l` == 0 ]; then
+           /bin/sh $db_oracle_home/clone/rootpre.sh
+           export SKIP_ROOTPRE="TRUE" && $db_oracle_home/runInstaller -applyRU "{{ sw_stage }}/$ruid" -silent -responsefile "{{ temp_dir }}/scripts/$response_file" > $install_log 2>&1
            else
-           export SKIP_ROOTPRE="TRUE" && $oracle_home/runInstaller -silent -responsefile "{{ temp_dir }}/{{ response_file }}" > $install_log 2>&1
+           export SKIP_ROOTPRE="TRUE" && $db_oracle_home/runInstaller -silent -responsefile "{{ temp_dir }}/scripts/$response_file" > $install_log 2>&1
         fi
     fi
 fi
 
 if grep -q 'Successfully Setup Software' $install_log; then
-  touch "{{ temp_dir }}/oracle.install.done"
+  touch "{{ temp_dir }}/done/oracle.install.$oh.done"
   echo "Oracle install done"
 else
   echo "ERROR: runInstaller failed. See $install_log for details."

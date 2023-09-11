@@ -5,6 +5,11 @@
     with_items: "{{ oracle_databases }}"
     tags: set_fact
 
+  - name: Create Stage directory for response file.
+    ansible.builtin.file:
+      path: "{{ oracle_rsp_stage }}"
+      state: directory
+
   - include: listener.yml
     when: create_listener
     tags: listener
@@ -36,11 +41,6 @@
     tags:
     - dbcaresponse
 
-  # - debug: var="{{ oracle_home_db }}/bin/dbca -createDatabase -responseFile {{ oracle_rsp_stage }}/{{ oracle_dbca_rsp }} -silent -redoLogFileSize {{ item.0.redolog_size_in_mb }} {{ dbca_initParams }}"
-  #   with_together:
-  #    - "{{oracle_databases}}"
-  #    - "{{checkdbexist.results}}"
-  #
   - name: Create database(s)
     shell: "time {{ oracle_home_db }}/bin/dbca -createDatabase -responseFile {{ oracle_rsp_stage }}/{{ oracle_dbca_rsp }} -silent -redoLogFileSize {{ item.0.redolog_size_in_mb }} {{ dbca_initParams }}"
     with_together:
@@ -78,27 +78,27 @@
     - "{{dbs.results}}"
     tags: dotprofile_db
 
-  - name: Update oratab
-    lineinfile: dest=/etc/oratab line="{{ item.1.stdout }}:{{ oracle_home_db }}:N" state=present
-    with_together:
-    - "{{oracle_databases}}"
-    - "{{dbs.results}}"
-    when: item.0.oracle_db_type != "SI"
-    tags: update_oratab
+#  - name: Update oratab
+#    lineinfile: dest=/etc/oratab line="{{ item.1.stdout }}:{{ oracle_home_db }}:N" state=present
+#    with_together:
+#    - "{{oracle_databases}}"
+#    - "{{dbs.results}}"
+#    when: item.0.oracle_db_type != "SI"
+#    tags: update_oratab
 
-  - name: Customize oratab for autostart
-    lineinfile: dest=/etc/oratab line="{{ item.oracle_db_name }}:{{ oracle_home_db }}:Y" state=present
-    with_items:
-         - "{{ oracle_databases }}"
-    when: autostartup_service
-    tags: update_oratab
+#  - name: Customize oratab for autostart
+#    lineinfile: dest=/etc/oratab line="{{ item.oracle_db_name }}:{{ oracle_home_db }}:Y" state=present
+#    with_items:
+#         - "{{ oracle_databases }}"
+#    when: autostartup_service
+#    tags: update_oratab
 
-  - name: Customize oratab for autostart
-    lineinfile: dest=/etc/oratab line="{{ item.oracle_db_name }}:{{ oracle_home_db }}:N" state=absent
-    with_items:
-         - "{{ oracle_databases }}"
-    when: autostartup_service
-    tags: update_oratab
+#  - name: Customize oratab for autostart
+#    lineinfile: dest=/etc/oratab line="{{ item.oracle_db_name }}:{{ oracle_home_db }}:N" state=absent
+#    with_items:
+#         - "{{ oracle_databases }}"
+#    when: autostartup_service
+#    tags: update_oratab
 
   - name: Check if database is running
     shell: ps -ef |grep pmon |grep -v grep
@@ -106,7 +106,6 @@
      - psout
     register: psout
     ignore_errors: true
-
 
   - debug: var=psout.stdout_lines
     tags:
