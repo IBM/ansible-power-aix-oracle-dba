@@ -10,6 +10,7 @@
   gather_facts: false
   vars_files:
    - vars/vault.yml
-   - vars/vars.yml
+   - vars/manage-users-vars.yml
   roles:
      - { role: oradb_manage_users }
+     - { role: oradb_manage_grants }

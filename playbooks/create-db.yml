@@ -5,9 +5,10 @@
 # default_dbpass: Oracle4u
 
 - name: Create a Database
-  hosts: rac93                  # Target LPAR hostname defined in the inventory
+  hosts: ansible_db                  # Target LPAR hostname defined in the inventory
   remote_user: oracle           # Oracle Database Username
   vars_files:
+   - vars/create-db-vars.yml
    - vars/vault.yml
   roles:
      - { role: oradb_create }

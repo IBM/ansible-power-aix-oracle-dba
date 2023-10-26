@@ -15,9 +15,24 @@ Following functionalities can be achieved with this collection.
 - Manage ACFS
 - Manage DBMS jobs
 
-PODBA v2.0 and later
+Version Change history:
+
+PODBA v2.0.3
+- Introduced standalone variables file path.
+- Refinement of documentation.
+- Documentation provided to execute playbooks from AAP2 GUI.
+
+PODBA v2.0.2
 - Upgrade Oracle 12c Single Instance Grid Infrastructure & Multiple Databases to Oracle 19c.
+
+PODBA v2.0.1
 - Download Patches from My Oracle Support.
+
+PODBA v2.0.0
+- Upgrade Oracle 12c Single Instance Grid Infrastructure & Databases to Oracle 19c.
+
+PODBA v1.0.0
+- Base release
 
 # Documentation:
 

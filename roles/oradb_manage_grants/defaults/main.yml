@@ -12,39 +12,8 @@ db_service_name: "{% if item.0 is defined %}
                   {%- endif %}"
 
 oracle_env:
-  ORACLE_HOME: /home/ansible/oracle_client              # Oracle 19c Client home location on Ansible controller.
-  LD_LIBRARY_PATH: /home/ansible/oracle_client/lib      # Oracle 19c Client Lib path on Ansible controller.
+     ORACLE_HOME: "{{ oracle_db_home }}"
+     LD_LIBRARY_PATH: "{{ oracle_db_home}}"
+     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
 
 listener_port_template: "{% if item.0.listener_port is defined %}{{ item.0.listener_port }}{% else %}{{ listener_port }}{% endif %}"
-listener_port: 1521                     # Database Listener port number.
-hostname: ansible_db                    # AIX Lpar hostname, SCAN name in case of RAC>
-oracle_databases:
-#      - users:
-#         - schema: dbuser1          # CDB Schema user to be granter privileges.
-#        default_tablespace: users       # Schema's default tablespace.
-#        db_password_cdb: oracle         # Sys user password.
-#        service_name: ansible.pbm.ihost.com          # Service name of the CDB.
-#        grants_mode: enforce            # enforce|append
-#        grants: 
-#         - connect                      # Role/Grants to be assigned to the schema.
-#         - resource
-#        container: all
-#        state: absent                   # present - added to the user|absent - removed from the user| REMOVEALL will remove ALL role/sys privileges.
-      - roles: 
-         - role: test                 # role name
-        grants_mode: enforce            # enforce|append
-        grants:
-         - connect                      # Role/Grants to be assigned to the schema.
-         - resource
-        oracle_db_name: ansible.pbm.ihost.com         # Service name of the PDB.
-        state: present                   # present - adds privileges to the role|absent - removes grants from the role| REMOVEALL will remove ALL role/sys privileges.
-
-oracle_pdbs:
-      - users:
-         - schema: DBuser2            # PDB Schema user to be granter privileges.
-        service_name: ansipdb.pbm.ihost.com         # Service name of the PDB.
-        grants_mode: enforce
-        grants:
-         - dba                          # Role/Grants to be assigned to the schema.
-        state: present                  # present|absent.
-      - role: ansirole2                # role name

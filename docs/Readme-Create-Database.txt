@@ -1,111 +1,156 @@
 # Create a database - Readme
 # ==========================
 
-# Description: This module is used to create database on File system/ASM. 
-# Can be used to create cluster database.
-# Multitenant database can also be created.
+# Description: This module is used to create database on File system/ASM.
+# The role "oradb_create" is used to create databases. It can be used for a Non Container Database (CDB) instance or a CDB in a Single Instance or RAC. 
 # Reference: https://docs.oracle.com/en/database/oracle/oracle-database/19/cwlin/running-dbca-using-response-files.html#GUID-E84CE996-B30C-4DCA-AE4C-1E90201317C2
 
-# Prerequisites:
-# ==============
-# Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
+In the following example we're going to create a RAC Container Database (CDB) called “devdb” with one PDB called “devpdb”.
+1. Passwordless SSH must be established between Ansible user & Oracle Database user.
+2. Define the required hostname in an inventory file to be used to execute the playbook.
+3. There are three files which needs to be updated:
+	a. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml: This file contains the SYS user password of ASM and SYS password which needs to set to 
+the new database.
+	b. {{ collection_dir }}/power_aix_oracle_dba/playbooks/create-db.yml: This file contains the playbook which executes the “oradb_create” role.
+	c. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/create-db-vars.yml: This file contains all the required variables required to create a database. Multiple databases can be created by providing the variables as a list.
 
-# Go to the collection directory 
-# Decrypt the file (if it's already encrypted)
-# ansible-vault decrypt playbooks/vars/vault.yml
-Vault password:
-Decryption successful
-# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vault.yml.
-# Encrypt the file
-# ansible-vault encrypt playbooks/vars/vault.yml
-New Vault password:
-Confirm New Vault password:
-Encryption successful
+4. Update the {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml file with the passwords.
+	a. Go to the playbooks directory and update the file with system password for asm and dba
+$ cat vault.yml
+default_gipass: Oracle4u
+default_dbpass: Oracle4u
+	b. Encrypt the file using the command:
+$ ansible-vault encrypt vault.yml
 
-# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vault.yml.
-# Set ASMSNMP password for "default_gipass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vault.yml.
-
-# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oradb_create/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
-
-  hostgroup: "{{ group_names[0] }}"
-  oracle_dbca_rsp: "dbca_{{ item.0.oracle_db_name }}.rsp"        # Name of responsefile used by dbca. One per database
-  oracle_netca_rsp: "netca_{{ item.home }}_{{ listener_name_template }}.rsp"
-  oracle_user: oracle                        			# User that will own the Oracle Installations.
-  oracle_user_home: "/home/{{ oracle_user }}" 			# Home directory for oracle_user. Needed for passing in ssh-keys, profiles etc
-  oracle_group: oinstall                          		# Primary group for oracle_user.
-
-  oracle_home_db: "{% if item.0 is defined %}{% if item.0.oracle_home is defined %}{{ item.0.oracle_home}}{% else %}{{ oracle_base }}/{{ item.0.oracle_version_db }}/{{ item.0.home }}{% endif %}{% else %}{% if item.oracle_home is defined %}{{ item.oracle_home }}{% else %}{{ oracle_base }}/{{ item.oracle_version_db }}/{{ item.home }}{% endif %}{% endif %}"
-
-  oracle_stage: /u01/app/stage					# Location on the target AIX lpar to stage response files. Must be created manually.
-  oracle_rsp_stage: "{{ oracle_stage }}/rsp"
-  oracle_inventory_loc: /u01/app/oraInventory
-  oracle_base: /u01/base
-  oracle_profile_name: ".profile_{{ item.oracle_db_name }}"       # Name of profile-file. Sets up the environment for that database. One per database
-  oracle_dbf_dir_fs: /oradata/db12c2                              # If storage_type=FS this is where the database is placed.
-  oracle_reco_dir_fs: /oradata/db12c2                             # If storage_type=FS this is where the fast recovery area is placed.
-  oracle_dbf_dir_asm: '+DATA2'                                    # If storage_type=ASM this is where the database is placed.
-  oracle_reco_dir_asm: '+DATA2'                                   # If storage_type=ASM this is where the fast recovery area is placed
-  datafile_dest: "{% if item.0.storage_type|upper == 'FS' %}{{ oracle_dbf_dir_fs }}{% elif item.0.storage_type|upper == 'ASM' %}{{ oracle_dbf_dir_asm }}{% else %}{% endif %}"
-  recoveryfile_dest: "{% if item.0.storage_type|upper == 'FS' %}{{ oracle_reco_dir_fs }}{% elif item.0.storage_type|upper == 'ASM' %}{{ oracle_reco_dir_asm }}{% else %}{% endif %}"
-  configure_cluster: True       				# Set it true when creating RAC database
-  #oracle_install_option_gi: "none"
-  oracle_gi_cluster_type: STANDARD
-  hostgroup_hub: "{{ hostgroup }}-hub"
-  hostgroup_leaf: "{{ hostgroup }}-leaf"
-  create_listener: "{% if oracle_install_option_gi is defined %}False{% elif oracle_install_option_gi is undefined %}{% if item.listener_name is defined %}True{% else %}False{% endif %}{% endif %}"
-  listener_name_template: "{% if item.listener_name is defined %}{{ item.listener_name }}{% else %}{{ listener_name }}{% endif %}"
-  listener_protocols_template: "{% if item.listener_protocols is defined %}{{ item.listener_protocols }}{% else %}{{ listener_protocols }}{% endif %}"
-  listener_port_template: "{% if item.listener_port is defined %}{{ item.listener_port }}{% else %}{{ listener_port }}{% endif %}"
-  listener_name: ANSILIST
-  listener_protocols: TCP
-  listener_port: 1521
-  autostartup_service: false
-
-# Everything between the lines START-OF-PASSWORDS & END-OF-PASSWORDS can be
-# put in an external passwords.yml file and be encrypted by Vault.
-# The file should be put in 'group_vars/<your-config>/passwords.yml'
-# This example will be broken out to a passwords.yml as soon as is allowed in ansible
-
-## Start of passwords.
-
-default_gipass: Oracle123				# asmsnmpPassword.
-
-default_dbpass: Oracle123				# Common passwords for the database users. [Sys, system, pdbadmin, dbsnmp].
-
-## End of passwords.
-
-  dbca_templatename: General_Purpose.dbc
-  dbca_initParams: "{% if '19.3' in item.0.oracle_version_db %} -initParams db_name={{item.0.oracle_db_name}}{% if item.0.oracle_db_unique_name is defined %},db_unique_name={{item.0.oracle_db_unique_name}}{% endif %}{% endif %}"
-
-# This is an example layout of a database installation
-  oracle_databases:                                            	# Dictionary describing the databases to be installed
-        - home: db1                                            	# 'Last' directory in ORACLE_HOME path (e.g /u01/app/oracle/12.1.0.2/racdb)
-          oracle_version_db: 19.3.0.0                    	# Oracle version
-          oracle_home: /u01/app/19c_ansible			# Oracle Home location.
-          oracle_edition: EE                                   	# The edition of database-server (EE,SE,SEONE)
-          oracle_db_name: db19c                                 # Database name
-          oracle_db_type: RAC                                   # Type of database (RAC,RACONENODE,SI)
-          is_container: True                                  	# (true/false) Is the database a container database
-          pdb_prefix: db19cpdb					# Pluggable database name.
-          num_pdbs: 1						# Number of pluggable databases.
-          storage_type: ASM                                     # Database storage to be used. ASM or FS.
-          service_name: db19c                              	# Inital service to be created.
-          oracle_init_params: ""                               	# Specific parameters to be set during installation. Comma-separated list
-          oracle_db_mem_totalmb: 10000                          # Amount of RAM to be used for SGA + PGA
-          oracle_database_type: MULTIPURPOSE                   	# MULTIPURPOSE|DATA_WAREHOUSING|OLTP
-          redolog_size_in_mb: 50				# Redolog size in MB
-          listener_name: LISTENER				# Listener name for creation
-          state: present                                        # present | absent
-
-# Executing the playbook: This playbook executes a role. Before running the playbook, open the playbook and update the hostname & remote user details as shown below. Do NOT change other parts of the script.
-# Change directory to ansible-power-aix-oracle-dba/playbooks
-# Name of the Playbook: create-db.yml
-# Content of the playbook
-
+5. Update the hosts and remote_user in the directory: {{ collection_dir }}/power_aix_oracle_dba/playbooks/create-db.yml file.
 - name: Create a Database
-  hosts: rac91                  # Target Lpar hostname
-  remote_user: oracle           # Remote username
+  hosts: rac91 # Target LPAR hostname defined in the inventory file.
+  remote_user: oracle # Oracle Database Username
+  vars_file:
+   - vars/create-db-vars.yml
+   - vars/vault.yml
   roles:
-     - { role: ibm.power_aix_oracle_dba.oradb_create }
+   - { role: ibm.power_aix_oracle_dba.oradb_create }
+ 
+ 6. Update the following variables in {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/create-db-vars.yml 
+ oracle_stage: /tmp # Location on the target AIX LPAR to stage response files.
+ oracle_inventory_loc: /u01/app/oraInventory
+ oracle_base: /u01/base
+ oracle_dbf_dir_asm: '+DATA1' # If storage_type=ASM this is where the database is placed.
+ oracle_reco_dir_asm: '+DATA1' # If storage_type=ASM this is where the fast recovery area is 
+ oracle_databases: # Dictionary describing the databases to be created.
+  - home: db1 
+    oracle_version_db: 19.3.0.0 # For a 19c database, the version should be 19.3.0.0
+    oracle_home: /u01/app/19c_ansible # Oracle Home location.
+    oracle_edition: EE # The edition of database-server (EE,SE,SEONE)
+    oracle_db_name: devdb # Database name
+    oracle_db_type: RAC # Type of database (RAC,RACONENODE,SI)
+    is_container: True # (true/false) Is the database a container database.
+    pdb_prefix: devpdb # Pluggable database name.
+    num_pdbs: 1 # Number of pluggable databases.
+    storage_type: ASM # Database storage to be used. ASM or FS.
+    service_name: db19c # Inital service to be created.
+    oracle_init_params: "" # initialization parameters, comma separated
+    oracle_db_mem_totalmb: 10000 # Amount of RAM to be used for SGA + PGA
+    oracle_database_type: MULTIPURPOSE # MULTIPURPOSE|DATA_WAREHOUSING|OLTP
+    redolog_size_in_mb: 512 # Redolog size in MB
+    state: present 	# present | absent 
 
-# ansible-playbook create-db.yml --ask-vault-pass
+7. Verify the DB does not currently exist as shown below
+bash-5.1$ srvctl status database -d devdb
+PRCD-1120 : The resource for database devdb could not be found.
+PRCR-1001 : Resource ora.devdb.db does not exist
+
+8. Execute the following command to run the playbook below
+[ansible@x134vm236 playbooks]$ ansible-playbook create-db.yml -i inventory.yml 
+--ask-vault-pass
+Vault password:
+[DEPRECATION WARNING]: "include" is deprecated, use include_tasks/import_tasks instead. 
+This feature will be removed in version 2.16.
+Deprecation warnings can be disabled by setting deprecation_warnings=False in ansible.cfg.
+PLAY [Create a Database] 
+*******************************************************************************************
+TASK [Gathering Facts] 
+*******************************************************************************************
+[WARNING]: Platform aix on host rac93 is using the discovered Python interpreter at /usr/bin/python3, but future installation of another Python interpreter could change the meaning of that path. See https://docs.ansible.com/ansiblecore/2.12/reference_appendices/interpreter_discovery.html for more information.
+ok: [rac93]
+TASK [oradb_create : set fact] 
+*******************************************************************************************
+ok: [rac93] => (item={'home': 'db1', 'oracle_version_db': '19.3.0.0', 'oracle_home': '/u01/app/oracle/db', 'oracle_edition': 'EE', 'oracle_db_name': 'devdb', 'oracle_db_type': 'RAC', 'is_container': True, 'pdb_prefix': 'devpdb', 'num_pdbs': 1, 'storage_type': 'ASM', 'service_name': 'devdb', 'oracle_init_params': '', 'oracle_db_mem_totalmb': 10000, 'oracle_database_type': 'MULTIPURPOSE', 'redolog_size_in_mb': 50, 'state': 'present'})
+TASK [oradb_create : Create Stage directory for response file.] 
+***********************************************************************
+ok: [rac93]
+TASK [oradb_create : listener | Create responsefile for listener configuration] 
+*******************************************************
+skipping: [rac93] => (item={'home': 'db1', 'oracle_version_db': '19.3.0.0', 'oracle_home': 
+'/u01/app/oracle/db', 'oracle_edition': 'EE', 'oracle_db_name': 'devdb', 'oracle_db_type':
+.
+.
+.
+Name:devdb', 'System Identifier(SID) Prefix:devdb', 'Look at the log file 
+"/u01/app/oracle/cfgtoollogs/dbca/devdb/devdb.log" for further details.']) => {
+ "ansible_loop_var": "item",
+ "item": [
+ "[WARNING] [DBT-09102] Target environment does not meet some optional 
+requirements.",
+ " CAUSE: Some of the optional prerequisites are not met. See logs for details.",
+ " ACTION: Find the appropriate configuration from the log file or from the 
+installation guide to meet the prerequisites and fix this manually.",
+ "Prepare for db operation",
+ "7% complete",
+ "Copying database files",
+ "27% complete",
+ "Creating and starting Oracle instance",
+ "28% complete",
+ "31% complete",
+ "35% complete",
+ "37% complete",
+ "40% complete",
+ "Creating cluster database views",
+ "41% complete",
+ "53% complete",
+ "Completing Database Creation",
+ "57% complete",
+ "59% complete",
+ "60% complete",
+ "Creating Pluggable Databases",
+ "64% complete",
+ "80% complete",
+ "Executing Post Configuration Actions",
+ "100% complete",
+ "Database creation complete. For details check the logfiles at:",
+ " /u01/app/oracle/cfgtoollogs/dbca/devdb.",
+ "Database Information:",
+ "Global Database Name:devdb",
+ "System Identifier(SID) Prefix:devdb",
+
+"Look at the log file \"/u01/app/oracle/cfgtoollogs/dbca/devdb/devdb.log\" for 
+further details."
+ ]
+}
+
+TASK [oradb_create : Check if database is running] 
+************************************************************************************
+changed: [rac93]
+TASK [oradb_create : debug] 
+*******************************************************************************************
+ok: [rac93] => {
+ "psout.stdout_lines": [
+ " grid 14483936 1 0 00:54:37 - 0:00 asm_pmon_+ASM1",
+ " grid 14745992 1 0 00:54:56 - 0:00 apx_pmon_+APX1",
+ " oracle 21365224 1 0 02:08:59 - 0:00 ora_pmon_devdb1"
+ ]
+}
+PLAY RECAP 
+*******************************************************************************************
+rac93 : ok=11 changed=4 unreachable=0 failed=0 skipped=3 
+rescued=0 ignored=0
+
+NOTE: Some output has been truncated
+
+9. Verify the DB is created by running the commands shown below
+bash-5.1$ srvctl status database -d devdb
+Instance devdb1 is running on node rac93
+Instance devdb2 is running on node rac94
+
+To execute this playbook from GUI, an example is provided in the document, please refer this link: https://github.com/IBM/ansible-power-aix-oracle-dba/blob/main/docs/PowerODBA_using_AAP2.pdf

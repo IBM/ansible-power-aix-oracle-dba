@@ -9,7 +9,7 @@
           password={{ db_password_pdb }}
           mode="{{ db_mode}}"
           schema={{ item.1.schema }}
-          schema_password={{ item.0.user_pdb_password }}
+          schema_password={{ item.0.schema_password }}
           schema_password_hash={{ user_pdb_password_hash | default(omit) }}
           profile={{ item.1.profile |default (omit) }}
           state={{ item.0.state }}

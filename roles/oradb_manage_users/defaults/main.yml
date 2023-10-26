@@ -1,3 +1,8 @@
+oracle_env:
+     ORACLE_HOME: "{{ oracle_db_home }}"
+     LD_LIBRARY_PATH: "{{ oracle_db_home}}"
+     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
+
 db_user: sys
 db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
 db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
@@ -10,17 +15,3 @@ db_service_name: "{% if item.0 is defined %}
                   {%- endif %}"
 
 listener_port_template: "{% if item.0.listener_port is defined %}{{ item.0.listener_port }}{% else %}{{ listener_port }}{% endif %}"
-
-oracle_databases:
-      - users:
-          - schema: DBUser1                           # Username to be created in PDB.
-        default_tablespace: users                       # Default tablespace to be assigned to the created user.
-        service_name: ansiblepdb.pbm.ihost.com            # PDB service name.
-        user_pdb_password: oracle3
-        state: present                                  # present|absent.
-      - users:                                         # Multiple users can be created with different attributes as shown below.
-         - schema: DBUser2
-        default_tablespace: users
-        service_name: ansiblepdb.pbm.ihost.com
-        user_pdb_password: oracle4
-        state: present
