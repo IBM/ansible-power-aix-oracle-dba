@@ -14,8 +14,14 @@ Following functionalities can be achieved with this collection.
 - Manage ASM
 - Manage ACFS
 - Manage DBMS jobs
+- Single Instance Grid Infrastructure and Database Upgrade from 12c to 19c
 
-Version Change history:
+Version Change:
+
+PODBA v2.0.4
+- Enhanced the role "oraswdb_manage_patches" patching module which uses “opatch” utility with restart of database and listener services while patching.
+- Added support for patch staging options – NFS, local (target node) & remote (ansible controller).
+- The role "orasw_download_patches" has been tested to download EBS patches as well.
 
 PODBA v2.0.3
 - Introduced standalone variables file path.

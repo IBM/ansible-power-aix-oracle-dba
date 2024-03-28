@@ -1,6 +1,6 @@
 ---
 galaxy_info:
-  role_name: create_asmdg_aix
+  role_name: podba_create_asm_dg
   description: Ansible role to create ASM diskgroup
   company: IBM
 

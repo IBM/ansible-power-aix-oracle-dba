@@ -1,7 +1,7 @@
 ---
 galaxy_info:
-  role_name: create_acfs_rac
-  description: Ansible role to manage ACFS
+  role_name: manage_acfs_rac
+  description: Ansible role to create/drop ACFS on RAC
   company: IBM
 
   license: Apache-2.0

@@ -1,6 +1,6 @@
 ---
 galaxy_info:
-  role_name: asm_add_disk_aix
+  role_name: podba_asm_add_disk
   description: Ansible role to add ASM disk
   company: IBM
 

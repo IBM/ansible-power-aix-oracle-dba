@@ -1,7 +1,7 @@
 ---
 galaxy_info:
-  role_name: drop_asmdg_disk_aix
-  description: Ansible role to drop ASM DG
+  role_name: podba_asm_drop_disk_dg
+  description: Ansible role to drop ASM DG/Disk
   company: IBM
 
   license: Apache-2.0
