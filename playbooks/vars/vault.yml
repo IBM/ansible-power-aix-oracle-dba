@@ -1,0 +1,5 @@
+default_gipass: Oracle4u             # ASM sys user password.
+default_dbpass: Oracle4u             # Sys user password.
+
+mos_login:                           # My Oracle Support Username.
+mos_password:                        # My Oracle Support Password.
