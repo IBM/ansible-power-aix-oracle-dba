@@ -1,4 +1,10 @@
-- hosts: rac91                        # Provide the name of the target lpar registered in ansible_inventory.
+# This playbook is used to upgrade Standalone Grid from 12c to 19c.
+# Install 19c RDBMS.
+# Upgrades the user listed databases from 12c to 19c.
+#
+# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+#
+- hosts: all                            # Provide the name of the target lpar registered in ansible inventory.
   remote_user: root                     # This needs to be run by "root" user.
   gather_facts: False
   vars_files:

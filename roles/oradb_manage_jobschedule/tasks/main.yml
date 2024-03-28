@@ -1,4 +1,4 @@
-- name: Create Job
+- name: Create DBMS Job Schedule
   oracle_jobschedule:
     hostname: "{{ hostname }}"
     service_name: "{{ service_name }}"

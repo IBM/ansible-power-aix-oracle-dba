@@ -1,10 +1,11 @@
-- hosts: localhost
-  connection: local
-  pre_tasks:
-   - name: include variables
-     include_vars:
-       dir: vars
-       extensions:
-         - 'yml'
+# Playbook to manage database user/role grants.
+# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+#
+- name: Manage DB user/role grants
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+   - vars/vault.yml
+   - vars/manage-grants-vars.yml
   roles:
      - { role: oradb_manage_grants }

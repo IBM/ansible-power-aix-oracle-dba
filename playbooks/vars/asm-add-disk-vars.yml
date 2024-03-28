@@ -1,0 +1,13 @@
+grid_install_user: oracle             # Grid software owner.
+oracle_group: oinstall                     # Grid software owner's primary group.
+oracle_home_gi: /ora/grid     # Grid installation software path.
+oracle_sid: +ASM1                      # SID of the running ASM instance
+asm_diskgroups:                       # Multiple diskgroups can be managed by providing the details as a list.
+  - diskgroup: CPUDB                  # ASM diskgroup name to which the disk needs to be added.
+    disk:
+      - { device: rhdisk8 }           # Raw disk name 1. Multiple raw disks can be added to the list.
+#     - { device: rhdisk8 }           # Raw disk name 2.      
+#  - diskgroup: DATA2                 # ASM diskgroup name to be created.
+#    disk:
+#     - { device: rhdiskasm1 }        # Raw disk name 1. Multiple raw disks can be added to the list.
+#     - { device: rhdiskasm2 }        # Raw disk name 2.      

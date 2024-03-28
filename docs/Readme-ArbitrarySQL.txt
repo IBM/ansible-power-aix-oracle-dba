@@ -1,67 +1,48 @@
 # Run Arbitrary SQL scripts - Readme
 # ==================================
-# Description: This module is used run arbitrary SQL Scripts. Single & multiple sql scripts can be run. It uses a python library located here: ansible-power-aix-oracle-dba/library/oracle_sql.
+# Description: This module is used run arbitrary SQL Scripts. Single & multiple sql scripts can be run. 
 
-# Prerequisites:
-# ==============
+In the following example we're going to run two scripts (one will create a simple table and another one will insert few rows into that table).
 
-# Go to the playbooks directory 
-# Decrypt the file (if it's already encrypted)
-# ansible-vault decrypt vars/vault.yml
-Vault password:
-Decryption successful
-# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vault.yml.
-# Encrypt the file
-# ansible-vault encrypt vars/vault.yml
+1. There are two files which need to be updated:
+        a. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/manage-arbitrarysql-vars.yml: This file contains database hostname, database port number and the path to the Oracle client and other related parameters.
+        b. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml: This contains sys password which will be used by cx_oracle to connect to the database with sysdba privilege.
+
+2. Update the common variables file: {{collection_dir}}/power_aix_oracle_dba/playbooks/vars/manage-arbitrarysql-vars.yml as shown below
+
+hostname: ansible_db                           # AIX hostname where the Database is running.
+service_name: devpdb                           # Database service name.
+listener_port: 1521                            # Database port number.
+oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+sqlfile:
+   - { script: 'create.sql' }   # SQL Script 1 location & name of the file.
+   - { script: 'insert.sql' }   # SQL Script 2 location & name of the file.
+
+3. Update the passwords file: {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml with sys user password. This file needs to be encrypted using ansible-vault. While running the playbook, please provide the vault password.
+default_dbpass: Oracle4u # SYS password
+default_gipass: Oracle4u # ASMSNMP password
+
+4. Encrypt the passwords file using ansible-vault as shown below
+$ ansible-vault encrypt vars/vault.yml
 New Vault password:
 Confirm New Vault password:
 Encryption successful
 
-# Set the Variables for Oracle to execute this task: 
+5. Create the playbook in {{ collection_dir }}/power_aix_oracle_dba/playbooks directory as shown below
 
-# Open the file vars/vars.yml and set the following variables:
-
-hostname: ansible_db                    # AIX lpar hostname
-listener_port: 1521                     # Database port number
-oracle_db_home: /tmp/oracle_client      # Oracle Client location on the ansible controller.
-oracle_env:
-     ORACLE_HOME: "{{ oracle_db_home }}"
-     LD_LIBRARY_PATH: "{{ oracle_db_home}}/lib"
-     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
-
-Open the file ansible-power-aix-oracle-dba/arbitrarysql-task.yml and modify the variables under "vars" section. Do NOT change other sections of the file.
-
-service_name: db122c             # Service name of the database
-user: sys
-db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
-db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
-db_mode: sysdba
-sqlfile:
-    - { script: '/home/ansible/ansible_test/stage/create.sql' }   # SQL Script 1 location & name of the file.
-    - { script: '/home/ansible/ansible_test/stage/insert.sql' }   # SQL Script 2 location & name of the file.
-    - { script: '/home/ansible/ansible_test/stage/insert1.sql' }  # SQL Script 3 location & name of the file.
-    
-# Executing the playbook: This playbook runs using a Role.
-# Change directory to ansible-power-aix-oracle-dba/playbooks
-# Name of the Playbook: manage-arbitrarysql.yml
-# ansible-playbook manage-arbitrarysql.yml --ask-vault-pass
-# The following will get executed..
+$ cat manage-arbitrarysql.yml
 
 - hosts: localhost
   connection: local
-  pre_tasks:
-   - name: include variables
-     include_vars:
-       dir: vars
-       extensions:
-         - 'yml'
+  vars_files:
+   - vars/vault.yml
+   - vars/manage-arbitrarysql-vars.yml
   roles:
      - { role: oradb_manage_sql }
-    
-# Sample output:
-================
 
-[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook arbitrarysql-task.yml --ask-vault-pass
+6. Execute the playbook as shown below
+
+$ ansible-playbook manage-arbitrarysql.yml -i inventory.yml --ask-vault-pass
 Vault password:
 
 PLAY [localhost] **********************************************************************************************************************
@@ -69,93 +50,19 @@ PLAY [localhost] ***************************************************************
 TASK [Gathering Facts] ****************************************************************************************************************
 ok: [localhost]
 
-TASK [oracle_sql] *********************************************************************************************************************
-changed: [localhost] => (item={'script': '/home/ansible/ansible_test/stage/create.sql'})
-changed: [localhost] => (item={'script': '/home/ansible/ansible_test/stage/insert.sql'})
-changed: [localhost] => (item={'script': '/home/ansible/ansible_test/stage/insert1.sql'})
-[WARNING]: The value 1521 (type int) in a string field was converted to '1521' (type string). If this does not look like what you
-expect, quote the entire value to ensure it does not change.
+TASK [oradb_manage_sql : oracle_sql] *************************************************************************
+changed: [localhost] => (item={'script': 'create.sql'})
+changed: [localhost] => (item={'script': 'insert.sql'})
 
-TASK [debug] **************************************************************************************************************************
+TASK [oradb_manage_sql : set_fact] ***************************************************************************
+ok: [localhost]
+
+TASK [oradb_manage_sql : SQL Output] *************************************************************************
 ok: [localhost] => {
-    "output": {
-        "changed": true,
-        "msg": "All items completed",
-        "results": [
-            {
-                "ansible_loop_var": "item",
-                "changed": true,
-                "failed": false,
-                "invocation": {
-                    "module_args": {
-                        "hostname": "ansible_db",
-                        "mode": "sysdba",
-                        "password": "VALUE_SPECIFIED_IN_NO_LOG_PARAMETER",
-                        "port": "1521",
-                        "script": "/home/ansible/ansible_test/stage/create.sql",
-                        "service_name": "db122c",
-                        "sql": null,
-                        "user": "sys",
-                        "username": "sys"
-                    }
-                },
-                "item": {
-                    "script": "/home/ansible/ansible_test/stage/create.sql"
-                },
-                "msg": "Finished running script /home/ansible/ansible_test/stage/create.sql \nContents: \nCREATE TABLE ansible1(person_id NUMBER GENERATED BY DEFAULT AS IDENTITY, first_name VARCHAR2(50) NOT NULL,last_name VARCHAR2(50) NOT NULL);\ninsert into ansible1 (person_id,first_name,last_name) values (10,'ansiuser','2')"
-            },
-            {
-                "ansible_loop_var": "item",
-                "changed": true,
-                "failed": false,
-                "invocation": {
-                    "module_args": {
-                        "hostname": "ansible_db",
-                        "mode": "sysdba",
-                        "password": "VALUE_SPECIFIED_IN_NO_LOG_PARAMETER",
-                        "port": "1521",
-                        "script": "/home/ansible/ansible_test/stage/insert.sql",
-                        "service_name": "db122c",
-                        "sql": null,
-                        "user": "sys",
-                        "username": "sys"
-                    }
-                },
-                "item": {
-                    "script": "/home/ansible/ansible_test/stage/insert.sql"
-                },
-                "msg": "Finished running script /home/ansible/ansible_test/stage/insert.sql \nContents: \ninsert into ansible1 (person_id,first_name,last_name) values (11,'Ansi','User');\ninsert into ansible1 (person_id,first_name,last_name) values (12,'Ansi1','User1')"
-            },
-            {
-                "ansible_loop_var": "item",
-                "changed": true,
-                "failed": false,
-                "invocation": {
-                    "module_args": {
-                        "hostname": "ansible_db",
-                        "mode": "sysdba",
-                        "password": "VALUE_SPECIFIED_IN_NO_LOG_PARAMETER",
-                        "port": "1521",
-                        "script": "/home/ansible/ansible_test/stage/insert1.sql",
-                        "service_name": "db122c",
-                        "sql": null,
-                        "user": "sys",
-                        "username": "sys"
-                    }
-                },
-                "item": {
-                    "script": "/home/ansible/ansible_test/stage/insert1.sql"
-                },
-                "msg": "Finished running script /home/ansible/ansible_test/stage/insert1.sql \nContents: \ninsert into ansible1 (person_id,first_name,last_name) values (13,'Ansi2','User2');\ninsert into ansible1 (person_id,first_name,last_name) values (14,'Ansi3','User3')"
-            }
-        ],
-        "warnings": [
-            "The value 1521 (type int) in a string field was converted to '1521' (type string). If this does not look like what you expect, quote the entire value to ensure it does not change.",
-            "The value 1521 (type int) in a string field was converted to '1521' (type string). If this does not look like what you expect, quote the entire value to ensure it does not change.",
-            "The value 1521 (type int) in a string field was converted to '1521' (type string). If this does not look like what you expect, quote the entire value to ensure it does not change."
-        ]
-    }
+    "sql_ouput": "[\n        \"Finished running script create.sql \nContents: \nCREATE TABLE ansible1(person_id NUMBER GENERATED BY DEFAULT AS IDENTITY, first_name VARCHAR2(50) NOT NULL,last_name VARCHAR2(50) NOT NULL);\ninsert into ansible1 (person_id,first_name,last_name) values (10,'ansiuser','2')\",\n        \"Finished running script insert.sql \nContents: \ninsert into ansible1 (person_id,first_name,last_name) values (11,'Ansi','User');\ninsert into ansible1 (person_id,first_name,last_name) values (12,'Ansi1','User1')\",\n]"
 }
 
 PLAY RECAP ****************************************************************************************************************************
-localhost                  : ok=3    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+localhost                  : ok=4    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+To execute this playbook from GUI, please refer this link: https://github.com/IBM/ansible-power-aix-oracle-dba/blob/main/docs/PowerODBA_using_AAP2.pdf

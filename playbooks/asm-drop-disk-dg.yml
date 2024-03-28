@@ -1,0 +1,11 @@
+# Playbook to Drop ASM Disk/Diskgroup.
+# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+
+- name: Drop ASM Diskgroup/Disk
+  gather_facts: no
+  hosts: rac21                 # AIX Lpar Hostname where the Diskgroup/Disk has to be dropped. Proceed with caution.
+  remote_user: oracle               # Grid Home Owner
+  vars_files:
+   - vars/asm-drop-disk-dg-vars.yml
+  roles:
+     - {role: podba_asm_drop_disk_dg }

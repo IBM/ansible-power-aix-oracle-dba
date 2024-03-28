@@ -1,6 +1,6 @@
 - oracle_sql:
     username: "{{ user }}"
-    password: "{{ password }}"
+    password: "{{ default_dbpass }}"
     service_name: "{{ service_name }}"
     hostname: "{{ hostname }}"
     port: "{{ listener_port }}"
@@ -10,5 +10,15 @@
     - "{{ sqlfile }}"
   environment: "{{ oracle_env }}"
   register: output
-- debug:
-    var: output
+
+- set_fact:
+   sql_ouput: |-
+        [
+        {% for rp in output.results %}
+                "{{ rp.msg }}",
+        {% endfor %}
+        ]
+
+- name: SQL Output
+  debug:
+    var: sql_ouput

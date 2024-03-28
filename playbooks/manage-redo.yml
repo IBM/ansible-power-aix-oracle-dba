@@ -1,11 +1,10 @@
-# Playbook to create redo log groups. Supports ASM file system only. Local Non-ASM file system is not supported.
+# Playbook to manage redo log groups.
+# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+#
 - hosts: localhost
   connection: local
-  pre_tasks:
-   - name: include variables
-     include_vars:
-       dir: vars
-       extensions:
-         - 'yml'
+  vars_files:
+   - vars/vault.yml
+   - vars/manage-redo-vars.yml
   roles:
      - { role: oradb_manage_redo }

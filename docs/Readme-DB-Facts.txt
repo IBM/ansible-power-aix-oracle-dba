@@ -1,53 +1,82 @@
 # Gather Facts of a Database - Readme
 # ===================================
-# Description: This module is used to gather Facts about a Container/Pluggable or Non Multitenant database. It uses a python library located here: ansible-power-aix-oracle-dba/library/oracle_facts
-# Lists out the parameters set, size of tablespaces, Archive log Sequence number, Is a CDB or no etc.
+# Description: This module is used to gather Facts about a Container/Pluggable or Non Multitenant database. It will provide the facts like initialization parameters, size of tablespaces, Archive log Sequence number, Is a CDB or no etc.
 
-# Prerequisites:
-# ==============
+In the following example we're going to get facts about a single instance database called devdb.
 
-# Go to the playbooks directory
-# Decrypt the file (if it's already encrypted)
-# ansible-vault decrypt vars/vault.yml
-Vault password:
-Decryption successful
-# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vault.yml.
-# Encrypt the file
-# ansible-vault encrypt vars/vault.yml
+1. There are two files which need to be updated:
+        a. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/gather-dbfacts-vars.yml: This file contains database hostname, database port number and the path to the Oracle client and other related parameters.
+        b. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml: This contains sys password which will be used by cx_oracle to connect to the database with sysdba privilege.
+
+2. Update the common variables file: {{collection_dir}}/power_aix_oracle_dba/playbooks/vars/gather-dbfacts-vars.yml as shown below
+hostname: ansible_db                    # AIX lpar hostname where the database is running.
+listener_port: 1521                     # Database port number
+oracle_db_home: /home/ansible/oracle_client      # Oracle Client location on the ansible controller.
+service_name: devdb                     # Service name of a PDB or CDB.
+
+3. Update the passwords file: {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml with sys user password. This file needs to be encrypted using ansible-vault. While running the playbook, please provide the vault password.
+default_dbpass: Oracle4u # SYS password
+default_gipass: Oracle4u # ASMSNMP password
+
+4. Encrypt the passwords file using ansible-vault as shown below
+$ ansible-vault encrypt vars/vault.yml
 New Vault password:
 Confirm New Vault password:
 Encryption successful
 
-# Setup the variables for Oracle:
-# Open the file vars/vars.yml and set the following variables:
+5. Create the playbook from {{ collection_dir }}/power_aix_oracle_dba/playbooks directory as shown below
 
-hostname: ansible_db			# AIX lpar hostname
-listener_port: 1521			# Database port number
-oracle_db_home: /tmp/oracle_client      # Oracle Client location on the ansible controller.
-oracle_env:
-     ORACLE_HOME: "{{ oracle_db_home }}"
-     LD_LIBRARY_PATH: "{{ oracle_db_home}}/lib"
-     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
-
-# Open the file ansible-power-aix-oracle-dba/roles/oradb_gather_dbfacts/defaults/main.yml and modify the variables.
-
-service_name: ansidb                               # Service name of a PDB or CDB.
-db_user: sys
-db_mode: sysdba
-
-# Executing the playbook: This playbook runs using a single file where it contain both Oracle related variables as well as ansible task. The connection mode will be "local". The cx_Oracle & Oracle client must be installed on ansible controller before executing this playbook.
-# Name of the Playbook: ansible-power-aix-oracle-dba/gather-db-facts.yml
-# Change directory to ansible-power-aix-oracle-dba
-# ansible-playbook gather-db-facts.yml --ask-vault-pass
-# The following task will get executed.
-
+$ cat gather-db-facts.yml
 - hosts: localhost
   connection: local
-  pre_tasks:
-   - name: include variables
-     include_vars:
-       dir: vars
-       extensions:
-         - 'yml'
+  vars_files:
+   - vars/vault.yml
+   - vars/gather-dbfacts-vars.yml
   roles:
-     - { role: oradb_gather_dbfacts } 
+     - { role: oradb_gather_dbfacts }
+
+6. Now execute the playbook as shown below
+ansible-playbook gather-db-facts.yml -i inventory.yml --ask-vault-pass
+Vault password:
+
+PLAY [localhost] **********************************************************************************************************************
+
+TASK [Gathering Facts] ****************************************************************************************************************
+ok: [localhost]
+
+TASK [ibm.power_aix_oracle_dba.oradb_gather_dbfacts : gather database facts] **********************************************************
+[WARNING]: Module did not set no_log for password
+ok: [localhost]
+
+TASK [ibm.power_aix_oracle_dba.oradb_gather_dbfacts : debug] **************************************************************************
+ok: [localhost] => {
+    "dbfacts": {
+        "ansible_facts": {
+            "database": {
+                "ACTIVATION#": 1057980752,
+                "ARCHIVELOG_CHANGE#": 0,
+                "ARCHIVELOG_COMPRESSION": "DISABLED",
+                "ARCHIVE_CHANGE#": 2353520,
+                "CDB": "YES",
+.
+.
+.## Some Output is Truncated ##
+.
+                "DATABASE_ROLE": "PRIMARY",
+                "ISDBA": "TRUE",
+                "ORACLE_HOME": "/u02/db19c"
+            },
+            "version": "19.17.0.0.0"
+        },
+        "changed": false,
+        "failed": false,
+        "msg": "",
+        "warnings": [
+            "Module did not set no_log for password"
+        ]
+    }
+}
+
+PLAY RECAP ****************************************************************************************************************************
+localhost                  : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+To execute this playbook from GUI, please refer this link: https://github.com/IBM/ansible-power-aix-oracle-dba/blob/main/docs/PowerODBA_using_AAP2.pdf

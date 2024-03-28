@@ -1,0 +1,50 @@
+- name: Diskgroup check
+  ansible.builtin.shell: "{{ oracle_home_gi }}/bin/srvctl status diskgroup -g {{ item.diskgroup }}"
+  with_items: "{{ asm_diskgroups }}"
+  when:  asm_diskgroups is defined
+  tags: listgroup
+  register: listgroup
+  environment: "{{ oracle_env }}"
+  failed_when: "'does not exist' in listgroup.stdout"
+  run_once: True
+
+- name: Dismount ASM diskgroup
+  ansible.builtin.shell: srvctl stop diskgroup -diskgroup {{ item.diskgroup }} -n {{ racnodes }}
+  with_items: "{{asm_diskgroups}}"
+  when: drop_diskgroup and not drop_disk and is_rac
+  environment: "{{ oracle_env }}"
+  register: dismountgroup
+  ignore_errors: True
+  run_once: True
+
+- name: Drop ASM diskgroup
+  ansible.builtin.shell: echo "drop diskgroup {{ item.diskgroup }} including contents;" | sqlplus / as sysasm
+  with_items: "{{ asm_diskgroups }}"
+  when: drop_diskgroup and not drop_disk
+  environment: "{{ oracle_env }}"
+  register: dropgroup
+  run_once: True
+
+- name: Drop ASM Disk
+  ansible.builtin.shell: echo "alter diskgroup {{ item.diskgroup }} drop disk {{ item.disk }};" | sqlplus / as sysasm
+  with_items: "{{ asm_diskgroups }}"
+  when: drop_disk and not drop_diskgroup
+  environment: "{{ oracle_env }}"
+  register: dropdisk
+  run_once: True
+- name: 
+  block:
+   - name: Drop disk status
+     ansible.builtin.shell: echo "select name,PATH,STATE from v\$asm_disk where path='{{ item.disk }}';"|sqlplus -s / as sysasm
+     with_items: "{{ asm_diskgroups }}"
+     environment: "{{ oracle_env }}"
+     register: status
+     run_once: True
+   - name: Print Results
+     ansible.builtin.debug:
+      msg: "{{ item.stdout_lines }}"
+     with_items: "{{ status.results }}"
+     loop_control:
+      label: "{{ item.item }}"
+     run_once: True
+  when: drop_disk and not drop_diskgroup

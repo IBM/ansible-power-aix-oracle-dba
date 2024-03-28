@@ -1,10 +1,11 @@
+# Playbook to manage pluggable databases.
+# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+#
+
 - hosts: localhost
   connection: local
-  pre_tasks:
-   - name: include variables
-     include_vars:
-       dir: vars
-       extensions:
-         - 'yml'
+  vars_files:
+   - vars/vault.yml
+   - vars/manage-pdb-vars.yml
   roles:
      - { role: oradb_manage_pdb }

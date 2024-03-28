@@ -1,102 +1,80 @@
 # Manage Database directories  - Readme 
 # =====================================
 
-# Description: # This module is used to manage resources at the pluggable database level. It uses python library located here: ansible-power-aix-oracle-dba/library/oracle_rsrc_consgroup
+# Description: # This module is used to manage resources at the pluggable database level. 
 # More information on Create directory can be found here: https://docs.oracle.com/cd/E11882_01/server.112/e25494/dbrm.htm#ADMIN11842
 
-# Prerequisites:
-# ==============
+In the following example we're going to create a Resource Consumer Group in a PDB DEVPDB.
 
-# Go to the playbooks directory 
-# Decrypt the file (if it's already encrypted)
-# ansible-vault decrypt vars/vault.yml
-Vault password:
-Decryption successful
-# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vault.yml.
-# Encrypt the file
-# ansible-vault encrypt vars/vault.yml
-New Vault password:
-Confirm New Vault password:
-Encryption successful
+1. There are two files which need to be updated:
+         a. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/manage-resource-group-vars.yml: This file contains database hostname, database port number and the path to the Oracle client and other related parameters.
+        b. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml: This contains sys password which will be used by cx_oracle to connect to the database with sysdba privilege.
 
-# Set the Variables for Oracle to execute this task: 
-# Open the file vars/vars.yml and set the following variables:
+2. Update the common variables file: {{collection_dir}}/power_aix_oracle_dba/playbooks/vars/manage-resource-group-vars.yml as shown below
 
-hostname: ansible_db                    # AIX lpar hostname
-listener_port: 1521                     # Database port number
-oracle_db_home: /tmp/oracle_client      # Oracle Client location on the ansible controller.
-oracle_env:
-     ORACLE_HOME: "{{ oracle_db_home }}"
-     LD_LIBRARY_PATH: "{{ oracle_db_home}}/lib"
-     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
+$ cat vars/manage-resource-group-vars.yml
 
-# Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_rsrc/defaults/main.yml and modify the variables
-
-db_user: sys
-service_name: ansipdb.pbm.ihost.com     # Pluggable DB Service Name.
-db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
-db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
-db_mode: sysdba
+hostname: ansible_db                           # AIX hostname where the Database is running.
+service_name: devpdb                           # Database service name.
+listener_port: 1521                            # Database port number.
+oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
 state: present                  # State: Present/Absent
 consumer_group: ansigroup1      # Desired consumer group name
 comments:  This is a test consumer resource group       # Optional
 grant:
-   - ANSIUSER1                  # Name of the user to provide grants to resource group.
+   - testuser1                  # Name of the user to provide grants to resource group.
 map_oracle_user:
-   - ANSIUSER1                  # Map user
+   - testuser1                  # Map user
 map_service_name:
-   - db122cpdb                  # Map service
+   - devpdb                     # Map service name
 map_client_machine:
-   - x134vm236                  # Map client
+   - x123vm456                  # Map client machine name
 
-# Executing the playbook: This playbook executes a role.
-# Name of the Playbook: manage-resource-consumer-group.yml
-# Change directory to ansible-power-aix-oracle-dba/playbooks
-# ansible-playbook manage-resource-consumer-group.yml --ask-vault-pass
-# The following task will be executed which will call out a role.
+3. Update the passwords file: {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml with sys user password. This file needs to be encrypted using ansible-vault. While running the playbook, please provide the vault password.
+default_dbpass: Oracle4u # SYS password
+default_gipass: Oracle4u # ASMSNMP password
+
+4. Encrypt the passwords file using ansible-vault as shown below
+$ ansible-vault encrypt vars/vault.yml
+New Vault password:
+Confirm New Vault password:
+Encryption successful
+
+5. Create the playbook in {{ collection_dir }}/power_aix_oracle_dba/playbooks directory as shown below
+$ cat manage-awr.yml
 
 - hosts: localhost
   connection: local
-  pre_tasks:
-     - name: include variables
-       include_vars:
-         dir: vars
-         extensions:
-           - 'yml'
+  vars_files:
+   - vars/vault.yml
+   - vars/manage-resource-group-vars.yml
   roles:
-     - { role: ibm.power_aix_oracle_dba.oradb_manage_rsrc }
+     - { role: oradb_manage_rsrc }
 
-# Sample output:
-# =============
+6. Execute the playbook as shown below
 
-[ansible@localhost playbooks]$ ansible-playbook manage-resource-consumer-group.yml --ask-vault-pass
+$ ansible-playbook manage-resource-consumer-group.yml -i inventory.yml --ask-vault-pass
 Vault password:
-[WARNING]: Found both group and host with same name: ansible_db
-[WARNING]: running playbook inside collection ibm.power_aix_oracle_dba
 
-PLAY [localhost] ********************************************************************************************************************
+PLAY [localhost] **********************************************************************************************************************
 
-TASK [Gathering Facts] **************************************************************************************************************
-ok: [localhost]
-
-TASK [include variables] ************************************************************************************************************
-ok: [localhost]
-
-TASK [ibm.power_aix_oracle_dba.oradb_manage_rsrc : Resource Consumer Groups] ********************************************************
+TASK [oradb_manage_rsrc : Resource Consumer Groups] **********************************************************
 [WARNING]: Module did not set no_log for password
 changed: [localhost]
 
-TASK [ibm.power_aix_oracle_dba.oradb_manage_rsrc : debug] ***************************************************************************
+TASK [oradb_manage_rsrc : debug] *****************************************************************************
 ok: [localhost] => {
     "rsc": {
         "changed": true,
         "failed": false,
-        "msg": "Added grants: set(), Added mappings: {'ORACLE_USER': {'ANSIUSER1'}, 'SERVICE_NAME': {'DB122CPDB'}, 'CLIENT_MACHINE': {'X134VM236'}}",
+        "msg": "Added grants: {'TESTUSER1'}, Added mappings: {'ORACLE_USER': {'TESTUSER1'}, 'SERVICE_NAME': {'DEVPDB'}, 'CLIENT_MACHINE': {'X123VM456'}}",
         "warnings": [
             "Module did not set no_log for password"
         ]
     }
 }
 
-PLAY RECAP **************************************************************************************************************************
-localhost                  : ok=4    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+PLAY RECAP ****************************************************************************************************************************
+localhost                  : ok=2    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+To execute this playbook from GUI, please refer this link: https://github.com/IBM/ansible-power-aix-oracle-dba/blob/main/docs/PowerODBA_using_AAP2.pdf

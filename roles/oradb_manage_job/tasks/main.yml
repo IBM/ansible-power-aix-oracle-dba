@@ -2,8 +2,8 @@
   oracle_job:
     hostname: "{{ hostname }}"
     service_name: "{{ service_name }}"
-    port: "{{ listener_port }}"
     user: "{{ db_user }}"
+    port: "{{ listener_port }}"
     password: "{{ db_password_cdb }}"
     mode: "{{ db_mode }}"
     state: "{{ state }}"
@@ -14,5 +14,3 @@
     repeat_interval: "{{ repeat_interval }}"
   environment: "{{ oracle_env }}"
   register: job
-- debug:
-    var: job

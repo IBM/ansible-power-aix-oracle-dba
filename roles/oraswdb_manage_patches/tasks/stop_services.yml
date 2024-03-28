@@ -1,0 +1,41 @@
+- name: Stopping the DB Services for Patching
+  ansible.builtin.shell: "export ORACLE_SID={{ item }} && export ORACLE_HOME={{ oracle_home_db }} && PATH={{ oracle_home_db }}/bin; echo 'shut immediate' | sqlplus -S '/ as sysdba'"
+  with_items:
+    - "{{ db_homes_config[dbh.home]['databases'] }}"
+  when:
+    - "'0' in ptid_list|trim"
+    - db_homes_config[dbh.home]['opatch'] is defined and db_homes_config[dbh.home]['opatch'][0]['state'] == "present"
+  become: yes
+  become_user: "{{ oracle_user }}"
+
+- name: Stopping the DB Services for Rollback
+  ansible.builtin.shell: "export ORACLE_SID={{ item }} && export ORACLE_HOME={{ oracle_home_db }} && PATH={{ oracle_home_db }}/bin; echo 'shut immediate' | sqlplus -S '/ as sysdba'"
+  with_items:
+    - "{{ db_homes_config[dbh.home]['databases'] }}"
+  when:
+    - "'0' not in ptid_list|trim or '1' not in ptid_list|trim or '2' not in ptid_list|trim"
+    - db_homes_config[dbh.home]['opatch'] is defined and db_homes_config[dbh.home]['opatch'][0]['state'] == "absent"
+  become: yes
+  become_user: "{{ oracle_user }}"
+
+- name: Stopping the Listeners for Patching
+  ansible.builtin.shell: "export ORACLE_HOME={{ oracle_home_db }} && PATH={{ oracle_home_db }}/bin; lsnrctl stop {{ item | default (l) }}"
+  with_items:
+      - "{{ db_homes_config[dbh.home]['listeners'] }}"
+  ignore_errors: True
+  when:
+    - "'0' in ptid_list|trim"
+    - db_homes_config[dbh.home]['opatch'] is defined and db_homes_config[dbh.home]['opatch'][0]['state'] == "present"
+  become: yes
+  become_user: "{{ oracle_user }}"
+
+- name: Stopping the Listeners for Rollback
+  ansible.builtin.shell: "export ORACLE_HOME={{ oracle_home_db }} && PATH={{ oracle_home_db }}/bin; lsnrctl stop {{ item | default (l) }}"
+  with_items:
+      - "{{ db_homes_config[dbh.home]['listeners'] }}"
+  ignore_errors: True
+  when:
+    - "'0' not in ptid_list|trim or '1' not in ptid_list|trim or '2' not in ptid_list|trim"
+    - db_homes_config[dbh.home]['opatch'] is defined and db_homes_config[dbh.home]['opatch'][0]['state'] == "absent"
+  become: yes
+  become_user: "{{ oracle_user }}"      

@@ -127,11 +127,11 @@ def local_listener():
                 for proto in config['endpoints'].split('/'):
                     p = proto.split(':')
                     config[p[0].lower()] = p[1]
-        if "network" in config.keys():
-            config['address'] = vips[config['network']]['fqdn']
-            config['ipv4'] = vips[config['network']]['ipv4']
-            config['ipv6'] = vips[config['network']]['ipv6']
-        out.append(config)
+#        if "network" in config.keys():
+#            config['address'] = vips[config['network']]['fqdn']
+#            config['ipv4'] = vips[config['network']]['ipv4']
+#            config['ipv6'] = vips[config['network']]['ipv6']
+#        out.append(config)
     return out
 
 def scan_listener():

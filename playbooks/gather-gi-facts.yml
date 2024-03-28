@@ -1,4 +1,9 @@
-- hosts: ansihost		# Grid Host
+# Playbook to gather facts about Grid
+#
+- hosts: all                          # AIX Lpar where Grid Services are running.
   remote_user: oracle
+  vars:
+   oracle_env:
+      ORACLE_HOME: /ora/grid          # Grid Home Path on the above AIX Lpar.
   roles:
      - { role: oradb_gather_gifacts } 

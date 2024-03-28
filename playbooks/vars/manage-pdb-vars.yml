@@ -1,0 +1,34 @@
+hostname: ansible_db                  # AIX hostname where the Database is running.
+listener_port: 1521                   # Database listener port.
+oracle_db_name: devdb                 # Database Service Name.
+oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+
+create_pdb: False        # Set it to True to Create a fresh PDB. Otherwise, set False.
+drop_pdb: True         # Set it to True to Drop an existing PDB. Otherwise, set False.
+plug_pdb: False         # Set it to True to Create a PDB from an XML file. Otherwise, set False.
+unplug_pdb: False       # Set it to True to Unplug a PDB into an XML file. Otherwise, set False.
+
+pdb_oradata_dest: +DATA # Path to store PDB datafiles. 
+pdb_seed_dest: +DATA    # PDB Seed datafiles path.
+xml_file_dest:          # Path to where to create/use the XML files.
+
+#PDB Creation Variables  [When the above "create_pdb" or "plug_pdb" are set to True]
+
+create_oracle_pdbs:               # Set these parameters to create a new PDB from SEED PDB. Make sure to set plug_pdb variable "False"
+   - pdb_name: devpdb1            # Name of the PDB to be created or plugged from XML file.
+     cdb: "{{ oracle_db_name }}"
+     state: present               # present - creates PDB.
+     file_name_convert: "{{ pdb_seed_dest }},{{ pdb_oradata_dest }}"
+     xml_dest: "{{ xml_file_dest }}"         
+     xml_file: ansipdb4.xml       # XML File name.
+     datafile_dest: "{{ pdb_oradata_dest }}"
+
+#PDB Drop & Unplug Variables  [When the above "unplug_pdb" or "drop_pdb" are set to True]
+
+drop_oracle_pdbs:                 # Set these parameters to create a new PDB using an XML File.
+   - pdb_name: devpdb1             # Name of the PDB to be dropped/unplugged.
+     cdb: "{{ oracle_db_name }}"  
+     state: absent                # absent - drops a pdb, unplugged - unplugs a pdb
+     file_name_convert: "{{ pdb_seed_dest }},{{ pdb_oradata_dest }}"
+     xml_dest: "{{ xml_file_dest }}"
+     xml_file: ansipdb4.xml       # XML File name.

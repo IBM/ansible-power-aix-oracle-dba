@@ -1,10 +1,11 @@
+# Playbook to manage database resource consumer groups.
+# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+#
 - hosts: localhost
+  gather_facts: false
   connection: local
-  pre_tasks:
-   - name: include variables
-     include_vars:
-       dir: vars
-       extensions:
-         - 'yml'
+  vars_files:
+   - vars/vault.yml
+   - vars/manage-resource-group-vars.yml
   roles:
      - { role: oradb_manage_rsrc }

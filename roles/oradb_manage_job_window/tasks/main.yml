@@ -1,4 +1,4 @@
-- name: Oracle Job Window
+- name: Create DBMS Job Window
   oracle_jobwindow:
     hostname: "{{ hostname }}"
     service_name: "{{ service_name }}"

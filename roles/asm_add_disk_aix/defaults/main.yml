@@ -1,9 +1,0 @@
-oracle_home_gi: /u01/grid19c
-oracle_rsp_stage: /u01/stage
-grid_install_user: "{{ansible_user_id}}"
-oracle_group: dba
-oracle_asm_disk_string: "/dev/"
-asm_diskgroups:
-  - diskgroup: PQSTDB
-    disk:
-      - {device: rhdiskasm10}

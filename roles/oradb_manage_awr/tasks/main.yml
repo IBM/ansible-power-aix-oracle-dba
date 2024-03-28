@@ -9,6 +9,19 @@
     snapshot_interval_min: "{{ interval }}"
     snapshot_retention_days: "{{ retention }}"
   environment: "{{ oracle_env }}"
-  register: awr
-- debug:
-    var: awr
+
+- name: AWR Retention
+  oracle_sql:
+    username: "{{ db_user }}"
+    password: "{{ db_password_cdb }}"
+    service_name: "{{ service_name }}"
+    hostname: "{{ hostname }}"
+    port: "{{ listener_port }}"
+    mode: "{{ db_mode }}"
+    sql: "{{ sql_query }}"
+  environment: "{{ oracle_env }}"
+  register: output
+
+- name: AWR Retention
+  debug:
+    msg: "The Snapshot and Retention Intervals is set to - {{ output.msg }}"

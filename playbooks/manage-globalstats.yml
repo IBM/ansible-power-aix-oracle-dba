@@ -1,8 +1,10 @@
+# Playbook to gather Global Statistics for a database.
+# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+#
 - hosts: localhost
   connection: local
-  pre_tasks:
-     - name: include variables
-       include_vars: vars.yml
-
+  vars_files:
+   - vars/vault.yml
+   - vars/manage-globalstats-vars.yml
   roles:
-     - { role: ibm.power_aix_oracle_dba.oradb_manage_stats }
+     - { role: oradb_manage_stats }

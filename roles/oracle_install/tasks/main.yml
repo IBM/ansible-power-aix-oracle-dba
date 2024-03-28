@@ -49,7 +49,7 @@
        - "{{ required_homes }}"
   when: required_homes is defined
 
-- name: Installing 19c RDBMS
+- name: Installing 19c RDBMS, this will take around 30mins.
   ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/oracle_install_{{ item.oh }}.sh"
   register: oracle_install
   become: yes

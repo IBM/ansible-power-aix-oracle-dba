@@ -1,0 +1,10 @@
+hostname: ansible_db                           # AIX hostname where the Database is running.
+service_name: devpdb                           # Database service name.
+listener_port: 1521                            # Database port number.
+oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+job_name: testuser1.ansi_job                   # Job name along with schema name prefixed.
+job_action: testuser1.PKG_TEST_SCHEDULER.JOB_PROC_STEP_1   # Job action
+job_type: stored_procedure                     # Type of the job
+repeat_interval: FREQ=MINUTELY;INTERVAL=35     # Job interval
+state: present                                 # present - creates a job, absent - drops a job.
+enabled: True                                  # True - Enables the job, False, Disables the job.

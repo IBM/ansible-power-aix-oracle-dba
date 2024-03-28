@@ -1,0 +1,6 @@
+oracle_rsp_stage: /tmp
+oracle_asm_disk_string: "/dev/"
+oracle_env:
+       ORACLE_HOME: "{{ oracle_home_gi }}"
+       ORACLE_SID: "{{ oracle_sid }}"
+       PATH: "{{ oracle_home_gi }}/bin:$PATH"

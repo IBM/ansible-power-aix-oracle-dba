@@ -1,0 +1,9 @@
+grid_owner: oracle                   # Grid Software Owner.
+oracle_home_gi: /u02/base/grid19c    # Grid Home path.
+oracle_sid: +ASM                     # ASM SID.
+path: /acfs                          # Path onto which ACFS to be mounted.
+diskgroup: ACFSDISK                  # Diskgroup name where ACFS should me created.
+volname: ACFSDATA1                   # Desired ACFS volume name to be created.
+size: 10G                            # ACFS mount point size thats needs to be allocated.
+create_acfs: False                   # True: Creates ACFS mount point. False: Does nothing.
+delete_acfs: True                    # True: Deletes ACFS mount point. False: Does nothing. Proceed with caution.

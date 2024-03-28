@@ -1,12 +1,10 @@
-hostname: ansible_db               # AIX hostname.
-service_name: ansible.pbm.ihost.com        # DB service name.
 db_user: sys
 db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
 db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
-listener_port: 1521                # DB port number.
 db_mode: sysdba
-interval: 30               # Snapshot interval (in minutes). '0' disables.
-retention: 15              # Snapshot Retention period (in days)
 oracle_env:
-  ORACLE_HOME: /home/ansible/oracle_client
-  LD_LIBRARY_PATH: /home/ansible/oracle_client/lib
+     ORACLE_HOME: "{{ oracle_db_home }}"
+     LD_LIBRARY_PATH: "{{ oracle_db_home}}"
+     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
+
+sql_query: 'select extract( day from snap_interval)*24*60+ extract( hour from snap_interval)*60+extract( minute from snap_interval ) "Snapshot Interval", extract( day from retention)+extract( hour from retention)*60+extract( minute from retention ) "Retention Interval" from dba_hist_wr_control'

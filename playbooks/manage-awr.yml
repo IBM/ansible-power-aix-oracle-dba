@@ -1,7 +1,10 @@
+# Playbook to manage Automatic Workload Repository retention settings.
+# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+#
 - hosts: localhost
   connection: local
-  pre_tasks:
-     - name: include variables
-       include_vars: vars.yml  
+  vars_files:
+   - vars/vault.yml
+   - vars/manage-awr-vars.yml
   roles:
-     - { role: ibm.power_aix_oracle_dba.oradb_manage_awr }
+     - { role: oradb_manage_awr }

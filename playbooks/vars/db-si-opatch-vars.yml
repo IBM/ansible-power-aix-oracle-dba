@@ -1,0 +1,140 @@
+###############################################################################################################
+# Variables File for the Task to apply RU/One-Off patches on DB home using opatch utility.
+# #############################################################################################################
+#oracle_user: oracle
+#oracle_group: oinstall                  # Primary group for oracle/grid user.
+#configure_cluster: False                # Set it to False in case of Standalone DB, Set it to True in case of RAC DB.
+################################
+# Patch files staging variables#
+################################
+
+#ora_binary_location: local    # local|nfs|remote. When using "nfs" option, provide sudo password "--ask-become-pass" when running the playbook, this will use the elevated privileges to configure NFS.
+#ora_nfs_host: 129.40.76.1                       # NFS server name if "ora_binary_location is nfs".
+#ora_nfs_device: /repos                          # NFS filesystem if "ora_binary_location is nfs".
+#ora_nfs_filesystem: /repos                      # Path on the target lpar to mount the NFS filesystem if "ora_binary_location is nfs".
+#oracle_patch_stage: /backup/patches/RU          # Provide the path on the target lpar with sufficient space to extract the patch zipfiles. This path will be created by this Ansible playbook.
+
+#oracle_sw_patches:
+# - filename: /repos/images/oracle/19c/RU19.21/p35642822_190000_AIX64-5L_RU19.21.zip # Provide full path( based on nfs|local|remote) and the zipfile name.
+#   patchid: 35642822                            # Patch to be applied.
+#   version: 19.3.0                              # 19c GI version
+#   patchversion: 19.21.0.0                      # Release update patch version
+#   description: GI-RU-Oct-2023                  # This is an optional parameter shows the description of the patch.
+# - filename: /backup/patches/p34774667_1921000DBRU_AIX64-5L.zip
+#   patchid: 34774667
+#   version: 19.21.0
+#   patchversion: 19.21.0.0
+#oracle_opatch_patch:
+# - filename: /repos/images/oracle/opatch/12.2.0.1.41/opatch-12.2.0.1.41_p6880880_210000_AIX64-5L.zip # Provide full path(nfs|local|remote) along with the zipfile name.
+#   version: 19.3.0                              # 19c GI version
+#####################################
+# Oracle Home environment Variables #
+#####################################
+# This is an example variables template file.
+#
+# db_homes_config:
+#  19300-base:                       # Provide any name, this is the value for "home" variable in "db_homes_installed" used below.
+#    oracle_home: /u01/db19c         # Oracle Home path.
+#    opatch_minversion: 12.2.0.1.41  # Minimum opatch version required to apply the patches.
+#    opatchauto: []
+#    opatch:
+#      - patchid: 35642822           # Given patch id is the system patch of 19.21 RU, it contains both grid and db patches.
+#        patchversion: 19.21.0.0     # Minimum opatch version required to apply required patches.
+#        state: present              # present - applies the patch. absent - rollbacks the patch.
+#        subpatches:
+#         - 35655527                 # This is the DB patch inside 35642822 patch directory.
+#         - 35643107                 # This is OCW patch inside 35642822 patch directory.
+#      - patchid:                    # Leave this empty and provide the one off patch under subpatches below.
+#        patchversion: 19.21.0.0
+#        subpatches:
+#        - 34774667                  # This is a one off patch to be applied on Oracle home with 19.21 RU.
+#   stop_services: True              # True - Stops the DB and listener services before patching, False - Won't stop the services.
+#    databases:
+#         - testdb                   # Provide the list of the databases running in the above Oracle Home.
+#    listeners:
+#         - LISTENER		     # Provide the list of the listeners running in the above Oracle Home.
+# db_homes_installed:
+#    home: 19300-base            # This must be the same mentioned under "db_homes_config", see the above parameter.
+#    db_version: 19.3.0          # Oracle version.
+#    apply_patches: True         # True - will apply patch, False - will do nothing.
+#    state: present              # present - Oracle Home exists, absent - Oracle Home doesn't exist.
+###############################################################################################################
+
+
+oracle_user: oracle
+oracle_group: oinstall
+configure_cluster: False 
+
+ora_binary_location: local
+ora_nfs_host: 129.40.76.1
+ora_nfs_device: /repos
+ora_nfs_filesystem: /repos
+oracle_patch_stage: /backup/patches/RU
+
+oracle_sw_patches:
+ - filename: /repos/images/oracle/19c/RU19.21/p35642822_190000_AIX64-5L_RU19.21.zip
+   patchid: 35642822
+   version: 19.3.0
+   patchversion: 19.21.0.0
+   description: GI-RU-Oct-2023
+ - filename: /backup/patches/p34774667_1921000DBRU_AIX64-5L.zip
+   patchid: 34774667
+   version: 19.21.0
+   patchversion: 19.21.0.0
+
+oracle_opatch_patch:
+ - filename: /repos/images/oracle/opatch/12.2.0.1.41/opatch-12.2.0.1.41_p6880880_210000_AIX64-5L.zip
+   version: 19.3.0                              # 19c GI version
+
+db_homes_config:
+  19300-base:
+    oracle_home: /u01/db19c
+    opatch_minversion: 12.2.0.1.41
+    opatchauto: []
+    opatch:
+      - patchid: 35642822
+        patchversion: 19.21.0.0
+        state: absent
+        subpatches:
+         - 35655527
+         - 35643107
+      - patchid:
+        patchversion: 19.21.0.0
+        state: absent
+        subpatches:
+         - 34774667
+    stop_services: True
+    databases:
+         - devdb
+    listeners:
+         - devlis
+  19300-base-1:
+    oracle_home: /u01/db19c_2
+    opatch_minversion: 12.2.0.1.41
+    opatchauto: []
+    opatch:
+      - patchid: 35642822
+        patchversion: 19.21.0.0
+        state: absent
+        subpatches:
+         - 35655527
+         - 35643107
+      - patchid:
+        patchversion: 19.21.0.0
+        state: absent
+        subpatches:
+         - 34774667
+    stop_services: True
+    databases:
+         - testdb
+    listeners:
+         - testlis
+db_homes_installed:
+  - home: 19300-base
+    db_version: 19.3.0
+    apply_patches: True
+    state: present
+  - home: 19300-base-1
+    db_version: 19.3.0
+    apply_patches: True
+    state: present

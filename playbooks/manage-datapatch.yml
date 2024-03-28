@@ -1,0 +1,11 @@
+# Playbook to run "datapatch" on databases.
+# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+#
+- name: Run Datapatch
+  gather_facts: no
+  hosts: all     # AIX lpar hostname, make sure it's set in the inventory.
+  remote_user: oracle   # AIX lpar Oracle home user.
+  vars_files:
+   - vars/manage-datapatch-vars.yml 
+  roles:
+     - {role: oradb_datapatch }

@@ -1,6 +1,11 @@
- - name: Add disk to ASM Diskgroup
-   gather_facts: yes
-   hosts: ansible_db
-   remote_user: oracle
-   roles:
-      - {role: ibm.power_aix_oracle_dba.asm_add_disk_aix }
+# Playbook to add ASM disk to an existing diskgroup.
+# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+#
+- name: Add disk to ASM Diskgroup
+  gather_facts: no
+  hosts: rac21
+  remote_user: oracle
+  vars_files:
+   - vars/asm-add-disk-vars.yml
+  roles:
+   - {role: podba_asm_add_disk }

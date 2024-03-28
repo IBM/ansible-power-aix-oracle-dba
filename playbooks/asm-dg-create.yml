@@ -1,6 +1,0 @@
- - name: Create ASM Diskgroup
-   gather_facts: yes            
-   hosts: ansible_db                                   # AIX Lpar Hostname where the Diskgroup has to be created.
-   remote_user: oracle                                 # Grid Home Owner
-   roles:
-      - {role: ibm.power_aix_oracle_dba.create_asmdg_aix }

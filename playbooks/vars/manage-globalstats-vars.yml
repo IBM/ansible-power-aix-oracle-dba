@@ -1,0 +1,7 @@
+hostname: ansible_db                           # AIX hostname where the Database is running.
+service_name: devdb                            # Database service name.
+listener_port: 1521                            # Database port number.
+oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+preference_name: CONCURRENT                    # Statistics preference.
+preference_value: ALL                          # Value
+state: present

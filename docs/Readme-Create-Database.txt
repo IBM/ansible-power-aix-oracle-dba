@@ -5,14 +5,13 @@
 # The role "oradb_create" is used to create databases. It can be used for a Non Container Database (CDB) instance or a CDB in a Single Instance or RAC. 
 # Reference: https://docs.oracle.com/en/database/oracle/oracle-database/19/cwlin/running-dbca-using-response-files.html#GUID-E84CE996-B30C-4DCA-AE4C-1E90201317C2
 
-In the following example we're going to create a RAC Container Database (CDB) called “devdb” with one PDB called “devpdb”.
+In the following example we're going to create a RAC Container Database (CDB) called devdb with one PDB called devpdb.
 1. Passwordless SSH must be established between Ansible user & Oracle Database user.
 2. Define the required hostname in an inventory file to be used to execute the playbook.
 3. There are three files which needs to be updated:
-	a. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml: This file contains the SYS user password of ASM and SYS password which needs to set to 
-the new database.
-	b. {{ collection_dir }}/power_aix_oracle_dba/playbooks/create-db.yml: This file contains the playbook which executes the “oradb_create” role.
-	c. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/create-db-vars.yml: This file contains all the required variables required to create a database. Multiple databases can be created by providing the variables as a list.
+	a. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml: This file contains the SYS user password of ASM and SYS password which needs to set to the new database.
+	b. {{ collection_dir }}/power_aix_oracle_dba/playbooks/create-db.yml: This file contains the playbook which executes the oradb_create role.
+	c. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/create-db-vars.yml: This file contains all the required variables to create a database. Multiple databases can be created by providing the variables as a list.
 
 4. Update the {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml file with the passwords.
 	a. Go to the playbooks directory and update the file with system password for asm and dba
@@ -30,7 +29,7 @@ $ ansible-vault encrypt vault.yml
    - vars/create-db-vars.yml
    - vars/vault.yml
   roles:
-   - { role: ibm.power_aix_oracle_dba.oradb_create }
+   - { role: oradb_create }
  
  6. Update the following variables in {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/create-db-vars.yml 
  oracle_stage: /tmp # Location on the target AIX LPAR to stage response files.

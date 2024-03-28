@@ -1,0 +1,40 @@
+- name: Check volume
+  ansible.builtin.shell: "asmcmd volinfo --all|grep -w {{ volname }}"
+  register: checkvol
+  environment: "{{ oracle_env }}"
+  ignore_errors: True
+
+- ansible.builtin.fail:
+   msg: "Seems ACFS Volume doesn't exist"
+  when: checkvol.rc != 0
+
+- name: Start acfsload
+  ansible.builtin.shell: "{{oracle_home_gi}}/bin/acfsload start"
+  environment: "{{ oracle_env }}"
+  become: yes
+
+- name: Unmount ACFS volume
+  ansible.builtin.shell: "umount {{ path }}"
+  environment: "{{ oracle_env }}"
+  become: yes
+  tags: unmountacfs
+
+- name: Disable ACFS Volume
+  ansible.builtin.shell: "asmcmd voldisable -G {{ diskgroup }} {{ volname }}"
+  environment: "{{ oracle_env }}"
+  register: disable
+  tags: disable
+
+- name: Delete ACFS Volume
+  ansible.builtin.shell: "asmcmd voldelete -G {{ diskgroup }} {{ volname }}"
+  environment: "{{ oracle_env }}"
+  register: delete
+  tags: delete
+
+- name: Remove directory
+  ansible.builtin.file:
+   path: "{{ path }}"
+   state: absent
+   owner: "{{ grid_owner }}"
+   mode: 0775
+  become: yes

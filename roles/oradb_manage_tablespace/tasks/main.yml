@@ -2,7 +2,7 @@
   oracle_tablespace:
         hostname={{ hostname }}
         port={{ listener_port_template }}
-        service_name={{ db_service_name }}
+        service_name={{ service_name }}
         user={{ db_user }}
         password={{ db_password_cdb}}
         tablespace={{ item.1.name }}
@@ -23,6 +23,6 @@
       - flags:
         skip_missing: True
   loop_control:
-      label: "port: {{ listener_port_template }} service: {{ db_service_name }} tablespace: {{ item.1.name }} content: {{ item.1.content |default(omit)}} state: {{ item.1.state |default('present')}}"
+      label: "port: {{ listener_port_template }} service: {{ service_name }} tablespace: {{ item.1.name }} content: {{ item.1.content |default(omit)}} state: {{ item.1.state |default('present')}}"
   when: oracle_databases is defined
   tags: tablespace

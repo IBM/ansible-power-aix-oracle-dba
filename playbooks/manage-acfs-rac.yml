@@ -1,8 +1,11 @@
-#Playbook to create ACFS on RAC environment
-#
+# Playbook to create ACFS on a RAC environment
+# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+
 - name: Create ACFS in RAC
   gather_facts: no
-  hosts: rac91                  # AIX Lpar hostgroup defined in ansible inventory.
-  remote_user: grid             # Grid Home owner.
+  hosts: all                  # AIX Lpar hostgroup defined in ansible inventory.
+  remote_user: oracle             # Grid Home owner.
+  vars_files:
+   - vars/manage-acfs-rac-vars.yml
   roles:
-     - {role: ibm.power_aix_oracle_dba.create_acfs_rac }
+     - {role: manage_acfs_rac }

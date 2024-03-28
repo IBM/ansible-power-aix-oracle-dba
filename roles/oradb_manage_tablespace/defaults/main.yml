@@ -1,31 +1,10 @@
-oracle_base: /u01/app/oracle # Oracle base location
-hostname: ansible_db            # AIX hostname
 db_user: sys
 db_mode: sysdba
 db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item.0.oracle_db_name] is defined and dbpasswords[item.0.oracle_db_name][db_user] is defined%}{{dbpasswords[item.0.oracle_db_name][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
 db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item.0.cdb] is defined and dbpasswords[item.0.cdb][db_user] is defined%}{{dbpasswords[item.0.cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
-
-db_service_name: "{% if item.0 is defined %}
-                    {%- if item.0.oracle_db_unique_name is defined %}{{ item.0.oracle_db_unique_name }}
-                    {%- elif item.0.oracle_db_instance_name is defined %}{{ item.0.oracle_db_instance_name }}
-                    {%- else %}{{ item.0.oracle_db_name }}
-                    {%- endif %}
-                  {%- endif %}"
-oracle_env:
-     ORACLE_HOME: /home/ansible/oracle_client           # Oracle Client Home on Ansible Controller.
-     LD_LIBRARY_PATH: /home/ansible/oracle_client/lib   # Oracle Client Home Library on Ansible Controller.
-
-oracle_databases:                       
-      - tablespaces:
-          - name: ansitest      # Tablespace name for creation.
-            datafile: +DATA     # Diskgroup name in which tablespace needs to be created.
-            # datafile: /u01/app/oracle/oradata/testtbs2.dbf            # Specify datafile path & name in case of non ASM.
-            size: 1g     # Desired size of the datafile.
-            maxsize: 2g   # Desired maxsize for the datafile.
-            state: present     # Set "present" to create / "absent" to drop tablespace.
-            autoextend: true   # Whether to extend the datafile size automatically or not. True or False.
-            next: 100m      # Set this only if autoextend parameter is set to True, otherwise comment this parameter.
-        oracle_db_name: ansible.pbm.ihost.com # Container database Service Name
-
 listener_port_template: "{% if item.0.listener_port is defined %}{{ item.0.listener_port }}{% else %}{{ listener_port }}{% endif %}"
-listener_port: 1521 # Database listener port number.
+
+oracle_env:
+     ORACLE_HOME: "{{ oracle_db_home }}"
+     LD_LIBRARY_PATH: "{{ oracle_db_home}}"
+     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"

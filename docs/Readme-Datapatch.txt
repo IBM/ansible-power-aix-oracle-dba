@@ -1,51 +1,89 @@
-# Datapatch - Readme
+/ Datapatch - Readme
 # ==================
+# Description: This module is used to run datapatch on a given database list.
 
-# Description: # This module is used to run datapatch on a given database.
-
-# Prerequisites:
-# ==============
-# Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
-# Set the Variables for Oracle to execute this task: Open the file ansible-power-aix-oracle-dba/roles/oradb_datapatch/defaults/main.yml and modify the variables which are provided with comments on the right.
-
-hostgroup: "{{ group_names[0] }}"
-oracle_user: "{{ remote_user_id }}"
-
-db_user: sys
-db_service_name: ansible                        # Service name of the database
-
-listener_port_template: "{% if item.listener_port is defined %}{{ item.listener_port }}{% else %}{{ listener_port }}{% endif %}"
-listener_port: 1521                             # Database Listener port.
-
-listener_home: "{%- if lsnrinst is defined -%}
-                  {%- if db_homes_config[lsnrinst.home]['oracle_home'] is defined -%}{{db_homes_config[lsnrinst.home]['oracle_home']}}
-                  {%- else -%}{{oracle_base}}/{{db_homes_config[lsnrinst.home]['version']}}/{{db_homes_config[lsnrinst.home]['home']}}
-                  {%- endif -%}
-                {%- endif -%}"
-oracle_db_name: ansible                         # Name of the database to run Datapatch.
-oracle_db_home: /u01/19.3.0.0/19c_ansible       # Oracle Home location of the above database.
-oracle_env:
-      ORACLE_SID: "{{ oracle_db_name }}"
-      ORACLE_HOME: "{{ oracle_db_home}}"
-      PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
-
-oracle_env_lsnrctl:
-      ORACLE_BASE: "{{ oracle_base }}"
-      ORACLE_HOME: "{{ listener_home }}"
-      LD_LIBRARY_PATH: "{{ listener_home }}/lib"
-      PATH: "{{ listener_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
-
-autostartup_service: false
-fail_on_db_not_exist: False
-
-# Executing the playbook: This playbook executes a role. Before running the playbook, open the playbook and update the hostname & remote user details as shown below. Do NOT change other parts of the script.
-# Change directory to ansible-power-aix-oracle-dba
-# Name of the Playbook: datapatch.yml
-# Content of the playbook
+In the following example we're going to run datapatch on a Single Instance Database called ansible_dbdb.
+1. Passwordless SSH must be established between Ansible user & Oracle Database user.
+2. Define the required hostname in an inventory file to be used to execute the playbook.
+3. There are two files which needs to be updated:
+      a. {{ collection_dir }}/power_aix_oracle_dba/playbooks/manage-datapatch.yml: This file calls oradb_datapatch role to run datapatch on a given database.
+      b. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/manage-datapatch-vars.yml: This file contains variables.
+4. Update hostname and remote_user details in the file as shown below: {{ collection_dir }}/power_aix_oracle_dba/playbooks/manage-datapatch.yml file.
 
 - name: Datapatch
   gather_facts: yes
-  hosts: ansible_db     # AIX lpar hostname, make sure it's set in the inventory.
+  hosts: all            # AIX lpar hostname, make sure it's set in the inventory.
   remote_user: oracle   # AIX lpar Oracle home user.
+  vars_files:
+   - vars/manage-datapatch-vars.yml
   roles:
      - {role: oradb_datapatch }
+
+5. Update the following variables in {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/manage-datapatch-vars.yml
+
+oracle_db_name: ansible_db                         # Name of the database to run Datapatch.
+listener_port: 1521                           # Database Listener port.
+oracle_db_home: /u02/db19c                    # Oracle Home location of the above database.
+
+6. Execute the following command to run the playbook as shown below
+
+$ ansible-playbook manage-datapatch.yml -i inventory.yml
+
+PLAY [Datapatch] **********************************************************************************************************************
+
+TASK [Gathering Facts] ****************************************************************************************************************
+ok: [ansible_db]
+
+TASK [oradb_datapatch : oradb-datapatch | Start database] ****************************************************
+changed: [ansible_db]
+
+TASK [oradb_datapatch : oradb-datapatch | Run datapatch] *****************************************************
+changed: [ansible_db]
+
+TASK [oradb_datapatch : debug] *******************************************************************************
+ok: [ansible_db] => {
+    "datapatch.stdout_lines": [
+        "SQL Patching tool version 19.17.0.0.0 Production on Sun Nov 19 01:22:17 2023",
+        "Copyright (c) 2012, 2022, Oracle.  All rights reserved.",
+        "",
+        "Log file for this invocation: /u02/base/cfgtoollogs/sqlpatch/sqlpatch_22741270_2023_11_19_01_22_17/sqlpatch_invocation.log",
+        "",
+        "Connecting to database...OK",
+        "Gathering database info...done",
+        "",
+        "Note:  Datapatch will only apply or rollback SQL fixes for PDBs",
+        "       that are in an open state, no patches will be applied to closed PDBs.",
+        "       Please refer to Note: Datapatch: Database 12c Post Patch SQL Automation",
+        "       (Doc ID 1585822.1)",
+        "",
+        "Bootstrapping registry and package to current versions...done",
+        "Determining current state...done",
+        "",
+        "Current state of interim SQL patches:",
+        "  No interim patches found",
+        "",
+        "Current state of release update SQL patches:",
+        "  Binary registry:",
+        "    19.17.0.0.0 Release_Update 220928055956: Installed",
+        "  PDB CDB$ROOT:",
+        "    Applied 19.17.0.0.0 Release_Update 220928055956 successfully on 19-NOV-23 12.34.27.352034 AM",
+        "  PDB DEVPDB:",
+        "    Applied 19.17.0.0.0 Release_Update 220928055956 successfully on 19-NOV-23 12.46.39.411874 AM",
+        "  PDB PDB$SEED:",
+        "    Applied 19.17.0.0.0 Release_Update 220928055956 successfully on 19-NOV-23 12.46.39.411874 AM",
+        "",
+        "Adding patches to installation queue and performing prereq checks...done",
+        "Installation queue:",
+        "  For the following PDBs: CDB$ROOT PDB$SEED DEVPDB",
+        "    No interim patches need to be rolled back",
+        "    No release update patches need to be installed",
+        "    No interim patches need to be applied",
+        "",
+        "SQL Patching tool complete on Sun Nov 19 01:22:55 2023"
+    ]
+}
+
+PLAY RECAP ****************************************************************************************************************************
+ansible_db               : ok=4    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+To execute this playbook from GUI, an example is provided in the document, please refer this link: https://github.com/IBM/ansible-power-aix-oracle-dba/blob/main/docs/PowerODBA_using_AAP2.pdf

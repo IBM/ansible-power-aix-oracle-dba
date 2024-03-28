@@ -1,120 +1,67 @@
 # Manage Grants - Readme
 # =====================
 
-# Description: This module is used to grant/Revoke privileges to Users/Roles.
-# It uses a python library: ansible-power-aix-oracle-dba/library/oracle_grants
+# Description: This module is used to grant/Revoke privileges to/from Users/Roles. 
 
-# Prerequisites:
-# ==============
-# Passwordless ssh needs to be setup between the Target lpar oracle owner and ansible controller user.
+In the following example we're going to grant connect, resource and drop any table privileges to testuser1.
 
-# Go to the playbooks directory 
-# Decrypt the file (if it's already encrypted)
-# ansible-vault decrypt vars/vault.yml
-Vault password:
-Decryption successful
-# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vault.yml.
-# Encrypt the file
-# ansible-vault encrypt vars/vault.yml
+1. There are two files which need to be updated:
+        a. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/manage-grants-vars.yml: This file contains database hostname, database port number and the path to the Oracle client and other related parameters.
+        b. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml: This contains sys password which will be used by cx_oracle to connect to the database with sysdba privilege.
+
+2. Update the common variables file: {{collection_dir}}/power_aix_oracle_dba/playbooks/vars/manage-grants-vars.yml as shown below
+
+hostname: ansible_db                        # AIX Lpar hostname where the database is running.
+listener_port: 1521                         # Database port number.
+oracle_db_home: /home/ansible/oracle_client      # Oracle Instant Client path on the ansible controller.
+
+oracle_databases:                           # Database users list to be created
+      - users:
+         - schema: testuser1              # Username to be created.
+        service_name: devdb                 # Database service name.
+        grants_mode: enforce                # enforce|append.
+        grants:
+         - connect                          # Provide name of the privilege as a list to grant to the user.
+         - resource
+         - drop any table
+        state: present                       # present|absent.
+
+3. Update the passwords file: {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml with sys user password. This file needs to be encrypted using ansible-vault. While running the playbook, please provide the vault password.
+default_dbpass: Oracle4u # SYS password
+default_gipass: Oracle4u # ASMSNMP password
+
+4. Encrypt the passwords file using ansible-vault as shown below
+$ ansible-vault encrypt vars/vault.yml
 New Vault password:
 Confirm New Vault password:
 Encryption successful
 
-# Set the Variables for Oracle to execute this task: 
-# Open the file vars/vars.yml and set the following variables:
+5. Create the playbook from {{ collection_dir }}/power_aix_oracle_dba/playbooks directory as shown below
+$ cat manage-grants.yml
 
-hostname: ansible_db                    # AIX lpar hostname
-listener_port: 1521                     # Database port number
-oracle_db_home: /tmp/oracle_client      # Oracle Client location on the ansible controller.
-oracle_env:
-     ORACLE_HOME: "{{ oracle_db_home }}"
-     LD_LIBRARY_PATH: "{{ oracle_db_home}}/lib"
-     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
-
-# Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_grants/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
-
-db_user: sys
-db_mode: sysdba
-db_service_name: "{% if item.0 is defined %}
-                    {%- if item.0.oracle_db_unique_name is defined %}{{ item.0.oracle_db_unique_name }}
-                    {%- elif item.0.oracle_db_instance_name is defined %}{{ item.0.oracle_db_instance_name }}
-                    {%- else %}{{ item.0.oracle_db_name }}
-                    {%- endif %}
-                  {%- endif %}"
-
-
-listener_port_template: "{% if item.0.listener_port is defined %}{{ item.0.listener_port }}{% else %}{{ listener_port }}{% endif %}"
-
-# Note: The following has both Role & User variables defined. Make use of either one stack & comment the other. In this example, "Users" stack is commented to grant privileges to a role named "ansirole".
-
-oracle_databases:
-#      - users:
-#         - schema: dbuser1          # CDB Schema user to be granter privileges.
-#        default_tablespace: users       # Schema's default tablespace.
-#        db_password_cdb: oracle         # Sys user password.
-#        service_name: ansible.pbm.ihost.com          # Service name of the CDB.
-#        grants_mode: enforce            # enforce|append
-#        grants:
-#         - connect                      # Role/Grants to be assigned to the schema.
-#         - resource
-#        container: all
-#        state: absent                   # present - added to the user|absent - removed from the user| REMOVEALL will remove ALL role/sys privileges.
-      - roles:
-         - role: ansirole                 # role name
-        grants_mode: enforce            # enforce|append
-        grants:
-         - connect                      # Role/Grants to be assigned to the schema.
-         - resource
-        oracle_db_name: ansipdb4.pbm.ihost.com         # Service name of the PDB.
-        db_password_cdb: oracle         # Sys user password.
-        state: present                   # present - adds privileges to the role|absent - removes grants from the role| REMOVEALL will remove ALL role/sys privileges.
-
-oracle_pdbs:
-      - users:
-         - schema: DBuser1            # PDB Schema user to be granter privileges.
-        service_name: ansipdb4.pbm.ihost.com         # Service name of the PDB.
-        db_password_pdb: oracle         # Sys user password.
-        grants_mode: enforce
-        grants:
-         - dba                          # Role/Grants to be assigned to the schema.
-        state: present                  # present|absent.
-      - role: ansirole2                # role name
-
-# Executing the playbook: This playbook executes a role.
-# Change directory to ansible-power-aix-oracle-dba
-# Name of the Playbook: manage-grants.yml
-# Contents of playbook:
-
-- hosts: localhost
-  connection: local
-  pre_tasks:
-   - name: include variables
-     include_vars:
-       dir: vars
-       extensions:
-         - 'yml'
+- name: Manage DB User Permissions/Grants
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+   - vars/vault.yml
+   - vars/manage-grants-vars.yml
   roles:
-     - { role: ibm.power_aix_oracle_dba.oradb_manage_grants }
+     - { role: oradb_manage_grants }
 
-# Sample Output:
-# =============
+6. Execute the playbook as shown below
 
-[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook manage-grants.yml
+ansible-playbook manage-grants.yml -i inventory.yml --ask-vault-pass
+Vault password:
 
-PLAY [localhost] **********************************************************************************************************************
+PLAY [Manage DB User Permissions/Grants] **********************************************************************************************
 
-TASK [Gathering Facts] ****************************************************************************************************************
-ok: [localhost]
+TASK [ibm.power_aix_oracle_dba.oradb_manage_grants : Manage role grants] **************************************************************
+skipping: [localhost]
 
-TASK [oradb_manage_grants : Manage role grants (cdb)] *********************************************************************************
-changed: [localhost] => (item=port: 1521, service: ansipdb4.pbm.ihost.com, role: none, grants: ['connect', 'resource'], state: present)
-
-TASK [oradb_manage_grants : Manage role grants (pdb)] *********************************************************************************
-
-TASK [oradb_manage_grants : Manage schema grants (cdb)] *******************************************************************************
-
-TASK [oradb_manage_grants : Manage schema grants (pdb)] *******************************************************************************
-changed: [localhost] => (item=port: 1521, service: ansipdb4.pbm.ihost.com, schema: DBuser1, grants: ['dba'], state: present)
+TASK [ibm.power_aix_oracle_dba.oradb_manage_grants : Manage schema grants] ************************************************************
+changed: [localhost] => (item=port: 1522, service: atsdb, schema: testuser1, grants: ['connect', 'resource', 'drop any table'], state: present)
 
 PLAY RECAP ****************************************************************************************************************************
-localhost                  : ok=2    changed=2    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+localhost                  : ok=1    changed=1    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+
+To execute this playbook from GUI, please refer this link: https://github.com/IBM/ansible-power-aix-oracle-dba/blob/main/docs/PowerODBA_using_AAP2.pdf

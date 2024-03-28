@@ -2,42 +2,9 @@ configure_cluster: false
 db_user: sys
 db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
 db_mode: sysdba
-hostname: ansible_db
 pdbadmin_user: pdbadmin
 pdbadmin_password: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][item[1].pdb_name] is defined and dbpasswords[item[1].cdb][item[1].pdb_name][pdbadmin_user] is defined%}{{dbpasswords[item[1].cdb][item[1].pdb_name][pdbadmin_user]}}{% else %}{{ default_dbpass}}{% endif%}"
-listener_port: 1521
-oracle_db_name: ansible.pbm.ihost.com                 # Database Service Name.
-oracle_home_db: /u01/19.3.0.0/19c_ansible            # Oracle DB Home Location.
 oracle_env:
-     ORACLE_HOME: /home/ansible/oracle_client           # Oracle Client Home on Ansible Controller.
-     LD_LIBRARY_PATH: /home/ansible/oracle_client/lib   # Oracle Client Home Library on Ansible Controller.
-
-create_pdb: True        #Set it to True when creating a fresh PDB. Otherwise, set False.
-drop_pdb: False         #Set it to True to Drop a PDB. Otherwise, set False.
-plug_pdb: False         #Set it to True to Create a PDB from an XML file. Otherwise, set False.
-unplug_pdb: False       #Set it to True to Unplug a PDB to an XML file. Otherwise, set False.
-
-pdb_oradata_dest: /u01/19.3.0.0/oradata/ANSIBLE/ansipdb #Directory to store PDB datafiles, this needs to be created manually.
-pdb_seed_dest: /u01/19.3.0.0/oradata/ANSIBLE/pdbseed  # PDB Seed datafiles location.
-xml_file_dest: 
-
-#PDB Creation Variables  [When the above "create_pdb" or "plug_pdb" are set to True]
-#
-create_oracle_pdbs:                    # Set these parameters to create a new PDB from SEED PDB. Make sure to set plug_pdb variable "False"
-   - pdb_name: ansipdb              # Name of the PDB to be created from PDB
-     cdb: "{{ oracle_db_name }}"                  
-     state: present                      # present - creates PDB.
-     file_name_convert: "{{ pdb_seed_dest }},{{ pdb_oradata_dest }}"
-     xml_dest: "{{ xml_file_dest }}"         # Location of the XML file to plug in a PDB.
-     xml_file: ansipdb4.xml             # XML File name.
-     datafile_dest: "{{ pdb_oradata_dest }}"
-     
-#PDB Drop & Unplug Variables  [When the above "unplug_pdb" or "drop_pdb" are set to True]
-
-drop_oracle_pdbs:                  # Set these parameters to create a new PDB using an XML File.
-   - pdb_name: DB19CPDB              # Name of the PDB to be created from XML File.
-     cdb: "{{ oracle_db_name }}"                        # CDB name
-     state: absent                      # absent - drops pdb, unplugged - unplug pdb
-     file_name_convert: "{{ pdb_seed_dest }},{{ pdb_oradata_dest }}"
-     xml_dest: "{{ xml_file_dest }}"
-     xml_file: ansipdb4.xml
+     ORACLE_HOME: "{{ oracle_db_home }}"
+     LD_LIBRARY_PATH: "{{ oracle_db_home}}"
+     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"

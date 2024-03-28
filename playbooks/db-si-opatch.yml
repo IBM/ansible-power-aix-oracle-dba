@@ -1,0 +1,10 @@
+# Use this playbook to patch Oracle Home binaries on Single Instance using opatch utility. Datapatch must be run separately using "manage-datapatch.yml" playbook.
+
+- name: Apply binary patches
+  hosts: ansible_db     # AIX lpar hostname defined in Ansible inventory.
+  gather_facts: False
+  remote_user: oracle   # Oracle RDBMS user on the AIX lpar.
+  vars_files:
+     - vars/db-si-opatch-vars.yml
+  roles:
+     - {role: oraswdb_manage_patches }

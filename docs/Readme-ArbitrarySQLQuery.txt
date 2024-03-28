@@ -1,66 +1,49 @@
 # Run Arbitrary SQL Queries - Readme
 # ==================================
-# Description: This module is used run arbitrary SQL Queries. Single & multiple queries can be run. It uses a python library located here: ansible-power-aix-oracle-dba/library/oracle_sql.
+# Description: This module is used run arbitrary SQL Queries. Single & multiple queries can be run. 
 
-# Prerequisites:
-# ==============
+In the following example we're going to execute two simple queries against a PDB.
 
-# Go to the playbooks directory 
-# Decrypt the file (if it's already encrypted)
-# ansible-vault decrypt vars/vault.yml
-Vault password:
-Decryption successful
-# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vault.yml.
-# Encrypt the file
-# ansible-vault encrypt vars/vault.yml
-New Vault password:
-Confirm New Vault password:
-Encryption successful
+1. There are two files which need to be updated:
+        a. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/manage-arbitrarysqlquery-vars.yml: This file contains database hostname, database port number and the path to the Oracle client and other related parameters.
+        b. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml: This contains sys password which will be used by cx_oracle to connect to the database with sysdba privilege.
 
-# Set the Variables for Oracle to execute this task: 
+2. Update the common variables file: {{collection_dir}}/power_aix_oracle_dba/playbooks/vars/manage-arbitrarysqlquery-vars.yml as shown below
 
-# Open the file vars/vars.yml and set the following variables:
+hostname: ansible_db                  # AIX Lpar hostname where the Database is running.
+service_name: devpdb   # Database service name.
+listener_port: 1521                   # Database port number.
+oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
 
-hostname: ansible_db                    # AIX lpar hostname
-listener_port: 1521                     # Database port number
-oracle_db_home: /tmp/oracle_client      # Oracle Client location on the ansible controller.
-oracle_env:
-     ORACLE_HOME: "{{ oracle_db_home }}"
-     LD_LIBRARY_PATH: "{{ oracle_db_home}}/lib"
-     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
-
-# Open the file ansible-power-aix-oracle-dba/arbitrarysqlquery-task.yml and modify the variables under "vars" section. Do NOT change other sections of the file.
-
-service_name: db122c             # Service name of the database
-user: sys
-db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
-db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
-db_mode: sysdba
 sql_query:
    - { query: 'select name from v$database' }   # SQL Query 1.
    - { query: 'select instance_name from v$instance' }    # SQL Query 2.
 
-# Executing the playbook: This playbook executes a role.
-# Change directory to ansible-power-aix-oracle-dba/playbooks
-# Name of the Playbook: manage-arbitrarysqlquery.yml
-# ansible-playbook manage-arbitrarysqlquery.yml --ask-vault-pass
-# The following task will get executed.
+3. Update the passwords file: {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml with sys user password. This file needs to be encrypted using ansible-vault. While running the playbook, please provide the vault password.
+default_dbpass: Oracle4u # SYS password
+default_gipass: Oracle4u # ASMSNMP password
+
+4. Encrypt the passwords file using ansible-vault as shown below
+$ ansible-vault encrypt vars/vault.yml
+New Vault password:
+Confirm New Vault password:
+Encryption successful
+
+5. Create the playbook in {{ collection_dir }}/power_aix_oracle_dba/playbooks directory as shown below
+
+$ cat manage-arbitrarysqlquery.yml
 
 - hosts: localhost
   connection: local
-  pre_tasks:
-     - name: include variables
-       include_vars:
-         dir: vars
-         extensions:
-           - 'yml'
-
+  vars_files:
+   - vars/vault.yml
+   - vars/manage-arbitrarysqlquery-vars.yml
   roles:
-     - { role: ibm.power_aix_oracle_dba.oradb_manage_sqlqueries }
-# Sample output:
-================
+     - { role: oradb_manage_sqlqueries }
 
-[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook manage-arbitrarysqlquery.yml --ask-vault-pass
+6. Execute the playbook as shown below
+
+$ ansible-playbook manage-arbitrarysqlquery.yml -i inventory.yml --ask-vault-pass
 Vault password:
 
 PLAY [localhost] **********************************************************************************************************************
@@ -68,77 +51,22 @@ PLAY [localhost] ***************************************************************
 TASK [Gathering Facts] ****************************************************************************************************************
 ok: [localhost]
 
-TASK [oracle_sql] *********************************************************************************************************************
-ok: [localhost] => (item={'query': 'select name from v$database'})
+TASK [oradb_manage_sqlqueries : oracle_sql] ******************************************************************
+ok: [localhost] => (item={'query': 'select name,open_mode from v$database'})
 ok: [localhost] => (item={'query': 'select instance_name from v$instance'})
-[WARNING]: The value 1521 (type int) in a string field was converted to '1521' (type string). If this does not look like what you
-expect, quote the entire value to ensure it does not change.
 
-TASK [debug] **************************************************************************************************************************
+TASK [oradb_manage_sqlqueries : set_fact] ********************************************************************
+ok: [localhost]
+
+TASK [oradb_manage_sqlqueries : SQL Output] ******************************************************************
 ok: [localhost] => {
-    "output": {
-        "changed": false,
-        "msg": "All items completed",
-        "results": [
-            {
-                "ansible_loop_var": "item",
-                "changed": false,
-                "failed": false,
-                "invocation": {
-                    "module_args": {
-                        "hostname": "ansible_db",
-                        "mode": "sysdba",
-                        "password": "VALUE_SPECIFIED_IN_NO_LOG_PARAMETER",
-                        "port": "1521",
-                        "script": null,
-                        "service_name": "db122c",
-                        "sql": "select name from v$database",
-                        "user": "sys",
-                        "username": "sys"
-                    }
-                },
-                "item": {
-                    "query": "select name from v$database"
-                },
-                "msg": [
-                    [
-                        "DB122C"
-                    ]
-                ]
-            },
-            {
-                "ansible_loop_var": "item",
-                "changed": false,
-                "failed": false,
-                "invocation": {
-                    "module_args": {
-                        "hostname": "ansible_db",
-                        "mode": "sysdba",
-                        "password": "VALUE_SPECIFIED_IN_NO_LOG_PARAMETER",
-                        "port": "1521",
-                        "script": null,
-                        "service_name": "db122c",
-                        "sql": "select instance_name from v$instance",
-                        "user": "sys",
-                        "username": "sys"
-                    }
-                },
-                "item": {
-                    "query": "select instance_name from v$instance"
-                },
-                "msg": [
-                    [
-                        "db122c"
-                    ]
-                ]
-            }
-        ],
-        "warnings": [
-            "The value 1521 (type int) in a string field was converted to '1521' (type string). If this does not look like what you expect, quote the entire value to ensure it does not change.",
-            "The value 1521 (type int) in a string field was converted to '1521' (type string). If this does not look like what you expect, quote the entire value to ensure it does not change."
-        ]
-    }
+    "query_ouput": [
+        "{'query': 'select name,open_mode from v$database'}: [['DEVDB', 'READ WRITE']]",
+        "{'query': 'select instance_name from v$instance'}: [['devdb']]"
+    ]
 }
 
 PLAY RECAP ****************************************************************************************************************************
-localhost                  : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+localhost                  : ok=4    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
+To execute this playbook from GUI, please refer this link: https://github.com/IBM/ansible-power-aix-oracle-dba/blob/main/docs/PowerODBA_using_AAP2.pdf

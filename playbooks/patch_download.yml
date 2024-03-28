@@ -1,0 +1,11 @@
+# Playbook to download multiple patches from My Oracle Support. 
+# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+#
+- hosts: localhost             # Provide the hostname to which the patches needs to be downloaded. Either localhost or remote host.
+  remote_user: oracle          # Username of the remote host in case you are downloading to remote hosts. 
+  gather_facts: False
+  vars_files:
+     - vars/vault.yml          # Set your MOS credentials in this file. Make sure to encrypt this file using Ansible Vault.
+     - vars/patch-download-vars.yml            # Update this file with the required patchid and Oracle versions.
+  roles:
+     - { role: orasw_download_patches }

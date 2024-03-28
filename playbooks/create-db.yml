@@ -1,11 +1,8 @@
-# Execute this playbook from collection_dir/playbooks
-# Update vars/vault.yml with ASM sys password & DB sys password.
-# $ cat vars/vault.yml
-# default_gipass: Oracle4u
-# default_dbpass: Oracle4u
-
+# Playbook to create RAC/Non-RAC databases.
+# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+#
 - name: Create a Database
-  hosts: ansible_db                  # Target LPAR hostname defined in the inventory
+  hosts: all                    # Target LPAR hostname defined in the inventory
   remote_user: oracle           # Oracle Database Username
   vars_files:
    - vars/create-db-vars.yml

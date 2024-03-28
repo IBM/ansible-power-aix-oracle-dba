@@ -1,0 +1,5 @@
+- ansible.builtin.include_tasks: create_acfs.yml
+  when: create_acfs
+
+- ansible.builtin.include_tasks: delete_acfs.yml
+  when: delete_acfs

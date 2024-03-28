@@ -1,14 +1,22 @@
----
+- name: Delete database(s)
+  shell: "{{ oracle_home_db }}/bin/dbca -deleteDatabase -sourceDB {{ item.oracle_db_name }} -sysDBAUserName sys -sysDBAPassword {{ default_dbpass }} -silent"
+  with_items: "{{ oracle_databases }}"
+  when: item.state |upper == 'ABSENT'
+  tags:
+    - oradbdelete
+  register: oradbdelete
+  ignore_errors: true
 
-  - name: Delete database(s)
-    shell: "{{ oracle_home_db }}/bin/dbca -deleteDatabase -sourceDB {{ item.oracle_db_name }} -sysDBAUserName sys -sysDBAPassword {{ item.oracle_db_passwd }} -silent"
-    with_items: "{{oracle_databases}}"
-    when: item.state |upper == 'ABSENT'
-    tags:
-      - oradbdelete
-    register: oradbdelete
+- ansible.builtin.debug:
+    msg: "{{ item.stdout_lines }}"
+  loop: "{{ oradbdelete.results }}"
+#  loop_control:
+#    label: "{{ item.oracle_db_name }}"
 
-  - debug: var=oraddelete.stdout_lines
-    with_items: oradbdelete.results
-    tags:
-     - oradbdelete
+
+  #- ansible.builtin.debug:
+  #      msg: "{{ oradbdelete }}"
+
+#- ansible.builtin.debug: 
+#    msg: "{{ item }}"
+#  loop: "{{ oradbdelete.results | map(attribute='stdout_lines') }}"

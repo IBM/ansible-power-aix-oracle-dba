@@ -1,0 +1,15 @@
+hostname: ansible_db                           # AIX hostname where the Database is running.
+service_name: devpdb                           # Database service name.
+listener_port: 1521                            # Database port number.
+oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+state: present                  # State: Present/Absent
+consumer_group: ansigroup1      # Desired consumer group name
+comments:  This is a test consumer resource group       # Optional
+grant:
+   - testuser1                  # Name of the user to provide grants to resource group.
+map_oracle_user:
+   - testuser1                  # Map user
+map_service_name:
+   - devpdb                     # Map service name
+map_client_machine:
+   - x123vm456                  # Map client machine name

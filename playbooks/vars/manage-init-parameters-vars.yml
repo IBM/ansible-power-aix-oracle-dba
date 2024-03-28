@@ -1,0 +1,7 @@
+hostname: ansible_db                           # AIX hostname where the Database is running.
+service_name: devdb                            # Container Database service name.
+listener_port: 1521                            # Database port number.
+oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+param_name: log_archive_dest_state_2       # Initialization Parameter Name
+param_value: defer                         # Initialization Parameter Value
+state: present                              # Initialization Parameter state: present - sets the value, absent/reset - disables the parameter

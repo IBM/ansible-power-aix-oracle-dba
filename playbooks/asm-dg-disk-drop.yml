@@ -1,6 +1,0 @@
- - name: Manage ASM Diskgroup/Disk
-   gather_facts: yes
-   hosts: ansible_db                 # AIX Lpar Hostname where the Diskgroup/Disk has to be dropped.
-   remote_user: oracle               # Grid Home Owner
-   roles:
-      - {role: ibm.power_aix_oracle_dba.drop_asmdg_disk_aix }

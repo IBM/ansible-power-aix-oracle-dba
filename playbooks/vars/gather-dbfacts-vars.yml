@@ -1,0 +1,4 @@
+hostname: ansible_db                    # AIX lpar hostname where the database is running.
+listener_port: 1521                     # Database port number
+oracle_db_home: /home/ansible/oracle_client      # Oracle Client location on the ansible controller.
+service_name: devdb                     # Service name of a PDB or CDB.

@@ -1,5 +1,12 @@
+# Playbook to drop RAC/Non-RAC databases.
+# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+#
 - name: Drop a Database
-  hosts: ansible_db                     # Target Lpar hostname.
+  hosts: all                     # Target Lpar hostname.
   remote_user: oracle                   # Remote username.
+  gather_facts: false
+  vars_files:
+   - vars/delete-db-vars.yml
+   - vars/vault.yml  
   roles:
-     - { role: ibm.power_aix_oracle_dba.oradb_delete }
+     - { role: oradb_delete }

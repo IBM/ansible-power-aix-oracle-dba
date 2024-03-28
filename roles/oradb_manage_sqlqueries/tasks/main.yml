@@ -1,6 +1,6 @@
 - oracle_sql:
     username: "{{ user }}"
-    password: "{{ password }}"
+    password: "{{ db_password_cdb }}"
     service_name: "{{ service_name }}"
     hostname: "{{ hostname }}"
     port: "{{ listener_port }}"
@@ -10,5 +10,15 @@
     - "{{ sql_query }}"
   environment: "{{ oracle_env }}"
   register: output
-- debug:
-    var: output
+
+- set_fact:
+   query_ouput: |-
+        [
+        {% for rp in output.results %}
+                "{{ rp.item }}: {{ rp.msg }}",
+        {% endfor %}
+        ]
+
+- name: SQL Output
+  debug:
+    var: query_ouput

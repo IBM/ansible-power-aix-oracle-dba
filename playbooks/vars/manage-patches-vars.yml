@@ -1,0 +1,12 @@
+# Provide Patch ID, Patch Version and path to store the patch patch files to get started.
+
+oracle_patch_download_dir: /home/ansible/patches           # Path on local/remote host to save the patch files.
+oracle_sw_patches:                     # Provide the patchid & relevant version as a list shown below.
+      - patchid: 34762026              # Patch ID 1. Example: This is a 19.18 Release Update patch.
+        version: 1900                  # To download this patch, mention 1900 in the version field.
+      - patchid: 28676706              # Patch ID 2. This patch is available for multiple Release Updates.
+        version: 1916                  # To download this patch for version 19.16, mention 1916 in the version field.
+      - patchid: 28676706              # Patch ID 2. This patch is available for multiple Release Updates.
+        version: 1919                  # To download this patch for version 19.19, mention 1919 in the version field.
+      - patchid: 28676706              # Patch ID 2. This patch is available for multiple Release Updates.
+        version: 1900                  # To download this patch for version 19.0.0, mention 1900 in the version field.

@@ -1,16 +1,9 @@
-hostname: ansible_db
-service_name: ansible.pbm.ihost.com
 db_user: sys
 db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
 db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
-listener_port: 1521
 db_mode: sysdba
-state: present
-enabled: True
-repeat_interval: FREQ=MINUTELY;INTERVAL=30
-convert_to_upper: True
-comments: This is test
-schedule_name: ansiuser1.ansi_schedule
 oracle_env:
-  ORACLE_HOME: /home/ansible/oracle_client
-  LD_LIBRARY_PATH: /home/ansible/oracle_client/lib
+     ORACLE_HOME: "{{ oracle_db_home }}"
+     LD_LIBRARY_PATH: "{{ oracle_db_home}}"
+     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
+convert_to_upper: True

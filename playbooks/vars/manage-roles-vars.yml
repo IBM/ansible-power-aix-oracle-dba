@@ -1,0 +1,13 @@
+hostname: ansible_db                           # AIX hostname where the Database is running.
+service_name: devdb                            # Database service name.
+listener_port: 1521                            # Database port number.
+oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+oracle_databases:
+      - roles:
+          - name: devrole                              # Name of the role to be created in PDB
+        service_name: devpdb            # PDB service name.
+        grants:
+          - create session                              # Privilege 1 assigned to the role.
+          - create any table                            # Privilege 2 assigned to the role.
+          - create any view
+        state: present                                   # present|absent

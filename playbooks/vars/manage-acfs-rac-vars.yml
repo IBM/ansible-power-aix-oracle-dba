@@ -1,0 +1,10 @@
+grid_owner: oracle                       # Grid Home Owner.
+grid_group: oinstall                     # Grid Home Owner's primary group
+oracle_home_gi: /ora/grid        # Grid Home path.
+oracle_sid: +APX1                        # ASM/APX SID running on the connected node.
+path: /acfs                              # Path onto which ACFS to be mounted.
+diskgroup: ACFSDISK                      # Diskgroup name where ACFS should me created.
+volname: ACFSVOLUME                      # Desired ACFS volume name to be created.
+size: 95G                                # ACFS mount point size that needs to be allocated.
+create_acfs: False                        # True: Creates ACFS mount point. False: Does ntohing.
+delete_acfs: True                       # True: Deletes ACFS mount point. False: Does nothing.

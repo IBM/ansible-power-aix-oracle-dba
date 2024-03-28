@@ -43,9 +43,13 @@ if [ ! -f "{{ temp_dir }}/done/oracle.install.$oh.done" ]; then
         if [ `grep patched $db_oracle_home/install/files.lst | wc -l` == 0 ]; then
            /bin/sh $db_oracle_home/clone/rootpre.sh
            export SKIP_ROOTPRE="TRUE" && $db_oracle_home/runInstaller -applyRU "{{ sw_stage }}/$ruid" -silent -responsefile "{{ temp_dir }}/scripts/$response_file" > $install_log 2>&1
-           else
-           export SKIP_ROOTPRE="TRUE" && $db_oracle_home/runInstaller -silent -responsefile "{{ temp_dir }}/scripts/$response_file" > $install_log 2>&1
         fi
+    fi
+fi
+
+if [ ! -f "{{ temp_dir }}/done/oracle.install.$oh.done" ]; then
+    if [ $apply_ru == "False" ]; then
+       export SKIP_ROOTPRE="TRUE" && $db_oracle_home/runInstaller -silent -responsefile "{{ temp_dir }}/scripts/$response_file" > $install_log 2>&1
     fi
 fi
 

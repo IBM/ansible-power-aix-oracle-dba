@@ -1,0 +1,68 @@
+- name: Check directory
+  ansible.builtin.stat:
+    path: "{{ path }}"
+  register: dir
+
+- name: Check volume
+  ansible.builtin.shell: "asmcmd volinfo --all|grep -w {{ volname }}"
+  when: create_acfs
+  register: checkvol
+  environment: "{{ oracle_env }}"
+  ignore_errors: True
+
+- ansible.builtin.fail:
+   msg: "Looks like ACFS Volume already exists"
+  when: checkvol.rc == 0
+
+- name: Create directory
+  ansible.builtin.file:
+   path: "{{ path }}"
+   state: directory
+   owner: "{{ grid_owner }}"
+   mode: 0775
+  become: yes
+  when: not dir.stat.exists
+
+- ansible.builtin.name: Start acfsload
+  ansible.builtin.shell: "{{ oracle_home_gi }}/bin/acfsload start"
+  when: create_acfs
+  environment: "{{ oracle_env }}"
+  become: yes
+
+- name: Create ACFS Volume
+  ansible.builtin.shell: "asmcmd volcreate -G {{ diskgroup }} -s {{ size}} {{ volname }}"
+  environment: "{{ oracle_env }}"
+  when: create_acfs and checkvol.rc != 0
+  register: volcreate
+  tags: volcreate
+
+- name: Get Volume Device
+  ansible.builtin.shell: "asmcmd volinfo -G {{ diskgroup }} {{ volname }} | grep 'Volume Device' | awk '{print $3}'"
+  environment: "{{ oracle_env }}"
+  when: create_acfs
+  register: getvol
+  tags: getvol
+
+- name: Make Filesystem
+  ansible.builtin.shell: "mkfs -V acfs {{ getvol.stdout }}"
+  environment: "{{ oracle_env }}"
+  when: create_acfs
+  tags: mkacfs
+
+- name: Mount
+  ansible.builtin.shell: "mount -v acfs {{ getvol.stdout }} {{ path }}"
+  environment: "{{ oracle_env }}"
+  when: create_acfs
+  become: yes
+  tags: mountacfs
+
+- name: Add permissions to {{ grid_owner }} user
+  ansible.builtin.shell: "chown -R {{ grid_owner }}:{{ grid_group }} {{ path }}"
+
+- name: Verify New ACFS
+  ansible.builtin.shell: "df -g {{ path }}"
+  register: new_acfs
+
+- name: Verify New ACFS
+  ansible.builtin.debug:
+    msg: "{{ new_acfs.stdout_lines }}"  

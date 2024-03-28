@@ -2,7 +2,7 @@
 # =====================
 
 # Description: This module is used to create, drop, lock, unlock & expire user accounts. For privileges refer "grants" readme of our ansible collection.
-# The role “oradb_manage_users” is used to create, drop, lock, unlock & set expiration to database users. It uses the “oracle_users” module. The users require privileges to access the database which can be achieved by the role “oradb_manage_grants”. It uses the “oracle_grants” module.
+# The role oradb_manage_users is used to create, drop, lock, unlock & set expiration to database users. It uses the oracle_users module. The users require privileges to access the database which can be achieved by the role oradb_manage_grants. It uses the oracle_grants module.
 
 In the following example we're going to create two database users (testuser1 & testuser2) in a pluggable database DEVPDB running in a container database and grant privileges to the users.
 1. There are two files which need to be updated:
@@ -72,8 +72,8 @@ $ cat manage-users.yml
  - { role: oradb_manage_users }
  
  
-7. Now execute the playbook as shown below
- [ansible@x134vm236 playbooks]$ ansible-playbook manage-users.yml --ask-vault-pass
+7. Execute the playbook as shown below
+$ ansible-playbook manage-users.yml --ask-vault-pass
 Vault password:
 PLAY [Create DB User] 
 *******************************************************************************************

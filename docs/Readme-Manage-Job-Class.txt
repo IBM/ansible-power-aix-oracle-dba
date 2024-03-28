@@ -1,62 +1,73 @@
 # Manage DBMS_SCHEDULER job classes in Oracle database - Readme
 # =============================================================
 
-# Description: # This module is used to manage DBMS job Classes. It uses a python library located here: ansible-power-aix-oracle-dba/library/oracle_jobclass.
+# Description: # This module is used to manage DBMS job Classes. 
 # Reference: https://docs.oracle.com/database/121/ADMIN/scheduse.htm#ADMIN12674
 
-# Prerequisites:
-# ==============
+In the following example we're going to create a DBMS Scheduler Job Class.
 
-# Go to the playbooks directory 
-# Decrypt the file (if it's already encrypted)
-# ansible-vault decrypt vars/vault.yml
-Vault password:
-Decryption successful
-# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vault.yml.
-# Encrypt the file
-# ansible-vault encrypt vars/vault.yml
+1. There are two files which need to be updated:
+        a. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/manage-job-class-vars.yml: This file contains database hostname, database port number and the path to the Oracle client and other related parameters.
+        b. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml: This contains sys password which will be used by cx_oracle to connect to the database with sysdba privilege.
+
+2. Update the common variables file: {{collection_dir}}/power_aix_oracle_dba/playbooks
+
+$ cat vars/manage-job-class-vars.yml
+hostname: ansible_db                           # AIX hostname where the Database is running.
+service_name: devpdb                           # Database service name.
+listener_port: 1521                            # Database port number.
+oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+state: present
+resource_group: ansigroup1
+class_name: ansiclass
+logging: failed runs
+history: 14
+
+3. Update the passwords file: {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml with sys user password. This file needs to be encrypted using ansible-vault. While running the playbook, please provide the vault password.
+default_dbpass: Oracle4u # SYS password
+default_gipass: Oracle4u # ASMSNMP password
+
+4. Encrypt the passwords file using ansible-vault as shown below
+$ ansible-vault encrypt vars/vault.yml
 New Vault password:
 Confirm New Vault password:
 Encryption successful
 
-# Set the Variables for Oracle: 
-
-# Open the file vars/vars.yml and set the following variables:
-
-hostname: ansible_db                    # AIX lpar hostname
-listener_port: 1521                     # Database port number
-oracle_db_home: /tmp/oracle_client      # Oracle Client location on the ansible controller.
-oracle_env:
-     ORACLE_HOME: "{{ oracle_db_home }}"
-     LD_LIBRARY_PATH: "{{ oracle_db_home}}/lib"
-     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
-
-# Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_jobclass/defaults/main.yml and modify the variables.
-
-service_name: db122cpdb			# DB service name.
-db_user: sys
-db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
-db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
-db_mode: sysdba
-state: present
-resource_group: ansigroup1			# Resource group name
-class_name: ansiclass			# Class name
-logging: failed runs			# logging
-history: 14				# History
-
-# Executing the playbook: This playbook executes a role.
-# Playbook name: manage-jobclass.yml
-# Change directory to ansible-power-aix-oracle-dba/playbooks
-# ansible-playbook manage-jobclass.yml --ask-vault-pass
-# The following task will get executed.
+5. Create the playbook in {{ collection_dir }}/power_aix_oracle_dba/playbooks directory as shown below
+$ cat manage-jobclass.yml
 
 - hosts: localhost
+  gather_facts: false
   connection: local
-  pre_tasks:
-   - name: include variables
-     include_vars:
-       dir: vars
-       extensions:
-         - 'yml'
+  vars_files:
+   - vars/vault.yml
+   - vars/manage-job-class-vars.yml
   roles:
-     - { role: ibm.power_aix_oracle_dba.oradb_manage_jobclass }
+     - { role: oradb_manage_jobclass }
+
+6. Execute the playbook as shown below
+
+$ ansible-playbook manage-jobclass.yml -i inventory.yml --ask-vault-pass
+Vault password:
+
+PLAY [localhost] **********************************************************************************************************************
+
+TASK [oradb_manage_jobclass : Oracle Job Class] **************************************************************
+[WARNING]: Module did not set no_log for password
+changed: [localhost]
+
+TASK [oradb_manage_jobclass : debug] *************************************************************************
+ok: [localhost] => {
+    "jobclass": {
+        "changed": true,
+        "failed": false,
+        "msg": "",
+        "warnings": [
+            "Module did not set no_log for password"
+        ]
+    }
+}
+
+PLAY RECAP ****************************************************************************************************************************
+localhost                  : ok=2    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+To execute this playbook from GUI, please refer this link: https://github.com/IBM/ansible-power-aix-oracle-dba/blob/main/docs/PowerODBA_using_AAP2.pdf 

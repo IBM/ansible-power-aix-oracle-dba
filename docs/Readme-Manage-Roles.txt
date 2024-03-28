@@ -1,105 +1,68 @@
 # Manage Roles - Readme
 # =====================
 
-# Description: This module is used to create or drop roles. To add privileges to the roles please refer 
-# It uses a python library: ansible-power-aix-oracle-dba/library/oracle_users
+# Description: This module is used to create or drop roles. To add privileges to the roles please refer: https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/CREATE-ROLE.html#GUID-B2252DC5-5AE7-49B7-9048-98062993E450. 
 
-# Prerequisites:
-# ==============
+In the following example we're going to create a role called devrole in a PDB called DEVPDB.
 
-# Go to the playbooks directory 
-# Decrypt the file (if it's already encrypted)
-# ansible-vault decrypt vars/vault.yml
-Vault password:
-Decryption successful
-# Set SYS password for "default_dbpass" variable in ansible-power-aix-oracle-dba/playbooks/vars/vault.yml.
-# Encrypt the file
-# ansible-vault encrypt vars/vault.yml
+1. There are two files which need to be updated:
+        a. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/manage-roles-vars.yml: This file contains database hostname, database port number and the path to the Oracle client and other related parameters.
+        b. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml: This contains sys password which will be used by cx_oracle to connect to the database with sysdba privilege.
+
+2. Update the common variables file: {{collection_dir}}/power_aix_oracle_dba/playbooks
+
+$  cat vars/manage-roles-vars.yml
+hostname: ansible_db                           # AIX hostname where the Database is running.
+service_name: devdb                            # Database service name.
+listener_port: 1521                            # Database port number.
+oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+oracle_databases:
+      - roles:
+          - name: devrole                              # Name of the role to be created in PDB
+        service_name: devpdb            # PDB service name.
+        grants:
+          - create session                              # Privilege 1 assigned to the role.
+          - create any table                            # Privilege 2 assigned to the role.
+          - create any view
+        state: present                                   # present|absent
+
+3. Update the passwords file: {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/vault.yml with sys user password. This file needs to be encrypted using ansible-vault. While running the playbook, please provide the vault password.
+default_dbpass: Oracle4u # SYS password
+default_gipass: Oracle4u # ASMSNMP password
+
+4. Encrypt the passwords file using ansible-vault as shown below
+$ ansible-vault encrypt vars/vault.yml
 New Vault password:
 Confirm New Vault password:
 Encryption successful
 
-# Set the Variables for Oracle to execute this task: 
+5. Create the playbook in {{ collection_dir }}/power_aix_oracle_dba/playbooks directory as shown below
 
-# Open the file vars/vars.yml and set the following variables:
-
-hostname: ansible_db                    # AIX lpar hostname
-listener_port: 1521                     # Database port number
-oracle_db_home: /tmp/oracle_client      # Oracle Client location on the ansible controller.
-oracle_env:
-     ORACLE_HOME: "{{ oracle_db_home }}"
-     LD_LIBRARY_PATH: "{{ oracle_db_home}}/lib"
-     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
-
-# Open the file ansible-power-aix-oracle-dba/roles/oradb_manage_roles/defaults/main.yml and modify the variables. Modify only the ones which are marked with comments.
-
-db_user: sys
-db_mode: sysdba
-
-db_service_name: "{% if item.0 is defined %}
-                    {%- if item.0.oracle_db_unique_name is defined %}{{ item.0.oracle_db_unique_name }}
-                    {%- elif item.0.oracle_db_instance_name is defined %}{{ item.0.oracle_db_instance_name }}
-                    {%- else %}{{ item.0.oracle_db_name }}
-                    {%- endif %}
-                  {%- endif %}"
-
-listener_port_template: "{% if item.0.listener_port is defined %}{{ item.0.listener_port }}{% else %}{{ listener_port }}{% endif %}"
-
-oracle_databases:
-      - roles:
-          - name: ansirole                              # Name of the role to be created in CDB.
-        oracle_db_name: ANSIPDB4.pbm.ihost.com          # CDB service name.
-        db_password_cdb: oracle                         # Sys user password.
-        container: all
-        state: absent                                   # present|absent
-
-oracle_pdbs:
-      - roles:
-          - name: ansirole                              # Name of the role to be created in PDB
-        service_name: ansipdb4.pbm.ihost.com            # PDB service name.
-        db_password_pdb: oracle                         # Sys user password.
-        state: absent                                   # present|absent
-
-# Executing the playbook: This playbook executes a role.
-# Change directory to ansible-power-aix-oracle-dba/playbooks
-# Name of the Playbook: manage-roles.yml
-# Contents of playbook:
+$ cat manage-roles.yml
 
 - hosts: localhost
   connection: local
-  pre_tasks:
-   - name: include variables
-     include_vars:
-       dir: vars
-       extensions:
-         - 'yml'
+  vars_files:
+   - vars/vault.yml
+   - vars/manage-roles-vars.yml
   roles:
      - { role: oradb_manage_roles }
 
-# ansible-playbook manage-roles.yml --ask-vault-pass
+6. Execute the playbook as shown below
 
-# Sample output:
-# =============
-
-[ansible@x134vm232 ansible-power-aix-oracle-dba]$ ansible-playbook manage-roles.yml --ask-vault-pass
+$ ansible-playbook manage-roles.yml -i inventory.yml --ask-vault-pass
 Vault password:
 
-PLAY [localhost] **********************************************************************************************************************
+PLAY [localhost] *********************************************************************************************************************
 
-TASK [Gathering Facts] ****************************************************************************************************************
+TASK [Gathering Facts] ***************************************************************************************************************
 ok: [localhost]
 
-TASK [oradb_manage_roles : Manage roles (cdb)] ****************************************************************************************
-ok: [localhost] => (item=port: 1521, service: ANSIPDB4.pbm.ihost.com, role: ansirole, state: present)
+TASK [oradb_manage_roles : Manage roles] ********************************************************************
+changed: [localhost] => (item=port: 1521, service: devpdb, role: devrole, state: present)
 
-TASK [oradb_manage_roles : Manage roles (pdb)] ****************************************************************************************
-ok: [localhost] => (item=port: 1521, service: ansipdb4.pbm.ihost.com, role: ansirole, state: present)
+PLAY RECAP ***************************************************************************************************************************
+localhost                  : ok=2    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
 
-TASK [oradb_manage_roles : Manage roles (cdb)] ****************************************************************************************
-skipping: [localhost] => (item=port: 1521, service: ANSIPDB4.pbm.ihost.com, role: ansirole, state: present)
+To execute this playbook from GUI, please refer this link: https://github.com/IBM/ansible-power-aix-oracle-dba/blob/main/docs/PowerODBA_using_AAP2.pdf
 
-TASK [oradb_manage_roles : Manage roles (pdb)] ****************************************************************************************
-skipping: [localhost] => (item=port: 1521, service: ansipdb4.pbm.ihost.com, role: ansirole, state: present)
-
-PLAY RECAP ****************************************************************************************************************************
-localhost                  : ok=3    changed=0    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0

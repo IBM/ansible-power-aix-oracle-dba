@@ -1,0 +1,11 @@
+# Playbook to create a new ASM diskgroup.
+# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+#
+- name: Create ASM Diskgroup
+  gather_facts: no            
+  hosts: all                                   # AIX Lpar Hostname where the Diskgroup has to be created.
+  remote_user: oracle                                 # Grid Software owner.
+  vars_files:
+   - vars/asm-create-dg-vars.yml
+  roles:
+   - {role: podba_create_asm_dg }

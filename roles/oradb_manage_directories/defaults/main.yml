@@ -1,14 +1,8 @@
-  hostname: ansible_db                       # AIX Lpar hostname.
-  service_name: ansiblepdb.pbm.ihost.com                       # Service name for the database where the directory needs to be created.
-  db_user: sys
-  db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
-  db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
-  listener_port: 1521                        # Database listener port number.
-  db_mode: sysdba
-  directory_name: TESTDIR                    # Desired directory name to be created.
-  path: /u01/testdir                         # Path to which the database directory is to be created. This must be created manually.
-  state: present                             # To create a directory - present. To drop a directory - absent.
-  mode: enforce
-  oracle_env:
-     ORACLE_HOME: /home/ansible/oracle_client          # Oracle Client Home on Ansible Controller.
-     LD_LIBRARY_PATH: /home/ansible/oracle_client/lib      # Oracle Client Home Library on Ansible Controller.
+db_user: sys
+db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
+db_mode: sysdba
+oracle_env:
+     ORACLE_HOME: "{{ oracle_db_home }}"
+     LD_LIBRARY_PATH: "{{ oracle_db_home}}"
+     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"

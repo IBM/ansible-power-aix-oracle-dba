@@ -1,0 +1,8 @@
+hostname: ansible_db                       # AIX Lpar hostname where the Database is running.
+service_name: devpdb                        # Database service name.
+listener_port: 1521                        # Database port number.
+directory_name: TESTDIR                    # Desired directory name to be created.
+path: /u01/dbdir                           # OS Path on AIX Lpar. This path must exist.
+state: present                             # To create a directory - present. To drop a directory - absent.
+mode: enforce
+oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.

@@ -1,57 +1,49 @@
+- name: db-opatch | Check opatch dir
+  ansible.builtin.stat: path={{ oracle_home_db }}/OPatch
+  register: opatchdir
+
 - name: db-opatch | Check current opatch version
   oracle_opatch:
          oracle_home={{ oracle_home_db }}
          state=opatchversion
   register: current_opatch_version
+  become: yes
+  become_user: "{{ oracle_user }}" 
   tags: current_opatch_version
-  when: db_homes_config[dbh.home]['opatch_minversion'] is defined
+  when: opatchdir.stat.exists and db_homes_config[dbh.home]['opatch_minversion'] is defined
 
-- debug: var=current_opatch_version.msg
-  tags: current_opatch_version
-  when: current_opatch_version.changed
-
-# Added by Shiva
-####
 - name: db-opatch | Backup existing OPatch directory
   command: mv "{{ oracle_home_db }}/OPatch" "{{ oracle_home_db }}/OPatch{{ lookup('pipe', 'date +%Y%m%d-%H%M') }}"
   with_items: "{{ oracle_opatch_patch }}"
-  when: apply_patches_db and item.version == db_version and oracle_sw_copy and db_homes_config[dbh.home]['opatch_minversion'] is defined and (current_opatch_version.msg is version_compare(db_homes_config[dbh.home]['opatch_minversion'], '<'))
+  when: opatchdir.stat.exists and apply_patches_db and db_homes_config[dbh.home]['opatch_minversion'] is defined and (current_opatch_version.msg is version_compare(db_homes_config[dbh.home]['opatch_minversion'], '<'))
+  become: yes
+  become_user: "{{ oracle_user }}"  
   tags:
     - backupopatch
-####
-- name: db-opatch | Extract OPatch to DB Home
-  unarchive:
-      src={{ oracle_stage }}/{{ item.filename }}
+
+- name: db-opatch | Extract OPatch to DB Home (from local/nfs)
+  ansible.builtin.unarchive:
+      src={{ item.filename }}
       dest={{ oracle_home_db }}
-      copy=no
       owner={{ oracle_user }}
       group={{ oracle_group }}
-  with_items: "{{oracle_opatch_patch}}"
-  when: apply_patches_db and item.version == db_version and oracle_sw_copy and db_homes_config[dbh.home]['opatch_minversion'] is defined and (current_opatch_version.msg is version_compare(db_homes_config[dbh.home]['opatch_minversion'], '<'))
-  tags:
-    - oragridpatchunpack
+      remote_src=yes
+  with_items: "{{ oracle_opatch_patch }}"
+  become: yes
+  become_user: "{{ oracle_user }}"
+  when:
+    - ora_binary_location in ['local','nfs']
+    - not opatchdir.stat.exists or (current_opatch_version.msg is defined and current_opatch_version.msg is version_compare(db_homes_config[dbh.home]['opatch_minversion'], '<'))
 
 - name: db-opatch | Extract OPatch to DB Home (from remote location)
-  unarchive:
-      src={{ oracle_stage_remote }}/{{ item.filename }}
+  ansible.builtin.unarchive:
+      src={{ item.filename }}
       dest={{ oracle_home_db }}
-      copy=no
       owner={{ oracle_user }}
-      group={{ oracle_group }}
+      group={{ oracle_group }}      
+  with_items: "{{ oracle_opatch_patch }}"
   become: yes
-  with_items: "{{oracle_opatch_patch}}"
-  when: apply_patches_db and item.version == db_version and not oracle_sw_copy and db_homes_config[dbh.home]['opatch_minversion'] is defined and (current_opatch_version.msg is version_compare(db_homes_config[dbh.home]['opatch_minversion'], '<'))
-  tags:
-    - oragridpatchunpack
-
-- name: db-opatch | Check current opatch version
-  oracle_opatch:
-         oracle_home={{ oracle_home_db }}
-         state=opatchversion
-  register: current_opatch_version
-  tags: current_opatch_version
-  when: db_homes_config[dbh.home]['opatch_minversion'] is defined
-
-- debug: var=current_opatch_version.msg
-  tags: current_opatch_version
-  when: current_opatch_version.changed
+  become_user: "{{ oracle_user }}"
+  when:
+    - ora_binary_location in ['remote']
+    - not opatchdir.stat.exists or (current_opatch_version.msg is defined and current_opatch_version.msg is version_compare(db_homes_config[dbh.home]['opatch_minversion'], '<'))

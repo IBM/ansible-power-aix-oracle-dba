@@ -1,0 +1,4 @@
+oracle_env:                     
+    ORACLE_HOME: "{{ oracle_home_gi }}"
+    PATH: "{{oracle_home_gi}}/bin:$PATH:/bin:/usr/bin:/sbin:/usr/sbin:/opt/freeware/bin"
+    ORACLE_SID: "{{ oracle_sid }}"

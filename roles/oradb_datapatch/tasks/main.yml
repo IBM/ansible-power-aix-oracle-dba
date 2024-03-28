@@ -1,14 +1,16 @@
 - name: oradb-datapatch | Start database
-  environment: "{{ oracle_env }}"
-  shell: "export PATH=${ORACLE_HOME}/bin:${PATH}; echo 'startup' | sqlplus -S '/ as sysdba'"
-  tags: startdb
-  register: startdb
+  ansible.builtin.shell: "export ORACLE_SID={{ item.oracle_db_name }} && export ORACLE_HOME={{ item.oracle_db_home }} && PATH={{ item.oracle_db_home }}/bin; echo 'startup' | sqlplus -S '/ as sysdba'"
+  with_items:
+    - "{{ databases }}"
 
 - name: oradb-datapatch | Run datapatch
-  environment: "{{ oracle_env }}"
-  shell: "{{ oracle_db_home }}/OPatch/datapatch -verbose"
-  tags: datapatch
+  shell: "export ORACLE_SID={{ item.oracle_db_name }} && export ORACLE_HOME={{ item.oracle_db_home }} && PATH={{ item.oracle_db_home }}/bin; {{ item.oracle_db_home }}/OPatch/datapatch -verbose"
   register: datapatch
+  with_items:
+    - "{{ databases }}"
 
-- debug:
-    var: datapatch
+- ansible.builtin.debug: 
+    msg: "{{ item.stdout_lines }}"
+  loop: "{{ datapatch.results }}"
+  loop_control: 
+    label: "{{ item.item.oracle_db_name }}"

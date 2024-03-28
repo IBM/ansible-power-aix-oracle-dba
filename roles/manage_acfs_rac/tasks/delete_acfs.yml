@@ -1,0 +1,42 @@
+- name: Check volume
+  shell: "asmcmd volinfo --all|grep -w {{ volname }}"
+  register: checkvol
+  environment: "{{ oracle_env }}"
+  ignore_errors: True
+
+- fail:
+   msg: "Seems ACFS Volume doesn't exist"
+  when: checkvol.rc != 0
+
+- name: Get Volume Device
+  shell: "asmcmd volinfo -G {{ diskgroup }} {{ volname }} | grep 'Volume Device' | awk '{print $3}'"
+  environment: "{{ oracle_env }}"
+  register: getvol
+  tags: getvol
+
+- name: Stop ACFS filesystem
+  shell: srvctl stop filesystem -d {{ getvol.stdout }}
+  environment: "{{ oracle_env }}"
+  become: yes
+  register: stopacfs
+  failed_when: (stopacfs.rc not in [0,1,2])
+  tags: stopfs
+
+- name: Disable ACFS Volume
+  shell: "asmcmd voldisable -G {{ diskgroup }} {{ volname }}"
+  environment: "{{ oracle_env }}"
+  register: disable
+  tags: disable
+
+- name: Delete ACFS Volume
+  shell: "asmcmd voldelete -G {{ diskgroup }} {{ volname }}"
+  environment: "{{ oracle_env }}"
+  register: delete
+  tags: delete
+
+- name: Remove directory
+  ansible.builtin.file:
+   path: "{{ path }}"
+   state: absent
+   owner: "{{ grid_owner }}"
+  become: yes

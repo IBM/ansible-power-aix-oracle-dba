@@ -1,14 +1,8 @@
-hostname: ansible_db             # AIX hostname
-service_name: ansible.pbm.ihost.com             # Service name of the database
 user: sys
 db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
 db_password_pdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
 db_mode: sysdba
-listener_port: 1521              # Listen port
-sqlfile:
-   - { script: '/home/ansible/ansible_test/stage/create.sql' }   # SQL Script 1 location & name of the file.
-   - { script: '/home/ansible/ansible_test/stage/insert.sql' }   # SQL Script 2 location & name of the file.
-   - { script: '/home/ansible/ansible_test/stage/insert1.sql' }  # SQL Script 3 location & name of the file.
 oracle_env:
-   ORACLE_HOME: /home/ansible/oracle_client              # Oracle client home location on Ansible controller.
-   LD_LIBRARY_PATH: /home/ansible/oracle_client/lib      # Oracle client library location on Ansible controller.
+     ORACLE_HOME: "{{ oracle_db_home }}"
+     LD_LIBRARY_PATH: "{{ oracle_db_home}}"
+     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"

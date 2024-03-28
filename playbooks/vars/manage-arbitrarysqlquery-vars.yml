@@ -1,0 +1,8 @@
+hostname: ansible_db                  # AIX Lpar hostname where the Database is running.
+service_name: devpdb   # Database service name.
+listener_port: 1521                   # Database port number.
+oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+
+sql_query:
+   - { query: 'select name,open_mode from v$database' }   # SQL Query 1.
+   - { query: 'select instance_name from v$instance' }    # SQL Query 2.

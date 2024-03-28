@@ -1,0 +1,7 @@
+hostname: ansible_db                           # AIX hostname where the Database is running.
+service_name: devpdb                           # Database service name.
+listener_port: 1521                            # Database port number.
+oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+sqlfile:
+   - { script: 'create.sql' }   # SQL Script 1 location & name of the file.
+   - { script: 'insert.sql' }   # SQL Script 2 location & name of the file.
