@@ -1,8 +1,0 @@
-- hosts: ansible_db                        # Provide the name of the target lpar registered in ansible_inventory.
-  remote_user: root                     # This needs to be run by "root" user.
-  gather_facts: False
-  vars_files:
-      - vars/oracle-rdbms-install.vars.yml
-  roles:
-     - role: oracle_install
-       tags: oracle_install

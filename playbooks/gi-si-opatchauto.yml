@@ -1,6 +1,6 @@
 # Playbook to patch Single Instance Grid Infrastructure
 - name: Apply patches to GI
-  hosts: ansible_db                     # AIX Lapr hostgroup name defined in Ansible inventory.
+  hosts: all                     # AIX Lapr hostgroup name defined in Ansible inventory.
   remote_user: oracle                   # Grid Home Owner.
   gather_facts: False
   vars_files:

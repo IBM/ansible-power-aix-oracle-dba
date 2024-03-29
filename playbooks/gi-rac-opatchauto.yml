@@ -1,6 +1,6 @@
 # Use this playbook to patch Grid Infrastructure RAC.
 - name: Apply patches to GI
-  hosts: rachosts        # Provide AIX Lapr hostgroup name defined in Ansible inventory. All the RAC nodes must be defined as a group in the Ansible inventory/
+  hosts: all        # Provide AIX Lapr hostgroup name defined in Ansible inventory. All the RAC nodes must be defined as a group in the Ansible inventory/
   remote_user: oracle    # Remote AIX Lpar username.
   vars_files:
    - vars/gi-rac-opatchauto-vars.yml
