@@ -44,18 +44,12 @@
   when: item.1.stdout != "1" and item.0.state |upper == "PRESENT"
   register: oradbcreate
 
-- ansible.builtin.debug:
-    msg: "{{ item.stdout_lines }}"
-  loop: "{{ oradbcreate.results }}"
-  loop_control:
-    label: "{{ item.oracle_db_name }}"
-
-#- debug: var=item
-#  with_items:
-#       - "{{ oradbcreate.results|map(attribute='stdout_lines')| list }}"
-#  run_once: "{{ configure_cluster }}"
-#  when: oradbcreate.changed
-#  ignore_errors: true
+- debug: var=item
+  with_items:
+       - "{{ oradbcreate.results|map(attribute='stdout_lines')|list }}"
+  run_once: "{{ configure_cluster}}"
+  when: oradbcreate.changed
+  ignore_errors: true
 
 - name: Add dotprofile (1)
   shell:  ps -ef | grep -w "ora_pmon_{{ item.oracle_db_name }}" |grep -v grep | sed 's/^.*pmon_//g'

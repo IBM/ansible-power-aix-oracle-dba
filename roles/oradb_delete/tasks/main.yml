@@ -10,13 +10,3 @@
 - ansible.builtin.debug:
     msg: "{{ item.stdout_lines }}"
   loop: "{{ oradbdelete.results }}"
-#  loop_control:
-#    label: "{{ item.oracle_db_name }}"
-
-
-  #- ansible.builtin.debug:
-  #      msg: "{{ oradbdelete }}"
-
-#- ansible.builtin.debug: 
-#    msg: "{{ item }}"
-#  loop: "{{ oradbdelete.results | map(attribute='stdout_lines') }}"
