@@ -9,7 +9,7 @@ In the following example, we will apply RU 19.21 on a Standalone Grid Infrastruc
 2. SUDO utility must be installed on all the target lpars and the grid user must have sudo privilege to execute root actions. It is required by the "opatchauto" utility.
 3. In ansible.cfg file:
         a. set "remote_tmp" to a path where there is minimum 16GB of free space. It is for the remote staging option for patches. 
-        b. Make sure "python3" utility is available in /usr/bin directory on the target lpar.
+        b. Make sure "python3" utility is available in /usr/bin directory on the target lpars.
 4. There are two files which needs to be updated.
         a. {{ collection_dir }}/power_aix_oracle_dba/playbooks/gi-si-opatchauto.yml: This is the playbook.
         b. {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/gi-si-opatchauto-vars.yml: This file contains all the required variables.
