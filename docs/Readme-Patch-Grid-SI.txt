@@ -6,7 +6,7 @@
 In the following example, we will apply RU 19.21 on a Standalone Grid Infrastructure.
 
 1. Passwordless SSH must be established between Ansible user & Grid user.
-2. SUDO must be installed on all the target lpars and the grid user must have sudo privilege. This is required for the "opatchauto" utility.
+2. SUDO utility must be installed on all the target lpars and the grid user must have sudo privilege to execute root actions. It is required by the "opatchauto" utility.
 3. In ansible.cfg file:
         a. set "remote_tmp" to a path where there is minimum 16GB of free space. It is for the remote staging option for patches. 
         b. Make sure "python3" utility is available in /usr/bin directory on the target lpar.
