@@ -80,6 +80,7 @@
       state={{ item.state }}
   with_items:
       - "{{ db_homes_config[dbh.home]['opatchauto'] }}"
+  become: yes
   when: apply_patches_db and db_homes_config[dbh.home]['opatchauto'] is defined and olrloc.stat.exists
   register: psuapplym
 

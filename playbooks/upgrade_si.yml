@@ -4,15 +4,22 @@
 #
 # Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
 #
-- hosts: all                            # Provide the name of the target lpar registered in ansible inventory.
-  remote_user: root                     # This needs to be run by "root" user.
+#- hosts: all                            # Provide the name of the target lpar registered in ansible inventory.
+#  remote_user: root                     # This needs to be run by "root" user.
+#  gather_facts: False
+#  vars_files:
+#      - vars/upgrade/upgrade_si_vars.yml	# update all the required variables
+#      - vars/vault.yml				# update the passwords
+
+- hosts: ansible_db
+  remote_user: root
   gather_facts: False
   vars_files:
       - vars/upgrade/upgrade_si_vars.yml
       - vars/vault.yml
   roles:
-     - role: si_has_upgrade
+     - role: podba_si_has_upgrade
        tags: si_has_upgrade
-     - role: oracle_install
+     - role: podba_oracle_install
        tags: oracle_install
-     - role: db_upgrade
+     - role: podba_db_upgrade

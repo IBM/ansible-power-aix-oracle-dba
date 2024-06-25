@@ -1,0 +1,33 @@
+- name: Creating Temp Directory | {{ temp_dir }}
+  ansible.builtin.file:
+     dest={{ temp_dir }}/{{ item }}
+     owner={{ db_oracle_user }}
+     group={{ db_oinstall_group }}
+     state=directory
+  with_items:
+       - done
+       - scripts
+       - logs
+  changed_when: false
+
+- name: Reading Oracle Inventory File
+  ansible.builtin.slurp:
+    path: "{{ ora_inventory }}/ContentsXML/inventory.xml"
+  register: inv_oh
+
+- name: Setting Fact for Inventory File
+  ansible.builtin.set_fact:
+    input_lines: "{{ inv_oh.content | b64decode | string | split('\n') }}"
+
+- name: Preparing Oracle Homes List for Installation
+  ansible.builtin.set_fact:
+    required_homes: "{{ required_homes | default([]) + [{'oh': item.target_db_home | regex_replace('/',''), 'oracle_home': item.target_db_home }] }}"
+  loop: "{{ databases }}"
+  when: not input_lines | select('search', '(?i)(?!.*REMOVED).*' + item.target_db_home) | list | length > 0 
+  vars:
+    oraclehomes: "{{ item | regex_escape }}"
+  no_log: true
+
+- name: Oracle Installation
+  ansible.builtin.import_tasks: oracle_install.yml
+  when: required_homes is defined

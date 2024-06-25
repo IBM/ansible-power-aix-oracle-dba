@@ -7,19 +7,13 @@
      oracle_home={{ oracle_home_gi }}
      state=opatchversion
   register: current_opatch_version
-  when: 
-    - opatchdir.stat.exists
-    - gi_patches is defined
-    - gi_patches['opatch_minversion'] is defined
+  become_user: "{{ grid_install_user }}"
+  when: opatchdir.stat.exists and gi_patches is defined and gi_patches['opatch_minversion'] is defined
 
 - name: gi-opatch | Backup existing OPatch directory
   ansible.builtin.command: mv "{{ oracle_home_gi }}/OPatch" "{{ oracle_home_gi }}/OPatch{{ lookup('pipe', 'date +%Y%m%d-%H%M') }}"
   with_items: "{{ oracle_opatch_patch }}"
-  become: yes
-  when: 
-    - opatchdir.stat.exists 
-    - item.version == oracle_install_version_gi
-    - (current_opatch_version.msg is version_compare(gi_patches['opatch_minversion'], '<'))
+  when: opatchdir.stat.exists and item.version == oracle_install_version_gi and (current_opatch_version.msg is version_compare(gi_patches['opatch_minversion'], '<'))
 
 - name: gi-opatch | Extract OPatch to GI Home (from local/nfs)
   ansible.builtin.unarchive:

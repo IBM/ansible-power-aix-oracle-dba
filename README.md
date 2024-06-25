@@ -18,15 +18,20 @@ Following functionalities can be achieved with this collection.
 
 Version Change:
 
+PODBA v2.0.5
+
+- Latest RU patches can be applied during the upgrade to 19c. Previously it was restricted till RU 19.17.
+- Introduced patch staging options – NFS, local (target node) and remote (ansible controller) for Single Instance Upgrade.
+
 PODBA v2.0.4
-- Enhanced the role "oraswdb_manage_patches" patching module which uses “opatch” utility with restart of database and listener services while patching.
-- Added support for patch staging options – NFS, local (target node) & remote (ansible controller).
+- Enhanced the role "oraswdb_manage_patches" patching module to restart DB and listener services. While using "opatch" utility, the DB and listener servies of the Oracle home will be stopped before patching and started post patching.
+- Introduced patch staging options – NFS, local (target node) and remote (ansible controller) for patching module.
 - The role "orasw_download_patches" has been tested to download EBS patches as well.
 
 PODBA v2.0.3
-- Introduced standalone variables file path.
-- Refinement of documentation.
-- Documentation provided to execute playbooks from AAP2 GUI.
+- Introduced a common path to place the variable files for all the playbooks. 
+- Refined existing documentation.
+- New documentation to execute playbooks from AAP2 GUI.
 
 PODBA v2.0.2
 - Upgrade Oracle 12c Single Instance Grid Infrastructure & Multiple Databases to Oracle 19c.

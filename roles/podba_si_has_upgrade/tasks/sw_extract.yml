@@ -1,0 +1,135 @@
+- name: Checking if {{ env_type }} S/W is extracted
+  ansible.builtin.stat:
+    path: "{{ temp_dir }}/done/swunzip.done"
+  register: sw_unzipped
+  
+- name: Checking if RU is extracted
+  ansible.builtin.stat:
+    path: "{{ temp_dir }}/done/ruunzip.done"
+  register: ru_unzipped 
+  when: apply_ru
+  
+- name: Checking if Opatch is extracted
+  ansible.builtin.stat:
+    path: "{{ temp_dir }}/done/opunzip.done"
+  register: op_unzipped
+  when: apply_ru
+
+- name: Creating NFS filesystem from nfshost.
+  ibm.power_aix.filesystem:
+    device: "{{ ora_nfs_device }}"
+    nfs_server: "{{ ora_nfs_host }}"
+    filesystem: "{{ ora_nfs_filesystem }}"
+    state: present
+  when: ora_binary_location == 'nfs'
+
+- name: Creating {{ env_type }} home directory
+  ansible.builtin.file:
+    dest="{{ grid_home }}"
+    owner="{{ grid_user }}"
+    group="{{ grid_group }}"
+    state=directory      
+  changed_when: false
+
+- name: Creating RU Stage Directory
+  ansible.builtin.file:
+    dest="{{ ru_stage }}"
+    owner="{{ grid_user }}"
+    group="{{ grid_group }}"
+    state=directory
+  when: apply_ru
+
+- block:
+   - name: Extracting {{ env_type }} S/W (Remote)
+     ansible.builtin.unarchive:
+      src: "{{ grid_sw }}"
+      dest: "{{ grid_home }}"
+      keep_newer: yes
+      owner: "{{ grid_user }}"
+      group: "{{ grid_group }}"
+   - name: Creating the done file
+     ansible.builtin.command: touch "{{ temp_dir }}/done/swunzip.done"
+  when:
+    - ora_binary_location == 'remote'
+    - not sw_unzipped.stat.exists
+    
+- block:
+   - name: Extracting {{ env_type }} S/W (Local|NFS)
+     ansible.builtin.unarchive:
+      src: "{{ grid_sw }}"
+      dest: "{{ grid_home }}"
+      keep_newer: yes
+      owner: "{{ grid_user }}"
+      group: "{{ grid_group }}"
+      remote_src: yes
+   - name: Creating the done file
+     ansible.builtin.command: touch "{{ temp_dir }}/done/swunzip.done"
+  when:
+    - ora_binary_location in ['local', 'nfs']
+    - not sw_unzipped.stat.exists
+    
+- block:
+   - name: Extracting RU S/W (Remote)
+     ansible.builtin.unarchive:
+      src: "{{ ru_zip }}"
+      dest: "{{ ru_stage }}"
+      keep_newer: yes
+      owner: "{{ grid_user }}"
+      group: "{{ grid_group }}"
+   - name: Creating the done file
+     ansible.builtin.command: touch "{{ temp_dir }}/done/ruunzip.done"
+  when:
+    - ora_binary_location == 'remote'
+    - not ru_unzipped.stat.exists
+    - apply_ru
+
+- block:
+   - name: Extracting {{ env_type }} RU patch (Local|NFS)
+     ansible.builtin.unarchive:
+      src: "{{ ru_zip }}"
+      dest: "{{ ru_stage }}"
+      keep_newer: yes
+      owner: "{{ grid_user }}"
+      group: "{{ grid_group }}"
+      remote_src: yes
+   - name: Creating the done file 
+     ansible.builtin.command: touch "{{ temp_dir }}/done/ruunzip.done"
+  when:
+    - ora_binary_location in ['local', 'nfs']
+    - not ru_unzipped.stat.exists
+    - apply_ru
+
+- block:
+   - name: Backup Opatch
+     ansible.builtin.shell: mv {{ grid_home }}/OPatch {{ grid_home }}/OPatch.bkup
+   - name: Extracting OPatch (Remote)
+     ansible.builtin.unarchive:
+      src: "{{ opatch_sw }}"
+      dest: "{{ grid_home }}"
+      keep_newer: yes
+      owner: "{{ grid_user }}"
+      group: "{{ grid_group }}"
+   - name: Creating the done file
+     ansible.builtin.command: touch "{{ temp_dir }}/done/opunzip.done"
+  when:
+    - ora_binary_location == 'remote'
+    - not op_unzipped.stat.exists
+    - apply_ru
+
+- block:
+   - name: Backup Opatch
+     ansible.builtin.shell: mv {{ grid_home }}/OPatch {{ grid_home }}/OPatch.bkup
+   - name: Extracting OPatch (Local|NFS)
+     ansible.builtin.unarchive:
+      src: "{{ opatch_sw }}"
+      dest: "{{ grid_home }}"
+      keep_newer: yes
+      owner: "{{ grid_user }}"
+      group: "{{ grid_group }}"
+      remote_src: yes
+   - name: Creating the done file
+     ansible.builtin.command: touch "{{ temp_dir }}/done/opunzip.done"
+  when:
+    - ora_binary_location in ['local', 'nfs']
+    - not op_unzipped.stat.exists
+    - apply_ru

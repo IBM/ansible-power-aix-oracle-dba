@@ -87,6 +87,7 @@
       state={{ item.state }}
   with_items:
      - "{{ gi_patches['opatchauto'] }}"
+  become: yes
   tags:
     - apply_psu_grid
   when: apply_patches_gi and gi_patches is defined and gi_patches['opatchauto'] is defined and olrloc.stat.exists

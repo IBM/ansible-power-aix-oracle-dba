@@ -1,0 +1,42 @@
+# Copyright (c) IBM Corporation 2024
+# This script performs Oracle silent installation along with release update.
+
+db_oracle_home="{{ item.oracle_home }}"
+oh="{{ item.oh }}"
+temp_dir="{{ temp_dir }}"
+ru_stage="{{ ru_stage }}"
+apply_ru="{{ apply_ru }}"
+opatch_sw="{{ opatch_sw }}"
+ru_zip="{{ ru_zip }}"
+ruid=$(expr "$ru_zip" : '^.*p\([0-9]*\)_.*$')
+install_log="{{ temp_dir }}/logs/oracle_install.$oh.out"
+response_file=oracle_19c_install_$oh.rsp
+patch_log="{{ temp_dir }}/logs/oracle_patch.$oh.out"
+
+# Main
+
+# Installation
+
+if [ ! -f "{{ temp_dir }}/done/oracle.install.$oh.done" ]; then
+       export SKIP_ROOTPRE="TRUE" && $db_oracle_home/runInstaller -silent -responsefile "{{ temp_dir }}/scripts/$response_file" > $install_log 2>&1
+	if grep -q 'Successfully Setup Software' $install_log; then
+         touch "{{ temp_dir }}/done/oracle.install.$oh.done"
+         echo "Oracle install done"
+	else
+	 echo "ERROR: runInstaller failed. See $install_log for details."
+	exit 1
+	fi
+fi
+
+if [ ! -f "{{ temp_dir }}/done/patch.install.$oh.done" ] && [ $apply_ru == "True" ]; then
+        $db_oracle_home/OPatch/opatchauto apply "{{ ru_stage }}/$ruid" -binary -oh $db_oracle_home > $patch_log 2>&1
+        if grep -q 'Patches successfully applied' $patch_log; then
+         touch "{{ temp_dir }}/done/oracle.patch.$oh.done"
+         echo "RU Patch $ruid applied successfully"
+        else
+         echo "ERROR: Failed to apply $ruid. See $patch_log for details."
+        exit 1
+        fi
+fi
+
+exit 0

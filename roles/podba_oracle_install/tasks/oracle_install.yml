@@ -1,0 +1,63 @@
+- name: Checking if {{ env_type }} S/W is extracted
+  ansible.builtin.stat:
+    path: "{{ temp_dir }}/done/{{ item.oh }}.swunzip.done"
+  register: sw_unzipped
+  loop: "{{ required_homes }}"
+
+- name: Checking if {{ env_type }} OPatch is extracted
+  ansible.builtin.stat:
+    path: "{{ temp_dir }}/done/{{ item.oh }}.opunzip.done"
+  register: op_unzipped
+  loop: "{{ required_homes }}"
+  when: apply_ru
+
+- name: Extracting {{ env_type }} S/W
+  ansible.builtin.import_tasks: sw_extract.yml
+
+- name: Extracting RU and Opatch
+  ansible.builtin.import_tasks: ru_extract.yml
+  when: apply_ru
+
+- name: Copying Oracle RDBMS Install response file
+  ansible.builtin.template:
+    src: oracle_19c_install.rsp.j2
+    dest: "{{ temp_dir }}/scripts/oracle_19c_install_{{ item.oh }}.rsp"
+    owner: "{{ db_oracle_user }}"
+    group: "{{ db_oinstall_group }}"
+    mode: '0644'
+  with_items:
+       - "{{ required_homes }}"
+
+- name: Copying oracle_install.sh
+  template:
+    src: oracle_install.sh.j2
+    dest: "{{ temp_dir }}/scripts/oracle_install_{{ item.oh }}.sh"
+    owner: "{{ db_oracle_user }}"
+    group: "{{ db_oinstall_group }}"
+    mode: '0755'
+  with_items:
+       - "{{ required_homes }}"
+  when: required_homes is defined
+
+- name: Installing 19c RDBMS.
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/oracle_install_{{ item.oh }}.sh"
+  register: oracle_install
+  become: yes
+  become_user: "{{ db_oracle_user }}"
+  with_items:
+       - "{{ required_homes }}"
+  when: required_homes is defined
+
+- name: Oracle Install Output
+  debug: msg="{{ item.stdout_lines }}"
+  loop: "{{ oracle_install.results }}"
+  loop_control:
+    label: "{{ item.stdout_lines }}"
+  when: required_homes is defined
+
+- name: Executing root.sh
+  ansible.builtin.shell: "{{ item.oracle_home }}/root.sh"
+  register: execroot
+  with_items:
+    - "{{ required_homes }}"
+  when: required_homes is defined

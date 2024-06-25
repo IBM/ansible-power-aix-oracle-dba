@@ -1,0 +1,38 @@
+# Copyright (c) IBM Corporation 2024
+# This script performs Grid silent install with "upgrade" option along with Release Update Patch (if needed).
+
+grid_home="{{ grid_home }}"
+temp_dir="{{ temp_dir }}"
+ru_stage="{{ ru_stage }}"
+grid_sw="{{ grid_sw }}"
+apply_ru="{{ apply_ru }}"
+ru_zip="{{ ru_zip }}"
+ruid=$(expr "$ru_zip" : '^.*p\([0-9]*\)_.*$')
+install_log="{{ temp_dir }}/logs/grid_install.out"
+patch_log="{{ temp_dir }}/logs/grid_patch.out"
+
+# Installation
+
+if [ ! -f "{{ temp_dir }}/done/grid.install.done" ]; then
+	export SKIP_ROOTPRE="TRUE" && $grid_home/gridSetup.sh -silent -responsefile "{{ temp_dir }}/scripts/{{ response_file }}" > $install_log 2>&1
+	if grep -q 'Successfully Setup Software' $install_log; then
+ 	   touch "{{ temp_dir }}/done/grid.install.done"
+ 	   echo "gridSetup.sh completed successfully."
+	else
+	   echo "ERROR: gridSetup.sh failed. See $install_log for details."
+	   exit 1
+	fi
+fi
+
+if [ ! -f "{{ temp_dir }}/done/grid.patch.done" ] && [ $apply_ru == "True" ]; then
+    $grid_home/OPatch/opatchauto apply "{{ ru_stage }}/$ruid" -binary -oh $grid_home > $patch_log 2>&1
+    if grep -q 'Patches successfully applied' $patch_log; then
+        touch "{{ temp_dir }}/done/grid.patch.done"
+        echo "RU Patch $ruid applied successfully"
+    else
+        echo "ERROR: Failed to apply $ruid. See $patch_log for details."
+        exit 1
+    fi
+fi
+
+exit 0

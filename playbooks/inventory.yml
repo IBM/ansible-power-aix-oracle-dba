@@ -1,8 +1,1 @@
-[ansible_db]
-si
-
-[rachosts]
-rac21
-rac22
-rac23
-rac24
+ansible_db

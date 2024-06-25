@@ -1,0 +1,9 @@
+- hosts: all
+  remote_user: root
+  gather_facts: False
+  roles:
+     - role: podba_si_has_upgrade
+       tags: si_has_upgrade
+     - role: podba_oracle_install
+       tags: oracle_install
+     - role: podba_db_upgrade

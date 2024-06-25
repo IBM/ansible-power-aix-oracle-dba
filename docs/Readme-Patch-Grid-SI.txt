@@ -132,5 +132,3 @@ PLAY RECAP *********************************************************************
 ansible_db                 : ok=9    changed=1    unreachable=0    failed=0    skipped=6    rescued=0    ignored=0
 
 To execute this playbook from GUI, an example is provided in the document, please refer this link: https://github.com/IBM/ansible-power-aix-oracle-dba/blob/main/docs/PowerODBA_using_AAP2.pdf
-
-

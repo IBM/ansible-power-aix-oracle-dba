@@ -1,0 +1,26 @@
+# Copyright (c) IBM Corporation 2024
+# This script executes rootupgrade.sh
+
+# Idempotent: yes
+
+# Variables
+
+grid_home="{{ grid_home }}"
+rootupgrd_log="{{ temp_dir }}/logs/rootupgrd.out"
+
+# Main
+
+if [ ! -f {{ temp_dir }}/done/rootupgrade.done ]; then
+    export LDR_CNTRL=MAXDATA=0x80000000
+    $grid_home/rootupgrade.sh > $rootupgrd_log 2>&1
+
+    outlog=$(awk '{print $2}' $rootupgrd_log)
+    if grep -q "Successfully configured Oracle Restart for a standalone server" $outlog; then
+        echo "Rootupgrade.sh completed successfully"
+        touch {{ temp_dir }}/done/rootupgrade.done
+    else
+        echo "Rootupgrade.sh didn't complete successfully. Review the log $outlog on the host lpar"
+        exit 1
+    fi
+fi
+exit 0

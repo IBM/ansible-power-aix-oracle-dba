@@ -1,0 +1,97 @@
+- name: Checking if RU is extracted
+  ansible.builtin.stat:
+    path: "{{ temp_dir }}/done/ruunzip.done"
+  register: ru_unzipped
+
+- name: Checking if Opatch is extracted
+  ansible.builtin.stat:
+    path: "{{ temp_dir }}/done/{{ item.oh }}.opunzip.done"
+  loop: "{{ required_homes }}"
+  register: op_unzipped
+
+- name: Creating RU Stage Directory
+  ansible.builtin.file:
+    dest="{{ ru_stage }}"
+    owner="{{ grid_user }}"
+    group="{{ grid_group }}"
+    state=directory
+
+- block:
+   - name: Extracting RU S/W (Remote)
+     ansible.builtin.unarchive:
+      src: "{{ ru_zip }}"
+      dest: "{{ ru_stage }}"
+      keep_newer: yes
+      owner: "{{ grid_user }}"
+      group: "{{ grid_group }}"
+   - name: Creating the done file
+     ansible.builtin.command: touch "{{ temp_dir }}/done/ruunzip.done"
+  when:
+    - ora_binary_location == 'remote'
+    - not ru_unzipped.stat.exists
+
+- block:
+   - name: Extracting {{ env_type }} RU patch (Local|NFS)
+     ansible.builtin.unarchive:
+      src: "{{ ru_zip }}"
+      dest: "{{ ru_stage }}"
+      keep_newer: yes
+      owner: "{{ grid_user }}"
+      group: "{{ grid_group }}"
+      remote_src: yes
+   - name: Creating the done file
+     ansible.builtin.command: touch "{{ temp_dir }}/done/ruunzip.done"
+  when:
+    - ora_binary_location in ['local', 'nfs']
+    - not ru_unzipped.stat.exists
+
+- name: Backup Opatch
+  ansible.builtin.shell: mv {{ item.oracle_home }}/OPatch {{ item.oracle_home }}/OPatch.bkup
+  loop: "{{ required_homes }}"
+  loop_control:
+    label: "{{ item.oracle_home }}"
+  when:
+    - op_unzipped.results | selectattr('item.oh', 'equalto', item.oh) | map(attribute='stat.exists') | list | first != true
+
+- name: Extracting Opatch (Remote)
+  ansible.builtin.unarchive:
+    src: "{{ opatch_sw }}"
+    dest: "{{ item.oracle_home }}"
+    keep_newer: yes
+    owner: "{{ db_oracle_user }}"
+    group: "{{ db_oinstall_group }}"
+  loop: "{{ required_homes }}"
+  loop_control:
+    label: "{{ item.oracle_home }}"
+  when:
+    - op_unzipped.results | selectattr('item.oh', 'equalto', item.oh) | map(attribute='stat.exists') | list | first != true
+    - ora_binary_location == 'remote'
+  register: ex_opatch
+
+- name: Extracting Opatch (Local|NFS)
+  ansible.builtin.unarchive:
+    src: "{{ opatch_sw }}"
+    dest: "{{ item.oracle_home }}"
+    keep_newer: yes
+    owner: "{{ db_oracle_user }}"
+    group: "{{ db_oinstall_group }}"
+    remote_src: yes
+  loop: "{{ required_homes }}"
+  loop_control:
+    label: "{{ item.oracle_home }}"
+  when:
+    - op_unzipped.results | selectattr('item.oh', 'equalto', item.oh) | map(attribute='stat.exists') | list | first != true
+    - ora_binary_location in ['local','nfs']
+  register: ex_opatch
+
+- name: Creating done file
+  ansible.builtin.file:
+    path: "{{ temp_dir }}/done//{{ item.oh }}.opunzip.done"
+    state: touch
+    owner: "{{ db_oracle_user }}"
+    group: "{{ db_oinstall_group }}"
+  loop: "{{ required_homes }}"
+  loop_control:
+    label: "{{ item.oracle_home }}"
+  when:
+    - op_unzipped.results | selectattr('item.oh', 'equalto', item.oh) | map(attribute='stat.exists') | list | first != true

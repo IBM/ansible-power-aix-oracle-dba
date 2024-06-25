@@ -1,0 +1,52 @@
+# Copyright (c) IBM Corporation 2023
+
+# This script does the following:
+# 1) unzip grid files
+# 2) move OPatch/ to OPatch.prev/
+# 3) unzip new OPatch
+# 4) unzip Release Update 
+
+# Variables
+#
+grid_home="{{ grid_home }}"
+temp_dir="{{ temp_dir }}"
+sw_stage="{{ sw_stage }}"
+grid_sw="{{ grid_sw }}"
+apply_ru="{{ apply_ru }}"
+opatch_sw="{{ opatch_sw }}"
+is_ru_unzipped="{{ is_ru_unzipped }}"
+ru_zip="{{ ru_zip }}"
+
+# Main
+#
+if [ ! -d $grid_home ]; then 
+   mkdir -p $grid_home
+fi
+
+if [ ! -f "{{ temp_dir }}/done/sw.unzipped" ]; then
+   unzip -q $sw_stage/$grid_sw -d $grid_home
+   touch $temp_dir/done/sw.unzipped
+   echo "$grid_home unzipped"
+fi
+
+if [ $apply_ru == True ]; then
+   if [ ! -f "{{ temp_dir }}/done/opatch.unzipped" ]; then
+      if [ ! -d "$grid_home/OPatch.prev" ]; then
+        mv $grid_home/OPatch $grid_home/OPatch.prev
+        unzip -q $sw_stage/$opatch_sw -d $grid_home
+        touch "{{ temp_dir }}/done/opatch.unzipped"
+        echo "$grid_home/OPatch unzipped."
+      fi
+   fi
+fi
+
+if [ $apply_ru == True ]; then
+   if [ $is_ru_unzipped == False ]; then
+      if [ ! -f "$temp_dir/done/ru.unzipped" ]; then
+      unzip -q $sw_stage/$ru_zip -d $sw_stage
+      touch "{{ temp_dir }}/done/ru.unzipped"
+      fi
+   fi
+fi   
+    
+exit 0

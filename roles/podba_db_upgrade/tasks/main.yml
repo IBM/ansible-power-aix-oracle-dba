@@ -1,0 +1,136 @@
+- name: Stage Autoupgrade Utility
+  ansible.builtin.copy:
+     src: "{{ autoupgrade_util_remote }}"
+     dest: "{{ autoupgrade_util }}"
+     owner: "{{ db_oracle_user }}"
+     group: "{{ db_oinstall_group }}"
+     mode: '0644'
+  when: ora_binary_location == 'remote'
+
+- block:
+   - name: Creating Temp Directory | {{ temp_dir }}
+     ansible.builtin.file:
+        dest={{ temp_dir }}/{{ item }}
+        owner={{ db_oracle_user }}
+        group={{ db_oinstall_group }}
+        state=directory
+     with_items:
+       - scripts
+     no_log: true
+     changed_when: false
+     tags: cdir
+
+   - name: Autoupgrade Full DB | Checking source database name in /etc/oratab file
+     shell: "grep {{ item.source_db_name }}:{{ item.source_db_home }} /etc/oratab |wc -l |sed 's/ //g'"
+     register: dboratab
+     no_log: true
+     with_items:
+          - "{{ databases }}"
+
+   - name: Fail if source database name doesn't exist in oratab file.
+     fail:
+        msg: Source Database name not found in /etc/oratab. Please recheck.
+     when: item.stdout|trim == "0"
+     no_log: true
+     loop: "{{ dboratab.results }}"
+
+   - name: Autoupgrade Full DB | Checking the status of the Source Database
+     ansible.builtin.shell: "ps -ef|grep pmon|grep -v grep |grep -w ora_pmon_{{ item.source_db_name }} | wc -l"
+     register: dbrun
+     no_log: true
+     with_items:
+          - "{{ databases }}"
+
+   - name: Autoupgrade Full DB | Fail if Source database is not running.
+     fail:
+        msg: Source Database NOT running, either the Database name provided is wrong or it is not up.
+     when: item.stdout|trim == "0"
+     loop: "{{ dbrun.results }}"
+     no_log: true
+
+   - name: Autoupgrade Non-CDB to PDB | Checking target database name in /etc/oratab file
+     shell: "grep {{ item.target_cdb_name }}:{{ item.target_db_home }} /etc/oratab |wc -l |sed 's/ //g'"
+     register: cdboratab
+     with_items:
+          - "{{ databases }}"
+     when: item.target_cdb_name is defined
+     no_log: true
+
+   - name: Autoupgrade Non-CDB to PDB | Fail if Target database name doesn't exist in oratab file.
+     fail:
+        msg: Target Container Database name not found in /etc/oratab. Please recheck.
+     loop: "{{ cdboratab.results }}"
+     when: item.item.target_cdb_name is defined and item.item.target_cdb_name != None and item.stdout|trim == "0"
+     no_log: true
+
+   - name: Autoupgrade Non-CDB to PDB | Checking the status of the Target Container Database
+     ansible.builtin.shell: "ps -ef|grep pmon|grep -v grep |grep -w ora_pmon_{{ item.target_cdb_name }} | wc -l"
+     register: cdbrun
+     when: item.target_cdb_name is defined
+     with_items:
+          - "{{ databases }}"
+     no_log: true
+   
+   - name: Autoupgrade Non-CDB to PDB | Fail if Target database is not up.
+     fail:
+        msg: Target Database NOT running, either the Database name provided is wrong or it is not up.
+     when: item.item.target_cdb_name is defined and item.item.target_cdb_name != None and item.stdout|trim == "0"
+     loop: "{{ cdbrun.results }}"
+     no_log: true
+
+   - name: Autoupgrade Full DB | Generating response file for autoupgrade
+     template:
+       src=fulldbupgrd.cfg.j2
+       dest="{{ temp_dir }}/scripts/fulldbupgrd.cfg"
+       owner="{{ db_oracle_user }}"
+       group="{{ db_oinstall_group }}"
+       mode=744
+       backup=no
+       force=yes
+     with_items:
+          - "{{ databases }}"
+     no_log: true
+
+  tags: predbupgrade
+- block:
+  - name: Autoupgrade - Analyze
+    shell: "{{ item.target_db_home }}/jdk/bin/java -jar {{ autoupgrade_util }} -config {{ temp_dir }}/scripts/fulldbupgrd.cfg -mode analyze -noconsole"
+    become: yes
+    become_user: "{{ db_oracle_user }}"
+    with_items:
+         - "{{ databases | first }}"
+    register: analyze
+
+  - debug:
+      var: analyze.results[0].stdout_lines
+  tags: analyze
+
+- block:
+  - name: Autoupgrade - Deploy
+    shell: "{{ item.target_db_home }}/jdk/bin/java -jar {{ autoupgrade_util }} -config {{ temp_dir }}/scripts/fulldbupgrd.cfg -mode deploy -noconsole"
+    become: yes
+    become_user: "{{ db_oracle_user }}" 
+    with_items:
+         - "{{ databases | first }}"
+    register: deploy
+
+  - debug:
+      var: deploy.results[0].stdout_lines
+
+  - name: Checking the status of the DBs
+    ansible.builtin.shell: "export ORACLE_HOME={{ grid_home }} && {{ grid_home }}/bin/srvctl status database -d {{ item.source_db_name }}"
+    become: yes
+    become_user: "{{ grid_user }}"
+    with_items:
+      - "{{ databases }}"
+    ignore_errors: True
+    register: state_db
+    no_log: true
+
+  - name: Status of the DBs
+    ansible.builtin.debug:
+      msg: " Status: {{ item.item.source_db_name }} {{ item.stdout }}"
+    loop: "{{ state_db.results }}"
+    loop_control:
+      label: "{{ item.item.source_db_name }}" 
+  tags: deploy
