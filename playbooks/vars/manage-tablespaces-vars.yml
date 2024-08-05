@@ -1,0 +1,15 @@
+hostname: ansible_db                           # AIX hostname where the Database is running.
+service_name: devdb                            # Database service name.
+listener_port: 1521                            # Database port number.
+oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+
+oracle_databases:
+      - tablespaces:
+          - name: devusertbs      # Tablespace name for creation.
+            datafile: +DATA     # Diskgroup name in which tablespace needs to be created.
+            #datafile: '/u02/db19c/dbs/ +DATA'           # Specify datafile path & name in case of non ASM.
+            size: 1g     # Desired size of the datafile.
+            maxsize: 2g   # Desired maxsize for the datafile.
+            state: absent     # present, absent, read_only, read_write, offline, online.
+            autoextend: true   # Whether to extend the datafile size automatically or not. True or False.
+            next: 100m      # Set this only if autoextend parameter is set to True, otherwise comment this parameter.

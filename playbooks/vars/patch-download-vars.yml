@@ -1,0 +1,6 @@
+oracle_patch_download_dir: /tmp/patches           # Path to save the patch files.
+oracle_sw_patches:                    # Provide the patchid & relevant version as a list shown below.
+      - patchid: 28676706             # Patch ID 1. Example: This is a one off patch for 19.19 RU version.
+        version: 1919                 # To download this patch, mention 1919 in the version field.
+      - patchid: 33672402             # Patch ID 2. Example: This is an Oracle E-Business Suite Technology Stack patch.
+        version: R12                  # For EBS, mention the version as R12.

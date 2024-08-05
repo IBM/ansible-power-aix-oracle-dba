@@ -1,0 +1,5 @@
+databases:
+ - oracle_db_name: testdb                         # Name of the database to run Datapatch.
+   oracle_db_home: /u01/db19c_2                    # Oracle Home location of the above database.
+ - oracle_db_name: devdb
+   oracle_db_home: /u01/db19c

@@ -1,0 +1,26 @@
+# Create/Drop Database Users - Variables section
+hostname: ansible_db                        # AIX Lpar hostname where the database is running.
+listener_port: 1521                         # Database port number.
+oracle_db_home: /home/ansible/aap2/context/oracle_client      # Oracle Instant Client path on the ansible controller.
+
+oracle_databases:                           # Database users list to be created
+      - users:
+         - schema: testuser1              # Username to be created.
+        default_tablespace: users           # Default tablespace to be assigned to the user.
+        service_name: devpdb                 # Database service name.
+        schema_password: oracle3            # Password for the user.
+        grants_mode: enforce                # enforce|append.
+        grants:
+         - connect                          # Provide name of the privilege as a list to grant to the user.
+         - resource
+        state: present                       # present|absent|locked|unlocked [present: Creates user, absent: Drops user]
+# Multiple users can be created with different attributes as shown below.
+      - users:
+         - schema: testuser2
+        default_tablespace: users
+        service_name: devpdb
+        grants_mode: enforce
+        grants:
+         - connect
+        schema_password: oracle4
+        state: present

@@ -1,0 +1,49 @@
+# Variables for Oracle RDBMS installation
+
+# sw_stage - Provide the path on the AIX lpar where 19c Grid, RDBMS & Release Update patches are placed.
+# db_oracle_sw - Provide 19c RDBMS s/w zipfile name, which is placed in "sw_stage" path on target lpar.
+# apply_ru - When apply_ru is set to "True", the Grid & RDBMS homes will be patched prior to the installation using "-applyRU <RU number>". Set it to False when only the base version (19.3) needs to be installed.
+# opatch_sw - Provide latest OPatch zipfile name, which is placed in "sw_stage" path on target lpar.
+# ru_zip - Release Update patch zipfile, which is placed in "sw_stage" path on target lpar.
+# is_sw_local -Set to True - if RU patch is already unzipped. Set to False - If Release Update patch zipfile needs to be extracted automatically.
+# ora_inventory - Provide the Central inventory path on the AIX lpar.
+# mgmt_opt - Update CLOUD_CONTROL when you want to manage your Oracle Grid Infrastructure with Enterprise Manager Cloud Control. Leave it blank otherwise.
+# oms_host - Enterprise Cloud Control Hostname. Response file parameter: oracle.install.config.omsHost=
+# oms_port - Enterprise Cloud Control Host Port number. Response file parameter: oracle.install.config.omsPort=
+# oms_em_user - Enterprise Cloud Control Admin Username. Response file parameter: oracle.install.config.emAdminUser=
+# db_oracle_base - Provide Base path for the new 19c RDBMS Home.
+# db_oracle_user - Provide the RDBMS software owner, ex: oracle.
+# db_oinstall_group - Provide the RDBMS software owner's primary group, ex: oinstall.
+# db_osdba_group - The OSDBA_GROUP is the OS group which is to be granted SYSDBA privileges.
+# db_osoper_dba - The OSOPER_GROUP is the OS group which is to be granted SYSOPER privileges (optional).
+# db_osbkup_dba - The OSBACKUPDBA_GROUP is the OS group which is to be granted SYSBACKUP privileges.
+# db_osdg_dba - The OSDGDBA_GROUP is the OS group which is to be granted SYSDG privileges.
+# db_oskm_dba - The OSKMDBA_GROUP is the OS group which is to be granted SYSKM privileges.
+# db_osrac_dba - The OSRACDBA_GROUP is the OS group which is to be granted SYSRAC privileges.
+
+
+sw_stage: /backup/stage
+db_oracle_sw: V982583-01_193000_db.zip
+apply_ru: False
+opatch_sw: p6880880_210000_AIX64-5L.zip
+ru_zip: RU19.17-p34416665_190000_AIX64-5L.zip
+is_sw_local: True
+
+ora_inventory: /u01/app/oraInventory
+mgmt_opt:
+oms_host:
+oms_port:
+oms_em_user:
+
+db_oracle_base: /u02/base
+db_oracle_user: oracle
+db_oinstall_group: oinstall
+db_osdba_group: dba
+db_osoper_dba:
+db_osbkup_dba:
+db_osdg_dba:
+db_oskm_dba:
+db_osrac_dba:
+
+databases:
+      - target_db_home: /u01/db19c_2

@@ -1,0 +1,5 @@
+oracle_databases:                                         # Dictionary describing the databases to be deleted
+ - home: 
+   oracle_home: /u01/db19c_2
+   oracle_db_name: testdb                                 # Database name
+   state: absent

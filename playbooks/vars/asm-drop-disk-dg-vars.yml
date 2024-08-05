@@ -1,0 +1,14 @@
+grid_install_user: oracle             # Grid software owner.
+oracle_home_gi: /ora/grid     # Grid Home Location
+oracle_sid: +ASM1                      # SID of the running ASM instance
+asm_diskgroups:
+   - diskgroup: CPUDB                 # Name of the diskgroup to perform modifications or deletion.
+     disk: CPUDB_0002                 # Desired Diskname to drop from the diskgroup. The disk name can be found from v$asm_disk.
+
+is_rac: True                         # If this is RAC environment set to True & update racnodes below, if NOT, mention False.
+racnodes: rac22,rac23,rac24             # Rac node names except the primary node. Applicable to RAC only.
+
+# Note: When setting the below parameters, only one must be True at the same time. Please proceed with caution.
+
+drop_diskgroup: False                 # If a diskgroup needs to be dropped, set it to True otherwise set it False.
+drop_disk: True                       # If a disk from diskgroup needs to be dropped, set it to True otherwise set it False.

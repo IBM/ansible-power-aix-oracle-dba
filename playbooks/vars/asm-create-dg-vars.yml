@@ -1,0 +1,15 @@
+grid_install_user: oracle                       # Grid software owner.
+oracle_home_gi: /ora/grid               # Grid Home Location.
+oracle_rsp_stage: /tmp                          # Any accessible location on remote host to stage scripts.
+oracle_group: oinstall                          # Grid owner's primary user group.
+oracle_asm_disk_string: "/dev/"                 # Entry point of the raw disk. Example "/dev".
+asm_diskgroups:
+  - diskgroup: ACFSDISK                         # Desired dikgroup name to be created.
+    properties:
+      - {redundancy: external, ausize: 1 }      # Redundancy: External, Normal, Ausize 1MB is default.
+    attributes:
+      - {name: 'compatible.rdbms', value: 19.0.0.0}
+      - {name: 'compatible.asm', value: 19.0.0.0}
+    disk:
+      - {device: rhdiskASACFS}                       # Provide raw disk name 1 on which the diskgroup needs to be created.
+#      - {device: rhdisk8}                        # Provide raw disk name 2, more number of disks can be added to the list.

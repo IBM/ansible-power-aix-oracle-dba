@@ -1,0 +1,83 @@
+###############################################################################################################
+# Variables File for the Task to apply patches on DB home using opatchauto.
+##########################################################################
+#oracle_user: oracle
+#oracle_group: oinstall                  # Primary group for oracle/grid user.
+#configure_cluster: False                # Set it to False in case of Standalone DB, Set it to True in case of RAC DB.
+################################
+# Patch files staging variables#
+################################
+#ora_binary_location: nfs                        # local|nfs|remote. When using "nfs" option, provide sudo password "--ask-become-pass" when running the playbook.
+#ora_nfs_host: 129.40.76.1                       # NFS server name if "ora_binary_location is nfs".
+#ora_nfs_device: /repos                          # NFS filesystem if "ora_binary_location is nfs".
+#ora_nfs_filesystem: /repos                      # Path on the target lpar to mount the NFS filesystem if "ora_binary_location is nfs".
+#oracle_patch_stage: /backup/patches/RU          # Provide the path on the target lpar with sufficient space to extract patch zipfiles if "ora_binary_location is local". This path will be created by this Ansible playbook.
+
+#oracle_sw_patches:
+# - filename: /repos/images/oracle/19c/RU19.21/p35642822_190000_AIX64-5L_RU19.21.zip # Provide full path( based on nfs|local|remote) and the zipfile name.
+#   patchid: 35642822                            # Release update Patch ID to be applied.
+#   version: 19.3.0                              # Grid Version must be the same defined for the variable "oracle_install_version_gi"
+#   patchversion: 19.21.0.0                      # Release update patch version
+#   description: GI-RU-Oct-2023                  # This is an optional parameter shows the description of the patch.
+
+#oracle_opatch_patch:
+# - filename: /repos/images/oracle/opatch/12.2.0.1.41/opatch-12.2.0.1.41_p6880880_210000_AIX64-5L.zip # Provide full path(based on nfs|local|remote) and the zipfile name.
+#   version: 19.3.0                              # Grid Version must be the same defined for the variable "oracle_install_version_gi"
+#####################################
+# Oracle Home environment Variables #
+#####################################
+#db_homes_config:
+#  19300-base:                       #Provide a name for the Oracle home identification, this name must be used in "db_homes_installed"
+#    oracle_home: /u02/db19c         # Oracle Home path.
+#    opatch_minversion: 12.2.0.1.41  # Minimum opatch version required to apply the patches.
+#    opatchauto:
+#      - patchid: 35642822           # Patch ID. Example: given patch id is 19.14 Release update patch for Database.
+#        patchversion: 19.21.0.0     # Minimum opatch version required to apply required patches.
+#        state: present              # Set to present (applies the patch). Set to absent (rolls back the patch).
+#    opatch: []
+
+#db_homes_installed:
+#    home: 19300-base            # This must be the same mentioned under "db_homes_config", see the above parameter.
+#    db_version: 19.3.0          # Oracle version.
+#    apply_patches: True         # True - will apply patch, False - will do nothing.
+#    state: present              # present - Oracle Home exists, absent - Oracle Home doesn't exist.
+###############################################################################################################
+
+
+oracle_user: oracle
+oracle_group: oinstall
+configure_cluster: False 
+
+ora_binary_location: local
+ora_nfs_host: 129.40.76.1
+ora_nfs_device: /repos
+ora_nfs_filesystem: /repos
+
+oracle_patch_stage: /backup/patches/RU
+
+oracle_sw_patches:
+ - filename: /backup/patches/p34204576_121020_AIX64-5L.zip
+   patchid: 34204576
+   version: 12.1.0.2
+   patchversion: 12.1.0.072022
+   description: DB-PSU-Jul-2022
+
+oracle_opatch_patch:
+ - filename: /repos/images/oracle/opatch/12.2.0.1.41/opatch-12.2.0.1.41_p6880880_210000_AIX64-5L.zip
+   version: 12.1.0.2
+
+db_homes_config:
+  12102-base:
+    oracle_home: /u01/base/db12c
+    opatch_minversion: 12.2.0.1.41
+    opatchauto:
+      - patchid: 34204576
+        patchversion: 12.1.0.2.Jul.22
+        state: present
+    opatch: []
+
+db_homes_installed:
+    home: 12102-base
+    db_version: 12.1.0
+    apply_patches: True
+    state: present

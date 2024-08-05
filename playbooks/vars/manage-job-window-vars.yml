@@ -1,0 +1,10 @@
+hostname: ansible_db                           # AIX hostname where the Database is running.
+service_name: devpdb                           # Database service name.
+listener_port: 1521                            # Database port number.
+oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+resource_plan: DEFAULT_MAINTENANCE_PLAN        # Resource plan name.
+window_name: ANSI_WINDOW                       # Scheduler Window Name.
+interval: freq=daily;byday=SUN;byhour=6;byminute=0; bysecond=0  # Interval.
+comments: This is a window for Ansible testing  # Comments
+state: enabled                                 # enabled, disabled, absent
+duration_hour: 12                              # Duration 12/24

@@ -1,0 +1,10 @@
+hostname: ansible_db                           # AIX hostname where the Database is running.
+service_name: devpdb                            # Database service name.
+listener_port: 1521                            # Database port number.
+oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+state: present
+resource_group: ansigroup1
+class_name: ansiclass
+logging: failed runs
+history: 14
+

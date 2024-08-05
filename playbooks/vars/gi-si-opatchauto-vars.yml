@@ -1,0 +1,74 @@
+##############################################################################################################
+# Variables for Standalone Grid Patching
+########################################
+#grid_install_user: oracle 			# Grid installation home Owner.
+#oracle_group: oinstall                          # Primary group for oracle/grid user.
+#apply_patches_gi: True
+#oracle_home_gi_so: "/u02/base/grid19c" 		# ORACLE_HOME for Grid Infrastructure (Stand Alone)
+#configure_cluster: False                        # True: For RAC GI, False: For SI GI 
+#oracle_install_version_gi: 19.3.0		
+################################
+# Patch files staging variables#
+################################
+#ora_binary_location: local                        # local|nfs|remote.
+#ora_nfs_host: 129.40.76.1                       # NFS server name if "ora_binary_location is nfs".
+#ora_nfs_device: /repos                          # NFS filesystem if "ora_binary_location is nfs".
+#ora_nfs_filesystem: /repos                      # Path on the target lpar to mount the NFS filesystem if "ora_binary_location is nfs".
+#oracle_patch_stage: /backup/patches/RU          # Provide the path on the target lpar with sufficient space to extract patch zipfiles if "ora_binary_locationis local". This path will be created by this Ansible playbook.
+#oracle_sw_patches:
+# - filename: /repos/images/oracle/19c/RU19.21/p35642822_190000_AIX64-5L_RU19.21.zip # Provide full path( based on nfs|local|remote) and the zipfile name. 
+#   patchid: 35642822                            # Release update Patch ID to be applied.
+#   version: 19.3.0                              # Grid Version must be the same defined for the variable "oracle_install_version_gi"
+#   patchversion: 19.21.0.0                      # Release update patch version
+#   description: GI-RU-Oct-2023                  # This is an optional parameter shows the description of the patch.
+#oracle_opatch_patch:
+# - filename: /repos/images/oracle/opatch/12.2.0.1.41/opatch-12.2.0.1.41_p6880880_210000_AIX64-5L.zip # Provide full path(based on nfs|local|remote) and the zipfile name.
+#   version: 19.3.0				# Grid Version must be the same defined for the variable "oracle_install_version_gi"
+#####################################
+# Grid Home environment Variables   #
+#####################################
+#gi_patches:
+#   opatch_minversion: 12.2.0.1.41         # Minimum opatch version required to apply the patch as per Oracle readme.txt file
+#   opatchauto:
+#       - patchid: 35642822                # Release update Patch ID to be applied.
+#         patchversion: 19.21.0            # Release update patch version obtained from Oracle readme.txt file
+#         state: present                   # present - applies the patch, absent - rollsback the patch.
+#         subpatches: []
+#   opatch: []
+##############################################################################################################
+
+
+grid_install_user: oracle
+oracle_group: oinstall
+apply_patches_gi: True
+oracle_home_gi_so: "/u01/base/grid12c"
+configure_cluster: False
+oracle_install_version_gi: 12.1.0
+
+ora_binary_location: local
+
+ora_nfs_host: 129.40.76.1
+ora_nfs_device: /repos
+ora_nfs_filesystem: /repos
+
+oracle_patch_stage: /backup/patches/RU
+
+oracle_sw_patches:
+ - filename: /backup/patches/p34204576_121020_AIX64-5L.zip
+   patchid: 34204576
+   version: 12.1.0
+   patchversion: 12.1.0.072022
+   description: GI-RU-Jul-2022
+
+oracle_opatch_patch:
+ - filename: /repos/images/oracle/opatch/12.2.0.1.41/opatch-12.2.0.1.41_p6880880_210000_AIX64-5L.zip
+   version: 12.1.0
+
+gi_patches:
+   opatch_minversion: 12.2.0.1.41
+   opatchauto:
+       - patchid: 34204576
+         patchversion: 12.1.0.072022
+         state: present
+         subpatches: []
+   opatch: []
