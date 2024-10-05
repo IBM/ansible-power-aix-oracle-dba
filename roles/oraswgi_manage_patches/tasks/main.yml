@@ -14,6 +14,7 @@
     filesystem: "{{ ora_nfs_filesystem }}"
     state: present
   when: ora_binary_location == 'nfs'
+  become: yes
 
 - name: gi-opatch | Create patch-base directory (version specific)
   ansible.builtin.file:
