@@ -1,0 +1,18 @@
+# Playbook to patch Single Instance GI & DB
+- name: Apply patches to GI
+  hosts: all
+  remote_user: oracle                   # Grid Home Owner.
+  gather_facts: False
+  vars_files:
+   - vars/gi-si-opatchauto-vars.yml
+  roles:
+     - {role: oraswgi_manage_patches }
+
+- name: Apply binary patches
+  hosts: all
+  gather_facts: False
+  remote_user: oracle   # Oracle RDBMS user on the AIX lpar.
+  vars_files:
+     - vars/db-si-opatchauto-vars.yml
+  roles:
+     - {role: oraswdb_manage_patches }
