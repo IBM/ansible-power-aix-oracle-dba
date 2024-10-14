@@ -20,8 +20,6 @@
   ansible.builtin.file:
      dest={{ oracle_patch_stage }}/{{ oracle_install_version_gi }}
      mode=777
-     owner={{ grid_install_user }}
-     group={{ oracle_group }}
      state=directory
   tags:
     - directories
