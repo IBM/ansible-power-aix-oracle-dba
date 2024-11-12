@@ -1,7 +1,7 @@
 # Use this playbook to patch database on Single Instance GI. This playbook uses opatchauto utility.
 
 - name: Apply binary patches
-  hosts: oracle_host     # AIX lpar hostname defined in Ansible inventory.
+  hosts: all     # AIX lpar hostname defined in Ansible inventory.
   gather_facts: False
   remote_user: oracle   # Oracle RDBMS user on the AIX lpar.
   vars_files:
