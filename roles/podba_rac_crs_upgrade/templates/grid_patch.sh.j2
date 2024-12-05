@@ -1,0 +1,35 @@
+# Copyright (c) IBM Corporation 2024
+# This script performs Grid Patch  with Release Update Patch .
+
+grid_home="{{ grid_home }}"
+temp_dir="{{ temp_dir }}"
+ru_stage="{{ ru_stage }}"
+grid_sw="{{ grid_sw }}"
+apply_ru="{{ apply_ru }}"
+ru_zip="{{ ru_zip }}"
+ruid=$(expr "$ru_zip" : '^.*p\([0-9]*\)_.*$')
+patch_log="{{ temp_dir }}/logs/grid_patch.out"
+
+# Apply patch on standalone home
+
+if [ ! -f "{{ temp_dir }}/done/grid.patch.done" ] && [ $apply_ru == "True" ]; then
+    echo "$(date) Applying RU Patch $ruid" >> $patch_log
+    $grid_home/OPatch/opatchauto apply "{{ ru_stage }}/$ruid" -binary -oh $grid_home >> $patch_log 2>&1
+
+    if grep -q 'Patches successfully applied' $patch_log; then
+        touch "{{ temp_dir }}/done/grid.patch.done"
+        echo "RU Patch $ruid applied successfully"
+    else
+        echo "ERROR: Failed to apply $ruid. See $patch_log for details."
+        exit 1
+    fi
+else
+    if [ ! -f "{{ temp_dir }}/done/grid.patch.done" ]; then
+        echo "INFO: RU patch application is not required as apply_ru is set to 'False'."
+    else
+        echo "INFO: RU patch $ruid already applied. Skipping this step."
+    fi   
+fi
+
+
+exit 0

@@ -1,0 +1,209 @@
+- name: Checking if new 19c home is already installed
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/grid.install.done"
+  register: giinstall
+
+- name: Checking if grid home was already upgraded
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/grid.upgrade.done"
+  register: giupgrade
+
+- name: Import sw_extract.yml
+  ansible.builtin.import_tasks: sw_extract.yml
+  when: 
+      - not giinstall.stat.exists
+      - not giupgrade.stat.exists 
+  
+- name: Executing rootpre.sh
+  shell: "{{ grid_home }}/clone/rootpre.sh"
+  when: 
+      - not giinstall.stat.exists
+      - not giupgrade.stat.exists 
+
+- name: Templating out {{ env_type }} Response File to install CRS SWONLY
+  template:
+    src: grid_19c_install.rsp.j2
+    dest: "{{ temp_dir }}/scripts/{{ response_file_crs_swonly }}"
+    owner: "{{ grid_user }}"
+    group: "{{ grid_group }}"
+    mode: '0644'
+  when: 
+      - not giinstall.stat.exists
+      - not giupgrade.stat.exists 
+  
+- name: Templating out grid_install Script
+  template:
+    src: grid_install.sh.j2
+    dest: "{{ temp_dir }}/scripts/grid_install.sh"
+    owner: "{{ grid_user }}"
+    group: "{{ grid_group }}"
+    mode: '0755'
+  when: 
+      - not giinstall.stat.exists
+      - not giupgrade.stat.exists 
+
+- name: Setting Up New 19c {{ env_type }} for CRS
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/grid_install.sh"
+  register: grid_install_out
+  become: yes
+  become_user: "{{ grid_user }}"
+  become_method: su
+  when: 
+      - not giinstall.stat.exists
+      - not giupgrade.stat.exists 
+- debug: var=grid_install_out.stdout
+
+- name: Checking if new 19c home is already installed
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/grid.install.done"
+  register: giinstall
+
+- name: Checking if new 19c home is already patched
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/grid.patch.done"
+  register: gipatch
+
+- name: Templating out grid_patch Script
+  template:
+    src: grid_patch.sh.j2
+    dest: "{{ temp_dir }}/scripts/grid_patch.sh"
+    owner: "{{ grid_user }}"
+    group: "{{ grid_group }}"
+    mode: '0755'
+  when:
+       - giinstall.stat.exists
+       - not gipatch.stat.exists
+       - not giupgrade.stat.exists 
+
+- name: Applying patch on New 19c standalone {{ env_type }}  home
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/grid_patch.sh"
+  register: grid_patch_out
+  become: yes
+  become_user: "{{ grid_user }}"
+  become_method: su
+  when:
+       - giinstall.stat.exists
+       - not gipatch.stat.exists
+       - not giupgrade.stat.exists 
+- debug: var=grid_patch_out.stdout
+
+- name: Checking if new 19c home is already patched
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/grid.patch.done"
+  register: gipatch
+
+- name: Checking if grid detach was already run
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/grid.home.detach.done"
+  register: griddetachdone
+
+- name: Templating out Grid home detach script
+  template:
+    src: files/grid_detach.sh
+    dest: "{{ temp_dir }}/scripts/grid_detach.sh"
+    owner: "{{ grid_user }}"
+    group: "{{ grid_group }}"
+    mode: '0755'
+  when: 
+      - giinstall.stat.exists
+      - gipatch.stat.exists
+      - not giupgrade.stat.exists 
+      - not griddetachdone.stat.exists 
+
+- name: Run Grid home detach script 
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/grid_detach.sh {{ grid_home }} {{ ora_inventory }} {{ temp_dir }}"
+  register: grid_detach
+  become: yes
+  become_user: "{{ grid_user }}"
+  become_method: su
+  when: 
+      - giinstall.stat.exists
+      - gipatch.stat.exists
+      - not giupgrade.stat.exists 
+      - not griddetachdone.stat.exists 
+  changed_when: grid_detach.rc == 0
+
+- name: Checking if grid detach was already run
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/grid.home.detach.done"
+  register: griddetachdone
+
+- name: Checking if cluvfy was already run
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/cluvfy_fixup.done"
+  register: cluvfydone
+
+- name: Templating out {{ env_type }} Runcluvfy
+  template:
+    src: myruncluvfy.sh.j2
+    dest: "{{ temp_dir }}/scripts/myruncluvfy.sh"
+    owner: "{{ grid_user }}"
+    group: "{{ grid_group }}"
+    mode: '0644'
+  when: 
+      - giinstall.stat.exists
+      - gipatch.stat.exists
+      - griddetachdone.stat.exists 
+      - not giupgrade.stat.exists 
+      - not cluvfydone.stat.exists 
+
+- name: Executing Runcluvfy script
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/myruncluvfy.sh"
+  register: cluvfy_out
+  become: yes
+  become_user: "{{ grid_user }}"
+  become_method: su
+  when: 
+      - giinstall.stat.exists
+      - gipatch.stat.exists
+      - griddetachdone.stat.exists 
+      - not giupgrade.stat.exists 
+      - not cluvfydone.stat.exists 
+- debug: var=cluvfy_out.stdout
+
+- name: Checking if cluvfy was already run
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/cluvfy_fixup.done"
+  register: cluvfydone
+
+- name: Templating out {{ env_type }} Response File to upgrade 
+  template:
+    src: grid_19c_upgrade.rsp.j2
+    dest: "{{ temp_dir }}/scripts/{{ response_file_upgrade }}"
+    owner: "{{ grid_user }}"
+    group: "{{ grid_group }}"
+    mode: '0644'
+  when: 
+      - giinstall.stat.exists
+      - gipatch.stat.exists
+      - griddetachdone.stat.exists 
+      - cluvfydone.stat.exists 
+      - not giupgrade.stat.exists 
+
+- name: Templating out grid_upgrade script
+  template:
+    src: grid_upgrade.sh.j2
+    dest: "{{ temp_dir }}/scripts/grid_upgrade.sh"
+    owner: "{{ grid_user }}"
+    group: "{{ grid_group }}"
+    mode: '0755'
+  when: 
+      - giinstall.stat.exists
+      - gipatch.stat.exists
+      - griddetachdone.stat.exists 
+      - cluvfydone.stat.exists 
+      - not giupgrade.stat.exists 
+
+- name: Executing grid_upgrade script
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/grid_upgrade.sh"
+  register: grid_upgrade_out
+  become: yes
+  become_user: "{{ grid_user }}"
+  become_method: su
+  when: 
+      - giinstall.stat.exists
+      - gipatch.stat.exists
+      - griddetachdone.stat.exists 
+      - cluvfydone.stat.exists 
+      - not giupgrade.stat.exists 
+- debug: var=grid_upgrade_out.stdout

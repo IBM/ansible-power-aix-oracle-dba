@@ -1,0 +1,96 @@
+- name: Checking if {{ env_type }} S/W is extracted
+  ansible.builtin.stat:
+    path: "{{ temp_dir }}/done/{{ item.oh }}.swunzip.done"
+  register: sw_unzipped
+  loop: "{{ required_homes_install }}"
+
+- name: Checking if {{ env_type }} OPatch is extracted
+  ansible.builtin.stat:
+    path: "{{ temp_dir }}/done/{{ item.oh }}.opunzip.done"
+  register: op_unzipped
+  loop: "{{ required_homes_install }}"
+  when: apply_ru
+
+- name: Check if OPatch.bkup exists
+  ansible.builtin.stat:
+    path: "{{ item.oracle_home }}/{{ item.oh }}.OPatch.bkup"
+  register: opatch_bkup
+  loop: "{{ required_homes_install }}"
+
+- name: Extracting {{ env_type }} S/W
+  ansible.builtin.import_tasks: sw_extract.yml
+
+- name: Extracting Opatch
+  ansible.builtin.import_tasks: opatch_extract.yml
+  when:
+      - apply_ru
+
+- name: Checking if new 19c home is already installed and patched
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/oracle.patch.{{ item.oh }}.done"
+  register: dbinstalldone
+  with_items: "{{ required_homes_install }}"
+  when: 
+       - required_homes_install is defined
+
+- name: Set facts for rootpre.sh scripts
+  ansible.builtin.set_fact:
+    rootpre_scripts: "{{ dbinstalldone.results | selectattr('stat.exists', 'equalto', true) | map(attribute='item.oh') | list }}"
+  with_items: "{{ required_homes_install }}"
+  when: 
+      - required_homes_install is defined
+      - inventory_hostname == first_host
+
+- name: Executing rootpre.sh
+  shell: "{{ item.oracle_home }}/clone/rootpre.sh"
+  with_items: "{{ required_homes_install }}"
+  when: 
+      - required_homes_install is defined
+      - inventory_hostname == first_host
+      - item.oh not in rootpre_scripts
+
+- name: Copying Oracle RDBMS Install response file
+  ansible.builtin.template:
+    src: oracle_19c_install.rsp.j2
+    dest: "{{ temp_dir }}/scripts/oracle_19c_install_{{ item.oh }}.rsp"
+    owner: "{{ db_oracle_user }}"
+    group: "{{ db_oinstall_group }}"
+    mode: '0644'
+  with_items: "{{ required_homes_install }}"
+
+- name: Copying oracle_install.sh
+  template:
+    src: oracle_install.sh.j2
+    dest: "{{ temp_dir }}/scripts/oracle_install_{{ item.oh }}.sh"
+    owner: "{{ db_oracle_user }}"
+    group: "{{ db_oinstall_group }}"
+    mode: '0755'
+  with_items: "{{ required_homes_install }}"
+  when: 
+       - required_homes_install is defined
+       - dbinstalldone.stat.exists is not defined or not dbinstalldone.stat.exists
+
+- name: Installing 19c RDBMS and applying patch
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/oracle_install_{{ item.oh }}.sh"
+  register: oracle_install
+  become: yes
+  become_user: "{{ db_oracle_user }}"
+  become_method: su
+  with_items: "{{ required_homes_install }}"
+  when: 
+       - required_homes_install is defined
+       - dbinstalldone.stat.exists is not defined or not dbinstalldone.stat.exists
+
+- name: Oracle Install Output
+  debug:
+    msg: "{{ item.stdout_lines }}"
+  loop: "{{ oracle_install.results }}"
+  when:
+    - required_homes_install is defined
+    - item.stdout_lines is defined
+  loop_control:
+    label: "{{ item.stdout_lines | default('No Output') }}"
+  delegate_to: "{{ first_host }}"
+  run_once: true
+
+

@@ -1,0 +1,48 @@
+# Copyright (c) IBM Corporation 2024
+# This script performs Oracle silent installation along with release update.
+
+db_oracle_home="{{ item.oracle_home }}"
+db_oracle_home_name=`sed -n 's/.*HOME NAME="\([^"]*\)".*LOC="$db_oracle_home".*/\1/p' "{{ ora_inventory }}/ContentsXML/inventory.xml"`
+oh="{{ item.oh }}"
+temp_dir="{{ temp_dir }}"
+install_log="{{ temp_dir }}/logs/oracle_rac_install.$oh.out"
+response_file=oracle_19c_racdb_install_$oh.rsp
+ignore_precheck="{{ ignoreprecheck }}"
+
+
+# Main
+
+# Installation
+
+if [ -f "{{ temp_dir }}/done/oracle.install.$oh.done" ] && [ -f "{{ temp_dir }}/done/oracle.home.detach.$oh.done" ]; then
+    if [ ! -f "{{ temp_dir }}/done/oracle.rac.install.$oh.done" ]; then
+        if [ $ignore_precheck == "True" ]; then
+            echo "$(date) $db_oracle_home/runInstaller -silent -ignorePrereqFailure -responseFile {{ temp_dir }}/scripts/$response_file" >> $install_log
+            export SKIP_ROOTPRE="TRUE"
+            $db_oracle_home/runInstaller -silent -ignorePrereqFailure -responseFile "{{ temp_dir }}/scripts/$response_file" >> $install_log 2>&1
+        elif [ $ignore_precheck == "False" ]; then
+            echo "$(date) $db_oracle_home/runInstaller -silent -responseFile {{ temp_dir }}/scripts/$response_file" >> $install_log
+            export SKIP_ROOTPRE="TRUE"
+            $db_oracle_home/runInstaller -silent -responseFile "{{ temp_dir }}/scripts/$response_file" >> $install_log 2>&1
+        fi
+    else
+        echo "INFO: oracle.rac.install.$oh.done already exists. Skipping installation."
+    fi
+else
+    if [ ! -f "{{ temp_dir }}/done/oracle.install.$oh.done" ]; then
+        echo "ERROR: oracle.install.$oh.done does not exist. Installation not done."
+    fi
+    if [ ! -f "{{ temp_dir }}/done/oracle.home.detach.$oh.done" ]; then
+        echo "ERROR: oracle.home.detach.$oh.done does not exist. Home not detached."
+    fi
+fi
+
+  	if grep -q 'Successfully Setup Software' $install_log; then
+         touch "{{ temp_dir }}/done/oracle.rac.install.$oh.done"
+         echo "Oracle install done"
+	  else
+	      echo "ERROR: runInstaller  failed. See $install_log for details."
+	      exit 1
+  	fi
+
+exit 0

@@ -1,0 +1,107 @@
+- name: Run initialization tasks
+  include_tasks: init.yml
+  when: not init_done is defined
+
+- name: Checking if 19c {{ env_type }} is installed
+  ansible.builtin.stat:
+      path: "{{ temp_dir }}/done/grid.install.done"
+  register: installdone
+  delegate_to: "{{ first_host }}"
+  run_once: true
+
+- name: Set fact for grid installation status
+  ansible.builtin.set_fact:
+    grid_installed: "{{ installdone.stat.exists | default(false) }}"
+  run_once: true
+
+- name: Checking if prechecks_grid script is already run
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/logs/prechecks_grid.log"
+  register: prech
+
+- name: Checking current CRS Version
+  ansible.builtin.shell: "export ORACLE_HOME={{ grid_home_prev }}; {{ grid_home_prev }}/bin/crsctl query crs releaseversion |awk '{print $12}' | sed 's/[][]//g'"
+  register: crsversion
+  changed_when: false
+
+- name: Setting fact - CRS Version
+  ansible.builtin.set_fact:
+    crs_version: "{{ crsversion.stdout }}"
+
+- name: Display crsctl query output for each node
+  ansible.builtin.debug:
+    msg: "Node: {{ inventory_hostname }} - CRS Version: {{ crsversion.stdout }}"
+
+- name: Fail and Exit if CRS versions do not match
+  ansible.builtin.fail:
+    msg: "CRS version mismatch detected! Node {{ inventory_hostname }} has version {{ crsversion.stdout }}, which does not match the version on the primary node {{ first_host }} ({{ hostvars[first_host].crsversion.stdout }}). All nodes must have the same version."
+  when: crsversion.stdout != hostvars[first_host].crsversion.stdout
+
+- name: End play if CRS versions do not match
+  ansible.builtin.meta: end_play
+  when: crsversion.stdout != hostvars[first_host].crsversion.stdout
+
+- name: Execute crsctl query on all nodes
+  ansible.builtin.command: "{{ grid_home_prev }}/bin/crsctl query crs releasepatch"
+  register: crspatch
+  changed_when: false
+
+- name: Setting fact - CRS Version
+  ansible.builtin.set_fact:
+    crs_version: "{{ crspatch.stdout }}"
+
+- name: Display crsctl query output for each node
+  ansible.builtin.debug:
+    msg: "Node: {{ inventory_hostname }} - CRS Version: {{ crspatch.stdout }}"
+
+- name: Check if unzip is available
+  ansible.builtin.command: "which unzip"
+  register: unzip_check
+  ignore_errors: true
+  changed_when: false
+
+- name: Display if unzip is available
+  ansible.builtin.debug:
+    msg: "Unzip is available on this node."
+  when: unzip_check.rc == 0
+
+- name: Display if unzip is not available
+  ansible.builtin.debug:
+    msg: "Unzip is not available on this node."
+  when: unzip_check.rc != 0
+  
+- name: Templating out prechecks_grid script
+  template:
+    src:  prechecks_grid.sh.j2
+    dest: "{{ temp_dir }}/scripts/prechecks_grid.sh"
+    mode: '755'
+  when: not prech.stat.exists
+
+- name: Executing prechecks grid script
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/prechecks_grid.sh"
+  become: yes
+  become_user: "{{ grid_user }}"
+  become_method: su
+  register: precheck_out
+  when: not prech.stat.exists
+
+- name: Prechecks Grid Script Output
+  debug: var=precheck_out.stdout_lines
+  when: not prech.stat.exists
+
+- name: Checking freespace in {{ env_type }} Installation Path {{ grid_home }}
+  ansible.builtin.shell: "df -g {{ grid_home }} |tail -1|awk '{print $3}'"
+  register: grid_home_freespace
+  changed_when: false
+  when: 
+    - installdone is not defined or (installdone.stat.exists is not defined or not installdone.stat.exists)  
+    - apply_ru
+
+
+- name: Fail if insufficient freespace for {{ grid_home }} (90GB required)
+  ansible.builtin.fail:
+    msg: "Insufficient freespace for {{ grid_home }} (90GB freespace required)."
+  when: 
+    - installdone is not defined or (installdone.stat.exists is not defined or not installdone.stat.exists)  
+    - grid_home_freespace.stdout | int < 90
+    - apply_ru

@@ -1,0 +1,105 @@
+- name: Run initialization tasks
+  include_tasks: ../../podba_rac_upgrade_precheck/tasks/init.yml
+  when: not init_done is defined
+
+- name: Checking if DB Upgrade was already done
+  ansible.builtin.stat:
+    path: "{{ temp_dir_upgrade }}/done/{{ item.source_db_name }}.success"
+  register: dbupgradedone
+  with_items: "{{ databases }}"
+  delegate_to: "{{ first_host }}"
+  run_once: true
+
+- name: Set fact if DB Upgrade was done for any database
+  ansible.builtin.set_fact:
+    upgrade_done: true
+  when: 
+    - item.stat.exists
+  with_items: "{{ dbupgradedone.results }}"
+  run_once: true
+
+- name: Set fact for no upgrade done if none were found
+  ansible.builtin.set_fact:
+    upgrade_done: false
+  when: 
+    - dbupgradedone.results | selectattr('stat.exists', 'equalto', true) | list | length == 0
+  run_once: true
+
+- name: Exit if DB Upgrade was already done
+  ansible.builtin.fail:
+    msg: "DB Upgrade already done. Exiting."
+  when: upgrade_done
+  run_once: true
+
+- name: End play if DB Upgrade Task was done
+  ansible.builtin.meta: end_play
+  when: upgrade_done
+  run_once: true
+     
+- name: Checking if grid home was already upgraded 
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/grid.upgrade.done"
+  register: giupgradedone
+  when: inventory_hostname == first_host
+  run_once: true  
+
+- name: Checking if prechecks_grid script is already run
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/logs/prechecks_grid.log"
+  register: prech
+  
+- name: Import grid_upgrade.yml
+  ansible.builtin.import_tasks: grid_upgrade.yml
+  when: 
+      - inventory_hostname == first_host
+      - not giupgradedone.stat.exists
+      - prech.stat.exists
+
+- name: Checking if 19c {{ env_type }} is installed
+  ansible.builtin.stat:
+      path: "{{ temp_dir }}/done/grid.install.done"
+  register: installdone
+  when: inventory_hostname == first_host
+  run_once: true  
+
+- name: Checking if new 19c home is already patched
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/grid.patch.done"
+  register: gipatch
+  when: inventory_hostname == first_host
+  run_once: true  
+
+- name: Checking if grid home was already upgraded 
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/grid.upgrade.done"
+  register: giupgradedone
+  when: inventory_hostname == first_host
+  run_once: true  
+
+- name: Checking if root Upgrade Task was already done
+  ansible.builtin.stat:
+    path: "{{ temp_dir }}/done/root.upgrade.done"
+  register: rootupgrade
+  delegate_to: "{{ first_host }}"   
+  run_once: true  
+
+- name: Import root_upgrade.yml
+  ansible.builtin.import_tasks: root_upgrade.yml
+  when: 
+      - prech.stat.exists
+      - installdone.stat.exists
+      - gipatch.stat.exists
+      - giupgradedone.stat.exists
+
+- name: Execute crsctl query on all nodes
+  ansible.builtin.command: "{{ grid_home_prev }}/bin/crsctl query crs releasepatch"
+  register: crspatch
+  changed_when: false
+
+- name: Setting fact - CRS Version
+  ansible.builtin.set_fact:
+    crs_version: "{{ crspatch.stdout }}"
+
+- name: Display crsctl query output for each node
+  ansible.builtin.debug:
+    msg: "Node: {{ inventory_hostname }} - CRS Version: {{ crspatch.stdout }}"

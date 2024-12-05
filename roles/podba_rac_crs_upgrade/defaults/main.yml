@@ -1,0 +1,8 @@
+swapsize: 16384
+maxuserproc: 16384
+temp_dir: /tmp/podba_gi_temp
+temp_dir_upgrade: /tmp/podba_db_upgrade
+response_file_crs_swonly: grid_install.rsp
+response_file_upgrade: grid_upgrade.rsp
+env_type: GI
+apply_ru: True
