@@ -15,8 +15,13 @@ Following functionalities can be achieved with this collection.
 - Manage ACFS
 - Manage DBMS jobs
 - Single Instance Grid Infrastructure and Database Upgrade from 12c to 19c
+- RAC Grid Infrastructure and Database Upgrade from 12c to 19c
 
 Version Change:
+
+PODBA v2.0.6
+
+- Introduced RAC Grid Infrastructure and Database Upgrade from 12c to 19c.
 
 PODBA v2.0.5
 
