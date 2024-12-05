@@ -1,0 +1,154 @@
+###############################################################################
+# This File contain all the Global Variables required to do the SIHA Upgrade.
+# Please update the variables by reading the comments provided at the 
+# beginning of each section.
+# This variables file contain 4 sections:
+#      A - Common Variables.
+#      B - RAC Instance CRS Upgrade.
+#      C - Oracle 19c RDBMS installation.
+#      D - Oracle Database Upgrade.
+# Note: While doing the RAC Instance Grid Upgrade, provide the DB names
+# in the "source_db_name" list under Section - D.
+###############################################################################
+
+## Section A - Common Variables
+# ignoreprecheck - to ignore prechecks errors and warnings default value false 
+
+# ora_binary_location: Oracle binaries staging option, either local|nfs|remote.
+# ora_nfs_host: If ora_binary_location: nfs, provide the resolvable hostname of the NFS server.
+# ora_nfs_device: NFS mount path.
+# ora_nfs_filesystem: Target NFS mount path.
+
+# db_oracle_sw: Provide the 19c RDBMS s/w zipfile name along with the path on Remote or Local or NFS.
+# grid_sw: Provide the 19c Grid s/w zipfile name along with the path on Remote or Local or NFS.
+# opatch_sw: Provide the latest Opatch utility along with the path on Remote or Local or NFS.
+# ru_stage: Provide the full path to extract the Release Update patch.
+# ru_zip: Release Update patch zipfile, which is placed in "sw_stage" path on target lpar.
+# autoupgrade_util_remote: If ora_binary_location: nfs then, provide the path of autoupgrade.jar utility on the Ansible controller.
+# autoupgrade_util: Provide the autoupgrade.jar path on the Local or NFS server. This path will also be used by Ansible to copy from Ansible controller when ora_binary_location is set to remote.
+# ora_inventory - Provide the Central Oracle inventory path on the AIX lpar.
+# mgmt_opt - Update the CLOUD_CONTROL when you want to manage your Oracle Grid Infrastructure with Enterprise Manager Cloud Control. Leave it blank otherwise.
+# oms_host - Enterprise Cloud Control Hostname. Response file parameter: oracle.install.config.omsHost=
+# oms_port - Enterprise Cloud Control Host Port number. Response file parameter: oracle.install.config.omsPort=
+# oms_em_user - Enterprise Cloud Control Admin Username. Response file parameter: oracle.install.config.emAdminUser=
+
+## Section B - RAC Instance Grid Variables
+
+# grid_home_prev: Provide the 12c Grid Home Path.
+# grid_home: Provide a new path for 19c Grid home; DON'T create this directory, Ansible will create it.
+# gi_oracle_base: Provide the Base path for the new 19c Grid Home.
+# grid_user: Provide the Grid software owner.
+# grid_group: Provide the Grid software owner's primary group.
+# gi_osdba_group: Provide the Grid software owner's secondary group.
+# gi_osasm_group: Provide asm group (osasm group name).
+# gi_osoper_group: Provide osoper group name, leave it blank if not being used.
+# gi_cluster_name: Provide clusterware name
+#       cluster_nodes - Specify the list of nodes that have to be configured to be part of the cluster.
+#         Example : For registering GI for a cluster software: cluster_nodes=node1,node2
+#       asm_disk_group - The ASM DiskGroup 
+#         Example: asm_disk_group=data
+
+## Section - C - Oracle 19c RDBMS installation Variables
+
+# db_oracle_base: Provide Base path for the new 19c RDBMS Home.
+# db_oracle_user: Provide the RDBMS software owner, ex: oracle.
+# db_oinstall_group: Provide the RDBMS software owner's primary group, ex: oinstall.
+# db_osdba_group: The OSDBA_GROUP is the OS group which is to be granted SYSDBA privileges.
+# db_osoper_dba: The OSOPER_GROUP is the OS group which is to be granted SYSOPER privileges (optional).
+# db_osbkup_dba: The OSBACKUPDBA_GROUP is the OS group which is to be granted SYSBACKUP privileges.
+# db_osdg_dba: The OSDGDBA_GROUP is the OS group which is to be granted SYSDG privileges.
+# db_oskm_dba: The OSKMDBA_GROUP is the OS group which is to be granted SYSKM privileges.
+# db_osrac_dba: The OSRACDBA_GROUP is the OS group which is to be granted SYSRAC privileges.
+
+## Section D - Database upgrade Variables
+#
+# autoupgrade_stage: Provide the path to the latest autoupgrade.jar utility on the target lpar.
+# global_log_dir: Autoupgrade Global Directory. Provide an empty path on the AIX lpar.
+# Make sure to follow the given dictionary pattern along with indentation. 
+# databases:  # Based on the requirement, more number of databases can be added as a list with the following set of variables.
+#     - source_db_sid: Provide 12c Database SID , which needs to be upgraded.
+#     - source_db_name: Provide 12c Database Name, which needs to be upgraded.
+#       source_db_home - Provide 12c Oracle Home.
+#       target_db_home - Provide 19c Oracle Home, Provide a Non existent path if 19c RDBMS is not already installed.
+#       log_dir - Provide a Non existent path on AIX lpar for Autoupgrade logs files.
+#       start_time: NOW
+#       restoration -  If yes, creates a restore point before upgrade, Flashback must be ON for this option. Set to 'no', if you don't want a restore point to be created.
+# upgrade_node: localhost
+#       run_utlrp: 'yes'
+#       timezone_upg: 'yes'
+#       target_cdb_name - This is only required when upgrading 12c Non CDB into a 19c CDB.
+#       target_pdb_name - This is an optional parameter which will rename the 12c Non-CDB and plugin into 19c CDB. To be used when "target_cdb_name" is set.
+
+
+## Section D - Network Variables
+#
+# Variables that need updates are tagged with "# !!! update !!!".
+
+# Section A - Update the Common Variables.
+
+ignoreprecheck: False
+
+ora_binary_location: local
+ora_nfs_host:  
+ora_nfs_device:  
+ora_nfs_filesystem:  
+
+grid_sw: /binaries/19c/V982588-01_193000_grid.zip
+db_oracle_sw: /binaries/19c/V982583-01_193000_db.zip
+ru_stage: /u01/19c/RU
+opatch_sw: /binaries/19c/p6880880_190000_AIX64-5L.zip_opatch.zip
+ru_zip: /binaries/19c/p36582629_190000_AIX64-5L_GI_RU19.24.zip
+autoupgrade_util_remote:
+autoupgrade_util: /u01/upgrade_121_19c/autoupgrade.jar
+
+ora_inventory: /u01/base/oraInventory  
+mgmt_opt:
+oms_host:
+oms_port:
+oms_em_user:
+
+# Section B - Update the RAC Instance Grid Variables
+
+grid_home_prev: /u01/app/12.1.0/grid
+grid_home: /u01/19c/grid19c
+
+gi_oracle_base: /u01/base
+grid_user: oracle
+grid_group: oinstall
+gi_osdba_group: dba
+gi_osasm_group: oinstall
+gi_osoper_group:
+gi_cluster_name: rac21  
+cluster_nodes: rac21,rac22
+asm_disk_group: DATA
+
+# Section C - Update the Variables for Oracle 19c RDBMS installation
+
+db_oracle_base: /u01/base
+db_oracle_user: oracle
+db_oinstall_group: oinstall
+db_osdba_group: dba
+db_osoper_dba:
+db_osbkup_dba:
+db_osdg_dba:
+db_oskm_dba:
+db_osrac_dba:
+
+# Section D - Variables for Database [Please Don't Change the dictionary list format. This format is referenced in the code.]
+
+autoupgrade_stage: /home/oracle
+global_log_dir: /u01/upgrade_121_19c/autoupgrade_1
+databases:  
+      - source_db_name: orcl
+        source_db_sid: orcl1
+        source_db_home: /u01/app/oracle/product/12.1.0/dbhome_1
+        target_db_home: /u01/19c/db19c
+        log_dir: /u01/upgrade_121_19c/autoupgrade_1/dbupgrdlogs
+        start_time: NOW
+        restoration: 'yes'
+        upgrade_node: localhost
+        run_utlrp: 'yes'
+        timezone_upg: 'yes'
+        target_cdb_name:
+        target_pdb_name:
+

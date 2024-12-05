@@ -1,0 +1,7 @@
+swapsize: 16384
+maxuserproc: 16384
+temp_dir: /tmp/podba_install_temp
+temp_dir_upgrade: /tmp/podba_db_upgrade
+response_file: oracle_19c_install.rsp
+env_type: DB
+apply_ru: True

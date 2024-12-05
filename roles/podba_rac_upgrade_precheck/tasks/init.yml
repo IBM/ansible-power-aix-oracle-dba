@@ -1,0 +1,31 @@
+---
+# Copyright (c) IBM Corporation 2021
+
+# Common vars used by multiple roles
+
+# tasks for init
+
+- name: Set fact init_done
+  set_fact:
+    init_done: true
+
+- name: Set fact for rac_hosts from cluster_nodes
+  set_fact:
+    rac_hosts: "{{ cluster_nodes.split(',') }}"
+  failed_when: not cluster_nodes is defined
+  when: not rac_hosts is defined
+
+- name: Set fact for first_host and last_host
+  set_fact:
+    first_host: "{{ rac_hosts[0] }}"
+    last_host: "{{ rac_hosts[-1] }}"
+
+- name: Creating Temp Directory
+  ansible.builtin.file:
+    dest: "{{ item }}"
+    mode: '0777'
+    owner: "{{ db_oracle_user }}"
+    group: "{{ db_oinstall_group }}"
+    state: directory
+  loop: "{{ directories | product(['done', 'scripts', 'logs']) | map('join', '/') }}"
+  changed_when: false

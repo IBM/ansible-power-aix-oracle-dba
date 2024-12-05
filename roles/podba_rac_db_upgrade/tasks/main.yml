@@ -1,0 +1,41 @@
+- name: Run initialization tasks
+  include_tasks: ../../podba_rac_upgrade_precheck/tasks/init.yml
+  when: not init_done is defined
+
+- name: Checking if DB Upgrade was already done
+  ansible.builtin.stat:
+    path: "{{ temp_dir_upgrade }}/done/{{ item.source_db_name }}.success"
+  register: dbupgradedone
+  with_items: "{{ databases }}"
+  delegate_to: "{{ first_host }}"
+  run_once: true
+
+- name: Set fact if DB Upgrade was done for any database
+  ansible.builtin.set_fact:
+    upgrade_done: true
+  when: 
+    - item.stat.exists
+  with_items: "{{ dbupgradedone.results }}"
+  run_once: true
+
+- name: Set fact for no upgrade done if none were found
+  ansible.builtin.set_fact:
+    upgrade_done: false
+  when: 
+    - dbupgradedone.results | selectattr('stat.exists', 'equalto', true) | list | length == 0
+  run_once: true
+
+- name: Exit if DB Upgrade was already done
+  ansible.builtin.fail:
+    msg: "DB Upgrade already done. Exiting."
+  when: upgrade_done
+  run_once: true
+
+- name: End play if DB Upgrade Task was done
+  ansible.builtin.meta: end_play
+  when: upgrade_done
+  run_once: true     
+  
+- name: Import db_upgrade.yml
+  ansible.builtin.import_tasks: db_upgrade.yml
+  when: inventory_hostname == first_host

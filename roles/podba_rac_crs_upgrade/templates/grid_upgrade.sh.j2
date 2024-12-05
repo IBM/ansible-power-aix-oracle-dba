@@ -1,0 +1,72 @@
+# Copyright (c) IBM Corporation 2024
+# This script performs Grid silent "upgrade" option from already patched home 
+
+grid_home="{{ grid_home }}"
+temp_dir="{{ temp_dir }}"
+ru_stage="{{ ru_stage }}"
+grid_sw="{{ grid_sw }}"
+apply_ru="{{ apply_ru }}"
+ru_zip="{{ ru_zip }}"
+ruid=$(expr "$ru_zip" : '^.*p\([0-9]*\)_.*$')
+upgrade_dryrun_log="{{ temp_dir }}/logs/grid_dryrun_upgrade.out"
+upgrade_log="{{ temp_dir }}/logs/grid_upgrade.out"
+ignore_precheck="{{ ignoreprecheck }}"
+
+# Dry Run for Grid Upgrade
+
+if [ ! -f "{{ temp_dir }}/done/grid.dryrun.upgrade.done" ]; then
+    if [ $ignore_precheck == "True" ]; then
+        echo "$(date) ./gridSetup.sh -silent -ignorePrereqFailure -dryRunForUpgrade -responseFile {{ temp_dir }}/scripts/{{ response_file_upgrade }}" >> $upgrade_dryrun_log
+        export SKIP_ROOTPRE=true
+        $grid_home/gridSetup.sh -silent -ignorePrereqFailure -dryRunForUpgrade -responseFile "{{ temp_dir }}/scripts/{{ response_file_upgrade }}" >> $upgrade_dryrun_log 2>&1
+    elif [ $ignore_precheck == "False" ]; then
+        echo "$(date) ./gridSetup.sh -silent -dryRunForUpgrade -responseFile {{ temp_dir }}/scripts/{{ response_file_upgrade }}" >> $upgrade_dryrun_log
+        export SKIP_ROOTPRE=true
+        $grid_home/gridSetup.sh -silent -dryRunForUpgrade -responseFile "{{ temp_dir }}/scripts/{{ response_file_upgrade }}" >> $upgrade_dryrun_log 2>&1
+    else
+        echo "ERROR: Invalid value for ignore_precheck: $ignore_precheck. Expected 'true' or 'false'."
+        exit 1
+    fi
+else
+    echo "INFO: Dry run upgrade already completed. Skipping dry run."
+fi
+
+# Check if the DRY RUN upgrade was successful and take action
+if grep -q 'Successfully Setup Software' $upgrade_dryrun_log; then
+    touch "{{ temp_dir }}/done/grid.dryrun.upgrade.done"
+    echo "gridSetup.sh -dryRunForUpgrade completed successfully."
+else
+    echo "ERROR: gridSetup.sh -dryRunForUpgrade failed. See $upgrade_dryrun_log for details."
+    exit 1
+fi
+
+# Grid Upgrade
+
+if [ ! -f "{{ temp_dir }}/done/grid.upgrade.done" ]; then
+    if [ $ignore_precheck == "True" ]; then
+        echo "$(date) ./gridSetup.sh -silent -ignorePrereqFailure -responseFile {{ temp_dir }}/scripts/{{ response_file_upgrade }}" >> $upgrade_log
+        export SKIP_ROOTPRE=true
+        $grid_home/gridSetup.sh -silent -ignorePrereqFailure -responseFile "{{ temp_dir }}/scripts/{{ response_file_upgrade }}" > $upgrade_log 2>&1
+    elif [ $ignore_precheck == "False" ]; then
+        echo "$(date) ./gridSetup.sh -silent -responseFile {{ temp_dir }}/scripts/{{ response_file_upgrade }}" >> $upgrade_log
+        export SKIP_ROOTPRE=true
+        $grid_home/gridSetup.sh -silent -responseFile "{{ temp_dir }}/scripts/{{ response_file_upgrade }}" > $upgrade_log 2>&1
+    else
+        echo "ERROR: Invalid value for ignore_precheck: $ignore_precheck. Expected 'true' or 'false'."
+        exit 1
+    fi
+else
+    echo "INFO: Grid upgrade already completed. Skipping upgrade."
+fi
+
+# Check if the upgrade was successful and take action
+if grep -q 'Successfully Setup Software' $upgrade_log; then
+    touch "{{ temp_dir }}/done/grid.upgrade.done"
+    echo "gridSetup.sh completed successfully."
+else
+    echo "ERROR: gridSetup.sh failed. See $upgrade_log for details."
+    exit 1
+fi
+
+
+exit 0

@@ -1,0 +1,36 @@
+# This playbook is used to upgrade RAC Grid from 12c to 19c.
+# Install and patch 19c RDBMS.
+# Upgrades the user listed databases from 12c to 19c.
+#
+# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+#
+#- hosts: all_nodes                            # Provide the name of the target lpar registered in ansible inventory.
+#  remote_user: root                     # This needs to be run by "root" user.
+#  gather_facts: False
+#  vars_files:
+#      - vars/upgrade/upgrade_rac_vars.yml	# update all the required variables
+#      - vars/vault.yml				# update the passwords
+
+
+- name: Run Grid Upgrade Script on first node
+  hosts: all 
+  remote_user: root
+  gather_facts: False
+  vars_files:
+      - vars/upgrade/upgrade_rac_vars.yml
+      - vars/vault.yml
+      
+  roles:
+     - role: podba_rac_upgrade_precheck
+       tags: rac_crs_precheck
+     - role: podba_rac_crs_upgrade 
+       tags: rac_crs_upgrade
+     - role: podba_rac_db_install
+       tags: oracle_rac_db_install
+     - role: podba_rac_db_upgrade
+       tags: db_upgrade
+
+
+
+
+

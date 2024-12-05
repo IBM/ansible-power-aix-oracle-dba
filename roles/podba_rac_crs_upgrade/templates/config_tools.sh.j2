@@ -1,0 +1,68 @@
+# Copyright (c) IBM Corporation 2023
+# This script executes gridSetup.sh -configtools
+
+# Idempotent: yes
+
+# Variables
+
+temp_dir="{{ temp_dir }}"
+grid_home="{{ grid_home }}"
+config_log="{{ temp_dir }}/logs/config.log"
+ignore_precheck="{{ ignoreprecheck }}"
+
+# Main
+
+if [ -f "{{ temp_dir }}/done/root.upgrade.done" ]; then
+    if [ ! -f "{{ temp_dir }}/done/configtools.done" ]; then
+        if [ $ignore_precheck == "True" ]; then
+            echo "$(date) ./gridSetup.sh -silent -ignorePrereqFailure -executeConfigTools -responseFile {{ temp_dir }}/scripts/{{ response_file_upgrade }}" >> $config_log
+            export SKIP_ROOTPRE="TRUE"
+            $grid_home/gridSetup.sh -silent -ignorePrereqFailure -executeConfigTools -responseFile "{{ temp_dir }}/scripts/{{ response_file_upgrade }}" >> $config_log 2>&1
+        elif [ $ignore_precheck == "False" ]; then
+            echo "$(date) ./gridSetup.sh -silent -executeConfigTools -responseFile {{ temp_dir }}/scripts/{{ response_file_upgrade }}" >> $config_log
+            export SKIP_ROOTPRE="TRUE"
+            $grid_home/gridSetup.sh -silent -executeConfigTools -responseFile "{{ temp_dir }}/scripts/{{ response_file_upgrade }}" >> $config_log 2>&1
+        else
+            echo "ERROR: Invalid value for ignore_precheck: $ignore_precheck. Expected 'True' or 'False'."
+            exit 1
+        fi
+    else
+        echo "INFO: Config tools already completed. Skipping the config tools execution."
+    fi
+else
+    echo "ERROR: rootupgrade.sh didn't complete successfully, or configtools is already done. Exiting."
+    exit 1
+fi
+
+## -- validate
+#if [ -f "{{ temp_dir }}/done/root.upgrade.done" ]; then
+#    if [ ! -f "{{ temp_dir }}/done/configtools.done" ]; then
+#           echo "$(date) ./gridSetup.sh -silent -executeConfigTools -responseFile {{ temp_dir }}/scripts/{{ response_file_upgrade }}" >> $config_log
+#           export SKIP_ROOTPRE="TRUE"
+#           $grid_home/gridSetup.sh -silent -executeConfigTools -responseFile "{{ temp_dir }}/scripts/{{ response_file_upgrade }}" >> $config_log 2>&1
+#           
+#    else
+#        echo "INFO: Config tools already completed. Skipping the config tools execution."
+#    fi
+#else
+#    echo "ERROR: rootupgrade.sh didn't complete successfully, or configtools is already done. Exiting."
+#    exit 1
+#fi
+
+# Checking the gridSetup result
+if grep -q "Successfully Configured Software" $config_log; then
+    touch "{{ temp_dir }}/done/configtools.done"
+    echo "gridSetup.sh -executeConfigTools completed successfully."
+elif grep -q "\[WARNING\]" $config_log; then
+    touch "{{ temp_dir }}/done/configtools.done"
+    echo "gridSetup.sh -executeConfigTools completed with [WARNING]."
+    echo "ACTION: Refer to the logs or contact Oracle Support Services."
+else
+    echo "ERROR: gridSetup.sh -executeConfigTools failed. See $config_log for details."
+    exit 1
+fi
+
+
+
+exit 0
+
