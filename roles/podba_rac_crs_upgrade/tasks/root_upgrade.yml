@@ -1,0 +1,106 @@
+- name: Checking if rootupgrade.sh script was already executed on the {{ first_host }}
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/root.upgrade.done"
+  register: rootupgradedone
+  when: inventory_hostname == first_host
+  run_once: true  
+
+- name: Templating out rootupgrade.sh script on all nodes
+  template:
+    src: rootupgrade.sh.j2
+    dest: "{{ temp_dir }}/scripts/rootupgrade.sh"
+    owner: "{{ grid_user }}"
+    group: "{{ grid_group }}"
+    mode: '0755'
+  when:
+    - not rootupgradedone.stat.exists
+
+- name: Run the rootupgrade script on the {{ first_host }} 
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/rootupgrade.sh"
+  register: root_upgrade_out
+  delegate_to: "{{ first_host }}"
+  when:
+   - not rootupgradedone.stat.exists
+  run_once: true 
+
+- name: Debug root_upgrade_out stdout
+  debug:
+    var: root_upgrade_out.stdout
+  when: 
+      - not rootupgradedone.stat.exists
+      - inventory_hostname == first_host
+  run_once: true  
+
+- name: Checking if rootupgrade.sh script was already executed on the {{ last_host }}
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/root.upgrade.done"
+  register: rootupgradedone 
+  when: inventory_hostname == last_host
+
+- name: Run the rootupgrade script on the {{ last_host }}
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/rootupgrade.sh"
+  register: root_upgrade_out
+  when:
+    - rootupgradedone.stat.exists is not defined or not rootupgradedone.stat.exists
+    - inventory_hostname == last_host
+
+- name: Debug root_upgrade_out stdout
+  debug:
+    var: root_upgrade_out.stdout
+  when: 
+      - root_upgrade_out is defined
+      - inventory_hostname == last_host
+
+- name: Checking if rootupgrade.sh script was already executed 
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/root.upgrade.done"
+  register: rootupgradedone
+  when: inventory_hostname == first_host
+  run_once: true  
+
+- name: Checking if rootupgrade.sh script was already executed
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/configtools.done"
+  register: configdone
+
+- name: Post {{ env_type }} Upgrade Steps Templating out config_tools.sh
+  template:
+    src: config_tools.sh.j2
+    dest: "{{ temp_dir }}/scripts/config_tools.sh"
+    owner: "{{ grid_user }}"
+    group: "{{ grid_group }}"
+    mode: '0755'
+  when:
+       - rootupgradedone.stat.exists
+       - not configdone.stat.exists
+  delegate_to: "{{ first_host }}"
+  run_once: true 
+
+- name: Post {{ env_type }} Upgrade Steps| Executing the Config Tools script
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/config_tools.sh"
+  register: config_tools_out
+  become: yes
+  become_user: "{{ grid_user }}"
+  become_method: su
+  run_once : true
+  when:
+       - rootupgradedone.stat.exists
+       - not configdone.stat.exists
+  delegate_to: "{{ first_host }}"
+
+- name: Debug config_tools_out stdout
+  debug:
+    var: config_tools_out.stdout
+  when: 
+      - config_tools_out is defined
+      - inventory_hostname == first_host
+  run_once: true  
+
+- name: Post {{ env_type }} Upgrade Steps | Checking if Config Tools is successful.
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/configtools.done"
+  register: postupgrd
+  delegate_to: "{{ first_host }}"
+  run_once: true 
+  tags: poststep
+  

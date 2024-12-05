@@ -1,0 +1,42 @@
+#!/usr/bin/ksh93
+
+# Copyright (c) IBM Corporation 2021
+
+# This script executes runcluvfy.sh in Grid home to verify the nodes
+# meet Oracale RAC upgrade requirements.
+
+# Idempotent: Yes
+
+grid_home="{{ grid_home }}"
+temp_dir="{{ temp_dir }}"
+cluvfy_nofixup_log="{{ temp_dir }}/logs/cluvfy_nofixup.out"
+cluvfy_fixup_log="{{ temp_dir }}/logs/cluvfy_fixup.out"
+ignore_precheck="{{ ignoreprecheck }}"
+dest_ver=$($grid_home/OPatch/opatch lspatches -oh $grid_home | grep "OCW RELEASE UPDATE" | sed 's/.*OCW RELEASE UPDATE \([0-9.]*\).*/\1/')
+dt=$(date +"%Y%m%d_%H%M%S")
+
+
+# runcluvfy with fixup
+if [ ! -f "{{ temp_dir }}/done/cluvfy_fixup.done" ]; then
+    echo "$(date) ./runcluvfy.sh stage -pre crsinst -upgrade -rolling -src_crshome {{ grid_home_prev }} -dest_crshome {{ grid_home }} -dest_version $dest_ver -verbose" >> $cluvfy_fixup_log
+    {{ grid_home }}/runcluvfy.sh stage -pre crsinst -upgrade -rolling -src_crshome {{ grid_home_prev }} -dest_crshome {{ grid_home }} -dest_version $dest_ver -verbose >> $cluvfy_fixup_log 2>&1
+else
+    echo "INFO: cluvfy_fixup already completed. Skipping."
+fi
+
+# Check if the cluvfy_fixup was successful and take action
+if grep -q '...FAILED' $cluvfy_fixup_log; then
+    if [ $ignore_precheck == "True" ]; then
+        touch "{{ temp_dir }}/done/cluvfy_fixup.done"
+        echo "WARNING: runcluvfy.sh stage -pre crsinst -upgrade failed. Ignoring errors and proceeding. See $cluvfy_fixup_log for details."
+    elif [ $ignore_precheck == "False" ]; then
+        mv "$cluvfy_fixup_log" "${cluvfy_fixup_log}_$dt"
+        echo "ERROR: runcluvfy.sh stage -pre crsinst -upgrade failed. Exiting. See ${cluvfy_fixup_log}_$dt for details."
+        exit 1
+    fi
+else
+    touch "{{ temp_dir }}/done/cluvfy_fixup.done"
+    echo "INFO: runcluvfy.sh stage -pre crsinst -upgrade successfully completed."
+fi
+
+exit 0

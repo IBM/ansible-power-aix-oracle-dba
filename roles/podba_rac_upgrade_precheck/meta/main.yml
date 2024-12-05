@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  role_name: rac_crs_upgrade
+  author: Naved Afroz
+  description: Ansible role to perform precheck for Upgrading Rac Instance Grid Infrastructure
+
+  company: IBM
+
+  license: Apache-2.0
+
+  min_ansible_version: 2.9
+
+  platforms:
+  - name: AIX
+    versions:
+    - all
+
+  galaxy_tags: [aix]
+  dependencies: []

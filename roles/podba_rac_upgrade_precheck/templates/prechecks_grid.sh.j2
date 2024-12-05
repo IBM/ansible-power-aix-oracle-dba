@@ -1,0 +1,97 @@
+# Copyright (c) IBM Corporation 2023
+# This script will do only prechecks. No changes will be done to the system.
+
+# Variables
+
+prechecks={{ temp_dir }}/logs/prechecks_grid.log
+olr_path=/etc/oracle/olr.loc
+inv_check=`cat {{ ora_inventory }}/ContentsXML/inventory.xml |grep {{ grid_home_prev }} | wc -l`
+swap_check=`lsps -a| tail -n +2| awk '{sum+=$4} END {print sum}'`
+tmp_check=`df -g /tmp |tail -1|awk '{print $3}'`
+maxup_check=`lsattr -E -l sys0|grep maxuproc|awk '{print $2}'`
+ORACLE_HOME={{ grid_home_prev }}
+crsversion={{ crs_version }}
+mandatory_patch_12=`$ORACLE_HOME/OPatch/opatch lsinventory | grep 21255373 |grep -v grep|wc -l`
+mandatory_patch_122=`$ORACLE_HOME/OPatch/opatch lsinventory | grep 27006180 |grep -v grep|wc -l`
+apply_ru="{{ apply_ru }}"
+check_grid=`cat {{ ora_inventory }}/ContentsXML/inventory.xml |grep {{ grid_home }} | grep "^[^#;]"| wc -l`
+ruid=$(expr "$ru_zip" : '^.*p\([0-9]*\)_.*$')
+asm_password_file=`$ORACLE_HOME/bin/srvctl config asm|grep "Password file:" | awk '{print $3}' | grep "+" | wc -l`
+
+# Main
+
+if [ ! -f $olr_path ]; then
+  echo "Grid is NOT configured (failed)" > $prechecks
+else
+  echo "Grid is configured (passed)" >> $prechecks
+fi
+
+if [ $inv_check != 0 ]; then
+  echo "Previous Grid installation home exists (passed)" >> $prechecks
+else
+  echo "Previous Grid installation home doesn't exist (failed)" >> $prechecks
+fi
+
+if [ ! -f {{ temp_dir }}/done/grid.install.done ]; then
+  if [ $check_grid != 0 ]; then
+    echo "New Grid Home already registered in oraInventory (failed)" >> $prechecks
+  else
+   echo "New Grid Home is not registered in oraInventory (passed)" >> $prechecks
+  fi
+fi
+
+if [ $swap_check -lt {{ swapsize }} ]; then
+  echo "Increase Swap size to greater than 16384 (failed)" >> $prechecks
+else
+  echo "Swap has sufficient space (passed)" >> $prechecks
+fi
+
+if [ $tmp_check -lt 5 ]; then
+  echo "/tmp has less than 5GB space (failed)" >> $prechecks
+else
+  echo "/tmp has sufficient space (passed)" >> $prechecks
+fi
+
+if [ $maxup_check -lt {{ maxuserproc }} ]; then
+  echo "maxuproc is less than 16384 (failed)" >> $prechecks
+else
+  echo "maxuproc value is sufficient $maxup_check (passed)" >> $prechecks
+fi
+
+if [ $crsversion == 12.1.0.2.0 ]; then
+	if [ $mandatory_patch_12 == 0 ]; then
+		echo "Patch 21255373 must be applied on $crsversion grid home (failed)" >> $prechecks
+		else  
+  		echo "Mandatory patch 21255373 is already applied on $crsversion (passed)" >> $prechecks
+	fi
+fi
+
+if [ $crsversion == 12.2.0.1.0 ]; then
+        if [ $mandatory_patch_122 == 0 ]; then
+                echo "Patch 27006180 must be applied on $crsversion grid home (failed)" >> $prechecks
+                else
+                echo "Mandatory patch 27006180 is already applied on $crsversion (passed)" >> $prechecks
+        fi
+fi
+
+#For 12.1 and 12.2 releases,Verify password file to ASM before Upgrade
+
+if [ $crsversion == 12.1.0.2.0 ] || [ $crsversion == 12.2.0.1.0 ]; then
+	if [ $asm_password_file == 0 ]; then
+		echo "Verify password file is present in ASM (failed)" >> $prechecks
+		else  
+  		echo "Verify password file is present in ASM (passed)" >> $prechecks
+	fi
+fi
+
+
+if grep -q 'failed' $prechecks; then
+   echo "Some or All prechecks have failed, Review the below messages"
+   cat $prechecks|grep failed
+   rm $prechecks
+   exit 1
+else
+   echo "Prechecks completed successfully."
+fi
+  
+exit 0

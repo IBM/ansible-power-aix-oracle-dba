@@ -1,0 +1,99 @@
+# Copyright (c) IBM Corporation 2024
+# This script performs Oracle silent installation along with release update.
+
+db_oracle_home="{{ item.oracle_home }}"
+oh="{{ item.oh }}"
+temp_dir="{{ temp_dir }}"
+ru_stage="{{ ru_stage }}"
+apply_ru="{{ apply_ru }}"
+opatch_sw="{{ opatch_sw }}"
+ru_zip="{{ ru_zip }}"
+ruid=$(expr "$ru_zip" : '^.*p\([0-9]*\)_.*$')
+install_log="{{ temp_dir }}/logs/oracle_install.$oh.out"
+response_file=oracle_19c_install_$oh.rsp
+patch_log="{{ temp_dir }}/logs/oracle_patch.$oh.out"
+ignore_precheck="{{ ignoreprecheck }}"
+
+#Main
+ 
+#Installation
+
+## Oracle install prerequisite check
+if [ ! -f "{{ temp_dir }}/done/oracle.install.prereq.$oh.done" ]; then
+    if [ $ignore_precheck == "True" ]; then
+        echo "$(date) $db_oracle_home/runInstaller -executePrereqs -silent -ignorePrereqFailure -responseFile {{ temp_dir }}/scripts/$response_file" >> $install_log
+        export SKIP_ROOTPRE="TRUE"
+        $db_oracle_home/runInstaller -executePrereqs -silent -ignorePrereqFailure -responseFile "{{ temp_dir }}/scripts/$response_file" >> $install_log 2>&1
+    elif [ $ignore_precheck == "False" ]; then
+        echo "$(date) $db_oracle_home/runInstaller -executePrereqs -silent -responseFile {{ temp_dir }}/scripts/$response_file" >> $install_log
+        export SKIP_ROOTPRE="TRUE"
+        $db_oracle_home/runInstaller -executePrereqs -silent -responseFile "{{ temp_dir }}/scripts/$response_file" >> $install_log 2>&1
+    else
+        echo "ERROR: Invalid value for ignore_precheck: $ignore_precheck. Expected 'true' or 'false'. Exiting."
+        exit 1
+    fi
+
+## Add INST 20.
+
+    if grep -q 'Prerequisite checks executed successfully' $install_log; then
+        touch "{{ temp_dir }}/done/oracle.install.prereq.$oh.done"
+        echo "Oracle install prerequisite checks completed successfully."
+    elif [ $ignore_precheck == "True" ]; then
+        touch "{{ temp_dir }}/done/oracle.install.prereq.$oh.done"
+        echo "Oracle install prerequisite checks completed successfully."
+    else
+        echo "ERROR: runInstaller prerequisite checks failed. See $install_log for details."
+        exit 1
+    fi
+else
+    echo "INFO: Prerequisite checks already done. Skipping this step."
+fi
+
+## Oracle software installation
+if [ ! -f "{{ temp_dir }}/done/oracle.install.$oh.done" ]; then
+    if [ $ignore_precheck == "True" ]; then
+        echo "$(date) $db_oracle_home/runInstaller -silent -ignorePrereqFailure -responseFile {{ temp_dir }}/scripts/$response_file" >> $install_log
+        export SKIP_ROOTPRE="TRUE"
+        $db_oracle_home/runInstaller -silent -ignorePrereqFailure -responseFile "{{ temp_dir }}/scripts/$response_file" >> $install_log 2>&1
+    elif [ $ignore_precheck == "False" ]; then
+        echo "$(date) $db_oracle_home/runInstaller -silent -responseFile {{ temp_dir }}/scripts/$response_file" >> $install_log
+        export SKIP_ROOTPRE="TRUE"
+        $db_oracle_home/runInstaller -silent -responseFile "{{ temp_dir }}/scripts/$response_file" >> $install_log 2>&1
+    else
+        echo "ERROR: Invalid value for ignore_precheck: $ignore_precheck. Expected 'true' or 'false'. Exiting."
+        exit 1
+    fi
+
+    if grep -q 'Successfully Setup Software' $install_log; then
+        touch "{{ temp_dir }}/done/oracle.install.$oh.done"
+        echo "Oracle software installation completed successfully."
+    else
+        echo "ERROR: Oracle installation failed. See $install_log for details."
+        exit 1
+    fi
+else
+    echo "INFO: Oracle installation already completed. Skipping this step."
+fi
+
+## RU patch application
+if [ ! -f "{{ temp_dir }}/done/oracle.patch.$oh.done" ] && [ -f "{{ temp_dir }}/done/oracle.install.$oh.done" ] && [ "$apply_ru" == "True" ]; then
+    echo "$(date) Applying RU Patch $ruid" >> $patch_log
+    $db_oracle_home/OPatch/opatchauto apply "{{ ru_stage }}/$ruid" -binary -oh $db_oracle_home >> $patch_log 2>&1
+
+    if grep -q 'Patches successfully applied' $patch_log; then
+        touch "{{ temp_dir }}/done/oracle.patch.$oh.done"
+        echo "RU Patch $ruid applied successfully."
+    else
+        echo "ERROR: Failed to apply RU Patch $ruid. See $patch_log for details."
+        exit 1
+    fi
+else
+    if [ ! -f "{{ temp_dir }}/done/oracle.patch.$oh.done" ]; then
+        echo "INFO: RU patch application is not required as apply_ru is set to 'False'."
+    else
+        echo "INFO: RU patch $ruid already applied. Skipping this step."
+    fi
+fi
+
+
+exit 0

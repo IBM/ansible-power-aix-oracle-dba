@@ -1,0 +1,41 @@
+- name: Creating {{ env_type }} Home Directory
+  ansible.builtin.file:
+    dest="{{ item.oracle_home }}"
+    owner="{{ db_oracle_user }}"
+    group="{{ db_oinstall_group }}"
+    state=directory
+  loop: "{{ required_homes_install }}"
+  when: sw_unzipped.results | selectattr('item.oh', 'equalto', item.oh) | map(attribute='stat.exists') | list | first != true
+
+- name: Extracting {{ env_type }} S/W (Remote)
+  ansible.builtin.unarchive:
+    src: "{{ db_oracle_sw }}"
+    dest: "{{ item.oracle_home }}"
+    keep_newer: yes
+    owner: "{{ db_oracle_user }}"
+    group: "{{ db_oinstall_group }}"
+  loop: "{{ required_homes_install }}"
+  when:
+    - sw_unzipped.results | selectattr('item.oh', 'equalto', item.oh) | map(attribute='stat.exists') | list | first != true
+    - ora_binary_location == 'remote'
+
+- name: Extracting {{ env_type }} S/W (Local|NFS)
+  ansible.builtin.unarchive:
+    src: "{{ db_oracle_sw }}"
+    dest: "{{ item.oracle_home }}"
+    keep_newer: yes
+    owner: "{{ db_oracle_user }}"
+    group: "{{ db_oinstall_group }}"
+    remote_src: yes
+  loop: "{{ required_homes_install }}"
+  when:
+    - sw_unzipped.results | selectattr('item.oh', 'equalto', item.oh) | map(attribute='stat.exists') | list | first != true
+    - ora_binary_location in ['local','nfs']
+
+- name: Creating the done file
+  ansible.builtin.file:
+    path: "{{ temp_dir }}/done/{{ item.oh }}.swunzip.done"
+    state: touch
+  loop: "{{ required_homes_install }}"
+  when:
+    - sw_unzipped.results | selectattr('item.oh', 'equalto', item.oh) | map(attribute='stat.exists') | list | first != true

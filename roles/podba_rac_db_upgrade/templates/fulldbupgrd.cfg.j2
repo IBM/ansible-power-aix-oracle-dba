@@ -1,0 +1,18 @@
+global.autoupg_log_dir={{ global_log_dir }}
+{% for database in databases %}
+upg{{ loop.index }}.log_dir={{ database.log_dir }}
+upg{{ loop.index }}.sid={{ database.source_db_sid }}
+upg{{ loop.index }}.source_home={{ database.source_db_home }}
+upg{{ loop.index }}.target_home={{ database.target_db_home }}
+upg{{ loop.index }}.start_time={{ database.start_time }}
+upg{{ loop.index }}.upgrade_node={{ database.upgrade_node }}
+upg{{ loop.index }}.run_utlrp={{ database.run_utlrp }}
+upg{{ loop.index }}.restoration={{ database.restoration }}
+upg{{ loop.index }}.timezone_upg={{ database.timezone_upg }}
+{% if database.get('target_cdb_name') is not none and database.get('target_cdb_name').strip() != '' %}
+upg{{ loop.index }}.target_cdb={{ database.target_cdb_name }}
+{% endif %}
+{% if database.get('target_pdb_name') is not none and database.get('target_pdb_name').strip() != '' %}
+upg{{ loop.index }}.target_pdb_name={{ database.target_pdb_name }}
+{% endif %}
+{% endfor %}

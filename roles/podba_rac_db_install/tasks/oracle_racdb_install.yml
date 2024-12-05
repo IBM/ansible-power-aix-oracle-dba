@@ -1,0 +1,68 @@
+- name: Checking if new 19c home is already installed
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/oracle.rac_install.{{ item.oh }}.done"
+  register: dbracinstalldone
+  with_items: "{{ required_homes_rac_install }}"
+  when: 
+       - required_homes_rac_install is defined
+
+- name: Set facts for rootpre.sh scripts
+  ansible.builtin.set_fact:
+    rootpre_scripts: "{{ dbracinstalldone.results | selectattr('stat.exists', 'equalto', true) | map(attribute='item.oh') | list }}"
+  with_items: "{{ required_homes_rac_install }}"
+  when: 
+      - required_homes_rac_install is defined
+      - dbracinstalldone.stat.exists is not defined or not dbracinstalldone.stat.exists
+      - inventory_hostname == first_host
+
+- name: Executing rootpre.sh
+  shell: "{{ item.oracle_home }}/clone/rootpre.sh"
+  with_items: "{{ required_homes_rac_install }}"
+  when: 
+      - required_homes_rac_install is defined
+      - dbracinstalldone.stat.exists is not defined or not dbracinstalldone.stat.exists
+      - inventory_hostname == first_host
+      - item.oh not in rootpre_scripts
+
+- name: Templating out Oracle RDBMS Install response file
+  ansible.builtin.template:
+    src: oracle_19c_racdb_install.rsp.j2
+    dest: "{{ temp_dir }}/scripts/oracle_19c_racdb_install_{{ item.oh }}.rsp"
+    owner: "{{ db_oracle_user }}"
+    group: "{{ db_oinstall_group }}"
+    mode: '0644'
+  with_items: "{{ required_homes_rac_install }}"
+  when: 
+       - required_homes_rac_install is defined
+       - dbracinstalldone.stat.exists is not defined or not dbracinstalldone.stat.exists
+
+- name: Templating out oracle_racdb_install.sh script
+  template:
+    src: oracle_racdb_install.sh.j2
+    dest: "{{ temp_dir }}/scripts/oracle_racdb_install_{{ item.oh }}.sh"
+    owner: "{{ db_oracle_user }}"
+    group: "{{ db_oinstall_group }}"
+    mode: '0755'
+  with_items: "{{ required_homes_rac_install }}"
+  when: 
+       - required_homes_rac_install is defined
+       - dbracinstalldone.stat.exists is not defined or not dbracinstalldone.stat.exists
+
+- name: Installing 19c RDBMS home in all RAC nodes
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/oracle_racdb_install_{{ item.oh }}.sh"
+  register: oracle_racdb_install
+  become: yes
+  become_user: "{{ db_oracle_user }}"
+  become_method: su
+  with_items: "{{ required_homes_rac_install }}"
+  when: 
+       - required_homes_rac_install is defined
+       - dbracinstalldone.stat.exists is not defined or not dbracinstalldone.stat.exists
+
+- name: Oracle Install Output
+  debug: msg="{{ item.stdout_lines }}"
+  loop: "{{ oracle_racdb_install.results }}"
+  loop_control:
+    label: "{{ item.stdout_lines | default('No output') }}"
+  when:
+      - required_homes_rac_install is defined

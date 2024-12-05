@@ -1,0 +1,552 @@
+- name: Run initialization tasks
+  include_tasks: ../../podba_rac_upgrade_precheck/tasks/init.yml
+  when: not init_done is defined
+
+- name: Checking if DB Upgrade was already done
+  ansible.builtin.stat:
+    path: "{{ temp_dir_upgrade }}/done/{{ item.source_db_name }}.success"
+  register: dbupgradedone
+  with_items: "{{ databases }}"
+  delegate_to: "{{ first_host }}"
+  run_once: true
+
+- name: Set fact if DB Upgrade was done for any database
+  ansible.builtin.set_fact:
+    upgrade_done: true
+  when:
+    - item.stat.exists
+  with_items: "{{ dbupgradedone.results }}"
+  run_once: true
+
+- name: Set fact for no upgrade done if none were found
+  ansible.builtin.set_fact:
+    upgrade_done: false
+  when:
+    - dbupgradedone.results | selectattr('stat.exists', 'equalto', true) | list | length == 0
+  run_once: true
+
+- name: Exit if DB Upgrade was already done
+  ansible.builtin.fail:
+    msg: "DB Upgrade already done. Exiting."
+  when: upgrade_done
+  run_once: true
+
+- name: End play if DB Upgrade Task was done
+  ansible.builtin.meta: end_play
+  when: upgrade_done
+  run_once: true
+
+###################################################
+# required_homes_check -- precheck
+###################################################
+
+- name: Checking freespace in {{ env_type }} Installation Path target_db_home
+  ansible.builtin.shell: "df -g {{ item.target_db_home }} |tail -1|awk '{print $3}'"
+  register: db_home_freespace
+  changed_when: false
+  with_items:
+       - "{{ databases }}"
+
+- name: Fail if insufficient freespace for target_db_home (30GB required)
+  ansible.builtin.fail:
+    msg: "Insufficient freespace for {{ item.target_db_home }} (30GB freespace required)."
+  with_items:
+    - "{{ databases }}"
+  when:
+      - db_home_freespace.results[0].stdout | float < 30
+
+###################################################
+# Extract RU
+###################################################
+
+- name: Checking if {{ env_type }} RU is extracted
+  ansible.builtin.stat:
+    path: "{{ temp_dir }}/done/ruunzip.done"
+  register: ru_unzipped
+  when:
+     - inventory_hostname == first_host
+
+- name: Creating RU Stage Directory
+  ansible.builtin.file:
+    dest="{{ ru_stage }}"
+    owner="{{ db_oracle_user }}"
+    group="{{ db_oinstall_group }}"
+    state=directory
+  when:
+      - inventory_hostname == first_host
+
+- block:
+   - name: Extracting RU patch (Remote)
+     ansible.builtin.unarchive:
+      src: "{{ ru_zip }}"
+      dest: "{{ ru_stage }}"
+      keep_newer: yes
+      owner: "{{ db_oracle_user }}"
+      group: "{{ db_oinstall_group }}"
+   - name: Creating the done file
+     ansible.builtin.command: touch "{{ temp_dir }}/done/ruunzip.done"
+  when:
+    - ora_binary_location == 'remote'
+    - ru_unzipped.stat.exists is not defined or not ru_unzipped.stat.exists
+    - inventory_hostname == first_host
+
+- block:
+   - name: Extracting {{ env_type }} RU patch (Local|NFS)
+     ansible.builtin.unarchive:
+      src: "{{ ru_zip }}"
+      dest: "{{ ru_stage }}"
+      keep_newer: yes
+      owner: "{{ db_oracle_user }}"
+      group: "{{ db_oinstall_group }}"
+      remote_src: yes
+   - name: Creating the done file
+     ansible.builtin.command: touch "{{ temp_dir }}/done/ruunzip.done"
+  when:
+    - ora_binary_location in ['local', 'nfs']
+    - ru_unzipped.stat.exists is not defined or not ru_unzipped.stat.exists
+    - inventory_hostname == first_host
+
+###################################################
+# required_homes_install -- Install && Patch
+###################################################
+
+- name: Reading Oracle Inventory File for standalone Install
+  ansible.builtin.slurp:
+    path: "{{ ora_inventory }}/ContentsXML/inventory.xml"
+  register: inv_oh
+
+- name: Setting Fact for Inventory File
+  ansible.builtin.set_fact:
+    input_lines: "{{ inv_oh.content | b64decode | string | split('\n') }}"
+
+- name: Preparing Oracle Homes List for Installation
+  ansible.builtin.set_fact:
+    required_homes_install: "{{ required_homes_install | default([]) + [{'oh': item.target_db_home | regex_replace('/',''), 'oracle_home': item.target_db_home }] }}"
+  loop: "{{ databases }}"
+  when: not input_lines | select('search', '(?i)(?!.*REMOVED).*' + item.target_db_home) | list | length > 0
+  vars:
+    oraclehomes: "{{ item | regex_escape }}"
+  no_log: true
+
+- name: Checking if Oracle home was already installed
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/oracle.patch.{{ item.oh }}.done"
+  register: giinstalldone
+  with_items:
+       - "{{ required_homes_install }}"
+  when:
+      - required_homes_install is defined
+      - inventory_hostname == first_host
+
+- name: Set facts for Oracle home installation
+  ansible.builtin.set_fact:
+    giinstalldone_success: "{{ giinstalldone.results | selectattr('stat.exists', 'equalto', false) | map(attribute='item.oh') | list }}"
+  with_items:
+       - "{{ required_homes_install }}"
+  when:
+      - required_homes_install is defined
+      - inventory_hostname == first_host
+
+- name: Checking if {{ env_type }} RU is extracted
+  ansible.builtin.stat:
+    path: "{{ temp_dir }}/done/ruunzip.done"
+  register: ru_unzipped
+  when:
+     - inventory_hostname == first_host
+
+- name: Oracle Installation and patching
+  ansible.builtin.import_tasks: oracle_install.yml
+  when:
+      - required_homes_install is defined
+      - inventory_hostname == first_host
+      - giinstalldone_success is defined
+      - ru_unzipped.stat.exists
+
+#########################################
+# Post Install & patch - 1. run root.sh
+#########################################
+
+- name: Reading Oracle Inventory File Again for root.sh
+  ansible.builtin.slurp:
+    path: "{{ ora_inventory }}/ContentsXML/inventory.xml"
+  register: inv_oh_after_install
+
+- name: Setting Fact for Inventory File after Install for root.sh
+  ansible.builtin.set_fact:
+    input_lines_after_install: "{{ inv_oh_after_install.content | b64decode | string | split('\n') }}"
+
+- name: Preparing Oracle Homes List for Installation after install for root.sh
+  ansible.builtin.set_fact:
+    required_homes_root: "{{ required_homes_root | default([]) + [{'oh': item.target_db_home | regex_replace('/',''), 'oracle_home': item.target_db_home}] }}"
+  loop: "{{ databases }}"
+  vars:
+    oraclehomes: "{{ item | regex_escape }}"
+  no_log: true
+
+- name: Check if the root.sh has been already executed
+  ansible.builtin.stat:
+    path: "{{ temp_dir }}/done/oracle.home.root1.{{ item.oh }}.done"
+  register: rootdone
+  with_items:
+       - "{{ required_homes_root }}"
+  when:
+       - required_homes_root is defined
+       - inventory_hostname == first_host
+
+- name: Set facts for root.sh scripts
+  ansible.builtin.set_fact:
+    root_scripts: "{{ rootdone.results | selectattr('stat.exists', 'equalto', false) | map(attribute='item.oh') | list }}"
+  with_items:
+       - "{{ required_homes_root }}"
+  when:
+      - required_homes_root is defined
+      - inventory_hostname == first_host
+
+- name: Checking if Oracle home was already installed
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/oracle.patch.{{ item.oh }}.done"
+  register: dbinstalldone
+  with_items:
+       - "{{ required_homes_root }}"
+  when:
+      - required_homes_root is defined
+      - inventory_hostname == first_host
+
+- name: Set facts for Oracle home installation
+  ansible.builtin.set_fact:
+    dbinstalldone_success: "{{ dbinstalldone.results | selectattr('stat.exists', 'equalto', true) | map(attribute='item.oh') | list }}"
+  with_items:
+       - "{{ required_homes_root }}"
+  when:
+      - required_homes_root is defined
+      - inventory_hostname == first_host
+
+- name: Create the flag file if root.sh  does not executed
+  ansible.builtin.file:
+    path: "{{ temp_dir }}/done/oracle.home.root1.{{ item.oh }}.done"
+    state: touch
+  loop: "{{ required_homes_root }}"
+  when:
+    - required_homes_root is defined
+    - root_scripts is defined
+    - dbinstalldone_success is defined
+    - item.oh in dbinstalldone_success
+    - item.oh in root_scripts
+    - inventory_hostname == first_host
+  loop_control:
+    label: "{{ item.oh }}"
+
+- name: Executing root.sh
+  ansible.builtin.shell: "{{ item.oracle_home }}/root.sh"
+  register: execroot
+  loop: "{{ required_homes_root }}"
+  when:
+    - required_homes_root is defined
+    - root_scripts is defined
+    - dbinstalldone_success is defined
+    - item.oh in dbinstalldone_success
+    - item.oh in root_scripts
+    - inventory_hostname == first_host
+  loop_control:
+    label: "{{ item.oh }}"
+
+###################################################
+# required_homes_detach -- detach
+###################################################
+
+# Oracle RAC Installation (requires removal of entry detach home)
+
+- name: Reading Oracle Inventory File for RAC Install
+  ansible.builtin.slurp:
+    path: "{{ ora_inventory }}/ContentsXML/inventory.xml"
+  register: inv_oh_rac
+
+- name: Setting Fact for Inventory File for RAC Install
+  ansible.builtin.set_fact:
+    input_lines_rac: "{{ inv_oh_rac.content | b64decode | string | split('\n') }}"
+
+- name: Preparing Oracle Homes List for Installation before detach home for RAC Install
+  ansible.builtin.set_fact:
+    required_homes_detach: "{{ required_homes_detach | default([]) + [{'oh': item.target_db_home | regex_replace('/',''), 'oracle_home': item.target_db_home }] }}"
+  loop: "{{ databases }}"
+  vars:
+    oraclehomes: "{{ item | regex_escape }}"
+  no_log: true
+
+- name: Checking if Oracle home detach script already executed
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/oracle.home.detach.{{ item.oh }}.done"
+  register: detach
+  with_items:
+       - "{{ required_homes_detach }}"
+  when:
+       - required_homes_detach is defined
+       - inventory_hostname == first_host
+
+- name: Set facts for Oracle home detach scripts
+  ansible.builtin.set_fact:
+    detach_scripts: "{{ detach.results | selectattr('stat.exists', 'equalto', false) | map(attribute='item.oh') | list }}"
+  with_items:
+       - "{{ required_homes_detach }}"
+  when:
+      - required_homes_detach is defined
+      - inventory_hostname == first_host
+
+- name: Checking if Oracle rac home was installed successfully
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/oracle.home.root1.{{ item.oh }}.done"
+  register: giinstalldone
+  with_items:
+       - "{{ required_homes_detach }}"
+  when:
+      - required_homes_detach is defined
+      - inventory_hostname == first_host
+
+- name: Set facts for Oracle home installation
+  ansible.builtin.set_fact:
+    giinstalldone_success: "{{ giinstalldone.results | selectattr('stat.exists', 'equalto', true) | map(attribute='item.oh') | list }}"
+  with_items:
+       - "{{ required_homes_detach }}"
+  when:
+      - required_homes_detach is defined
+      - inventory_hostname == first_host
+
+- name: Templating out Oracle home detach script
+  template:
+    src: files/oracle_detach.sh
+    dest: "{{ temp_dir }}/scripts/oracle_detach.sh"
+    owner: "{{ db_oracle_user }}"
+    group: "{{ db_oinstall_group }}"
+    mode: '0755'
+  when:
+       - inventory_hostname == first_host
+
+- name: Run Oracle home detach script for each home
+  ansible.builtin.command: "ksh93 {{ temp_dir }}/scripts/oracle_detach.sh {{ item.oracle_home }} {{ ora_inventory }} {{ item.oh }} {{ temp_dir }}"
+  register: oracle_detach
+  become: yes
+  become_user: "{{ db_oracle_user }}"
+  become_method: su
+  with_items:
+    - "{{ required_homes_detach }}"
+  when:
+    - required_homes_detach is defined
+    - inventory_hostname == first_host
+    - item.oh in detach_scripts
+    - detach_scripts is defined
+    - giinstalldone_success is defined
+    - item.oh in giinstalldone_success
+  changed_when: oracle_detach.rc == 0
+
+###################################################
+# required_homes_rac_install -- RAC install
+###################################################
+
+- name: Reading Oracle Inventory File Again for RAC Install after detach
+  ansible.builtin.slurp:
+   path: "{{ ora_inventory }}/ContentsXML/inventory.xml"
+  register: inv_oh_rac_after_removal
+
+- name: Setting Fact for Inventory File after detach home for RAC Install
+  ansible.builtin.set_fact:
+    input_lines_rac_after_removal: "{{ inv_oh_rac_after_removal.content | b64decode | string | split('\n') }}"
+
+- name: Preparing Oracle Homes List for Installation after detach home for RAC Install
+  ansible.builtin.set_fact:
+    required_homes_rac_install: "{{ required_homes_rac_install | default([]) + [{'oh': item.target_db_home | regex_replace('/',''), 'oracle_home': item.target_db_home }] }}"
+  loop: "{{ databases }}"
+  when: not input_lines_rac_after_removal | select('search', '(?i)(?!.*REMOVED).*' + item.target_db_home) | list | length > 0
+  vars:
+    oraclehomes: "{{ item | regex_escape }}"
+  no_log: true
+
+- name: Checking if Oracle home detach script executed successfully
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/oracle.home.detach.{{ item.oh }}.done"
+  register: detach
+  with_items:
+       - "{{ required_homes_rac_install }}"
+  when:
+       - required_homes_rac_install is defined
+       - inventory_hostname == first_host
+
+- name: Set facts for Oracle home detach scripts
+  ansible.builtin.set_fact:
+    detach_scripts: "{{ detach.results | selectattr('stat.exists', 'equalto', true) | map(attribute='item.oh') | list }}"
+  with_items:
+       - "{{ required_homes_rac_install }}"
+  when:
+      - required_homes_rac_install is defined
+      - inventory_hostname == first_host
+
+- name: Oracle RAC Installation
+  ansible.builtin.import_tasks: oracle_racdb_install.yml
+  when:
+      - required_homes_rac_install is defined
+      - inventory_hostname == first_host
+      - detach_scripts is defined
+
+###################################################
+# required_homes_root -- 2. RAC complete in remote node
+###################################################
+
+- name: Reading Oracle Inventory File Again for root.sh
+  ansible.builtin.slurp:
+    path: "{{ ora_inventory }}/ContentsXML/inventory.xml"
+  register: inv_oh_rac_after_install
+
+- name: Setting Fact for Inventory File after Install for root.sh
+  ansible.builtin.set_fact:
+    input_lines_rac_after_install: "{{ inv_oh_rac_after_install.content | b64decode | string | split('\n') }}"
+
+- name: Preparing Oracle Homes List for Installation after install for root.sh
+  ansible.builtin.set_fact:
+    required_homes_root: "{{ required_homes_root | default([]) + [{'oh': item.target_db_home | regex_replace('/',''), 'oracle_home': item.target_db_home}] }}"
+  loop: "{{ databases }}"
+  vars:
+    oraclehomes: "{{ item | regex_escape }}"
+  no_log: true
+
+- name: Checking if new 19c RAC home is installed successfully
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/oracle.rac.install.{{ item.oh }}.done"
+  register: dbracinstalldone
+  with_items: "{{ required_homes_root }}"
+  when:
+       - required_homes_root is defined
+  delegate_to: "{{ first_host }}"
+  delegate_facts: true
+
+- name: Set facts for 19c RAC home is installed
+  ansible.builtin.set_fact:
+    dbracinstalldone_success: "{{ dbracinstalldone.results | selectattr('stat.exists', 'equalto', true) | map(attribute='item.oh') | list }}"
+  when: dbracinstalldone is defined
+  delegate_to: "{{ last_host }}"
+  delegate_facts: true
+
+- name: Create the flag file for 19c RAC home install in remote node
+  ansible.builtin.file:
+    path: "{{ temp_dir }}/done/oracle.rac.install.{{ item.oh }}.done"
+    state: touch
+  with_items: "{{ required_homes_root }}"
+  when:
+       - required_homes_root is defined
+       - dbracinstalldone_success is defined
+       - item.oh in dbracinstalldone_success
+       - inventory_hostname == last_host
+
+###################################################
+# required_homes_root -- 2. root.sh
+###################################################
+
+- name: Reading Oracle Inventory File Again for root.sh
+  ansible.builtin.slurp:
+    path: "{{ ora_inventory }}/ContentsXML/inventory.xml"
+  register: inv_oh_rac_after_install
+
+- name: Setting Fact for Inventory File after Install for root.sh
+  ansible.builtin.set_fact:
+    input_lines_rac_after_install: "{{ inv_oh_rac_after_install.content | b64decode | string | split('\n') }}"
+
+- name: Preparing Oracle Homes List for Installation after install for root.sh
+  ansible.builtin.set_fact:
+    required_homes_root: "{{ required_homes_root | default([]) + [{'oh': item.target_db_home | regex_replace('/',''), 'oracle_home': item.target_db_home}] }}"
+  loop: "{{ databases }}"
+  vars:
+    oraclehomes: "{{ item | regex_escape }}"
+  no_log: true
+
+- name: Check if the root.sh has been already executed
+  ansible.builtin.stat:
+    path: "{{ temp_dir }}/done/oracle.home.root2.{{ item.oh }}.done"
+  register: rootdone
+  with_items:
+       - "{{ required_homes_root }}"
+  when:
+       - required_homes_root is defined
+
+- name: Set facts for root.sh scripts
+  ansible.builtin.set_fact:
+    root_scripts: "{{ rootdone.results | selectattr('stat.exists', 'equalto', false) | map(attribute='item.oh') | list }}"
+  with_items:
+       - "{{ required_homes_root }}"
+  when:
+      - required_homes_root is defined
+
+- name: Checking if new 19c RAC home is installed successfully
+  ansible.builtin.stat:
+   path: "{{ temp_dir }}/done/oracle.rac.install.{{ item.oh }}.done"
+  register: dbracinstalldone
+  with_items:
+       - "{{ required_homes_root }}"
+  when:
+       - required_homes_root is defined
+
+- name: Set facts for 19c RAC home is installed
+  ansible.builtin.set_fact:
+    dbracinstalldone_success: "{{ dbracinstalldone.results | selectattr('stat.exists', 'equalto', true) | map(attribute='item.oh') | list }}"
+  with_items:
+       - "{{ required_homes_root }}"
+  when:
+      - required_homes_root is defined
+
+- name: Create the flag file if root.sh if not executed
+  ansible.builtin.file:
+    path: "{{ temp_dir }}/done/oracle.home.root2.{{ item.oh }}.done"
+    state: touch
+  with_items: "{{ required_homes_root }}"
+  when:
+       - required_homes_root is defined
+       - root_scripts is defined
+       - dbracinstalldone_success is defined
+       - item.oh in root_scripts
+       - item.oh in dbracinstalldone_success
+
+- name: Executing root.sh across all nodes
+  ansible.builtin.shell: "{{ item.oracle_home }}/root.sh"
+  register: execroot
+  with_items: "{{ required_homes_root }}"
+  when:
+      - required_homes_root is defined
+      - root_scripts is defined
+      - dbracinstalldone_success is defined
+      - item.oh in root_scripts
+      - item.oh in dbracinstalldone_success
+
+- name: Oracle root script Output
+  debug:
+    msg: "{{ item.stdout_lines | default('No output') }}"
+  loop: "{{ execroot.results }}"
+  loop_control:
+    label: "{{ item.stdout_lines | default('No output') }}"
+  when:
+    - required_homes_root is defined
+    - item.stdout_lines is defined
+
+###################################################
+# End of play - Exception handling
+###################################################
+
+- name: Checking if new 19c RAC home is installed successfully
+  ansible.builtin.stat:
+    path: "{{ temp_dir }}/done/oracle.home.root2.{{ item.oh }}.done"
+  register: dbrootdone
+  with_items: "{{ required_homes_root }}"
+  delegate_to: "{{ first_host }}"
+  run_once: true
+
+- name: Set fact for missing root done files
+  ansible.builtin.set_fact:
+    missing_root_done_files: "{{ dbrootdone.results | selectattr('stat.exists', 'equalto', false) | map(attribute='item') | list }}"
+  run_once: true
+
+- name: Fail if any db root script not executed
+  ansible.builtin.fail:
+    msg: "The following required files are missing: {{ missing_root_done_files | join(', ') }}. Exiting play."
+  when: missing_root_done_files | length > 0
+  run_once: true
+
+- name: End play if any db root script not executed
+  ansible.builtin.meta: end_play
+  when: missing_root_done_files | length > 0
+  run_once: true

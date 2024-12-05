@@ -1,0 +1,7 @@
+temp_dir: /tmp/podba_db_upgrade
+apply_ru: True
+
+directories:
+  - /tmp/podba_db_upgrade
+  - /tmp/podba_gi_temp
+  - /tmp/podba_install_temp
