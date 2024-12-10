@@ -2,12 +2,13 @@ namespace: "ibm"
 
 name: "power_aix_oracle_dba"
 
-version: 2.0.5
+version: 2.0.6
 
 readme: "README.md"
 
 authors:
   - "Shiva Laveti <shiva.laveti@ibm.com>"
+  - "Naved Afroz <naved.afroz1@ibm.com>"
 
 license:
   - "Apache-2.0"
