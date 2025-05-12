@@ -1,0 +1,288 @@
+#!/bin/bash
+
+export ORACLE_SID={{ databases[database_name].db_sid }}
+export ORACLE_HOME={{ databases[database_name].oracle_db_home }}
+export PATH={{ databases[database_name].oracle_db_home }}/bin:$PATH
+standby_unique_name={{ databases.standby.db_unique_name }}
+primary_unique_name={{ databases[database_name].db_unique_name }}
+primary_diskgroup={{ databases[database_name].file_dest }}
+standby_diskgroup={{ databases.standby.file_dest }}
+tnsnames_file="$ORACLE_HOME/network/admin/tnsnames.ora"
+dataguard_protection_mode="{{ dataguard_protection_mode | lower }}"
+grid_asm_flag="{{ grid_asm_flag | lower }}"
+
+MASTER_LOG="{{ done_dir }}/dataguard_primary_config.log"
+FAILURE_LOG="{{ done_dir }}/dataguard_primary_config_failure.log"
+
+# Ensure log files are empty before running
+> "$MASTER_LOG"
+> "$FAILURE_LOG"
+
+# Run all queries in a single SQL*Plus session
+sqlplus -s / as sysdba <<SQL | tee -a "$MASTER_LOG"
+SET HEADING OFF
+SET FEEDBACK OFF
+SET PAGESIZE 0
+SET LINESIZE 1000
+SET TRIMOUT ON
+SET TRIMSPOOL ON
+SET ECHO ON;
+SET SERVEROUTPUT ON;
+WHENEVER SQLERROR EXIT SQL.SQLCODE;
+WHENEVER OSERROR EXIT FAILURE;
+
+-- Check current logging mode
+VARIABLE log_mode NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO :log_mode FROM v\$database WHERE FORCE_LOGGING = 'NO';
+END;
+/
+
+-- Put primary database in forced logging mode only if not already enabled
+BEGIN
+    IF :log_mode > 0 THEN
+        EXECUTE IMMEDIATE 'ALTER DATABASE FORCE LOGGING';
+    END IF;
+END;
+/
+
+-- Fetch logging mode
+SELECT 'DB_LOGGING:' || FORCE_LOGGING from v\$database;
+
+-- Enable Standby File Management
+ALTER SYSTEM SET STANDBY_FILE_MANAGEMENT=AUTO SCOPE=BOTH SID='*';
+
+-- Fetch Standby File Management
+SELECT 'STDBY_FILE_MANAGEMENT:' || value from v\$parameter where name='standby_file_management' AND VALUE IS NOT NULL;
+
+-- Fetch redo log count, max group number, location, and size
+SELECT 'REDO_COUNT:' || COUNT(*) || ',MAX_GROUP:' || MAX(GROUP#) FROM v\$log;
+SELECT 'REDO_LOCATION:' || MEMBER || ',REDO_SIZE:' || BYTES FROM v\$logfile lf JOIN v\$log l ON lf.GROUP# = l.GROUP# WHERE ROWNUM = 1;
+
+-- Fetch standby redo log count
+SELECT 'SRL_COUNT:' || COUNT(*) FROM v\$standby_log;
+
+-- Check if using SPFILE
+SELECT 'SPFILE_CHECK:' || COUNT(*) FROM v\$parameter WHERE NAME = 'spfile' AND VALUE IS NOT NULL;
+
+SQL
+
+# Capture SQL*Plus exit status
+sqlplus_exit_code=$?
+
+# Check if the SQL*Plus command was successful
+if [[ $sqlplus_exit_code -ne 0 ]]; then
+    echo "ERROR: SQL*Plus command failed with exit status $sqlplus_exit_code. Check logs for details." | tee -a "$FAILURE_LOG"
+    exit 1
+fi
+
+# Extracting values using grep and awk
+DB_LOGGING=$(grep "DB_LOGGING:" "$MASTER_LOG" | awk -F ':' '{print $2}')
+STDBY_FILE_MANAGEMENT=$(grep "STDBY_FILE_MANAGEMENT:" "$MASTER_LOG" | awk -F ':' '{print $2}')
+REDO_COUNT=$(grep "REDO_COUNT:" "$MASTER_LOG" | awk -F '[:,]' '{print $2}')
+MAX_GROUP=$(grep "MAX_GROUP:" "$MASTER_LOG" | awk -F '[:,]' '{print $4}')
+REDO_LOCATION=$(grep "REDO_LOCATION:" "$MASTER_LOG" | awk -F '[:,]' '{print $2}')
+REDO_SIZE=$(grep "REDO_SIZE:" "$MASTER_LOG" | awk -F '[:,]' '{print $4}')
+SPFILE_CHECK=$(grep "SPFILE_CHECK:" "$MASTER_LOG" | awk -F ':' '{print $2}')
+SRL_COUNT=$(grep "SRL_COUNT:" "$MASTER_LOG" | awk -F ':' '{print $2}')
+
+# Handle REDO_LOCATION based on grid_asm_flag
+if [[ "$grid_asm_flag" == "true" ]]; then
+  REDO_LOCATION=$(echo "$REDO_LOCATION" | sed -e 's:/.*::')
+elif [[ "$grid_asm_flag" == "false" ]]; then
+  REDO_LOCATION=$(echo "$REDO_LOCATION" | xargs dirname)
+else
+  echo "ERROR: Invalid grid_asm_flag value. Set it to true or false." | tee -a "$FAILURE_LOG"
+  exit 1
+fi
+
+# 1. Validate FORCE_LOGGING values
+if [[ "$DB_LOGGING" != "YES" ]]; then
+    echo "ERROR: FORCE_LOGGING not enabled, verify manually and retry" | tee -a "$FAILURE_LOG"
+fi
+
+# 2. Validate Standby File Management values
+if [[ "$STDBY_FILE_MANAGEMENT" != "AUTO" ]]; then
+    echo "ERROR: STANDBY_FILE_MANAGEMENT not set to AUTO, verify manually and retry" | tee -a "$FAILURE_LOG"
+fi
+
+# 3. Validate fetched values
+if [[ -z "$REDO_COUNT" || -z "$MAX_GROUP" || -z "$REDO_LOCATION" || -z "$REDO_SIZE" ]]; then
+  echo "ERROR: Unable to determine redo log details. Exit without SRL update..." | tee -a "$FAILURE_LOG"
+  exit 1
+fi
+
+# 4. Required standby redo logs count (Redo count + 1)
+REQUIRED_SRL_COUNT=$((REDO_COUNT + 1))
+
+# 5. If SRLs are already sufficient, exit
+if [[ "$SRL_COUNT" -ge "$REQUIRED_SRL_COUNT" ]]; then
+  echo "INFO: Standby redo log count ($SRL_COUNT) is sufficient. Skipping addition." | tee -a "$MASTER_LOG"
+else
+  # Calculate missing SRLs to be added
+  MISSING_SRL_COUNT=$((REQUIRED_SRL_COUNT - SRL_COUNT))
+
+  ## 6. Execute redo log addition inside a single PL/SQL block
+  sqlplus -s / as sysdba <<EOF | tee -a $MASTER_LOG
+  SET ECHO ON;
+  SET SERVEROUTPUT ON;
+  WHENEVER SQLERROR EXIT SQL.SQLCODE;
+  WHENEVER OSERROR EXIT FAILURE;
+  DECLARE
+    v_group_num NUMBER := $((MAX_GROUP + 1));
+    v_sql       VARCHAR2(1000);
+  BEGIN
+    FOR i IN 1..$MISSING_SRL_COUNT LOOP
+      IF '$grid_asm_flag' = 'true' THEN
+        v_sql := 'ALTER DATABASE ADD STANDBY LOGFILE GROUP ' || v_group_num || 
+                 ' (''$REDO_LOCATION'') SIZE $REDO_SIZE';
+      ELSE
+        v_sql := 'ALTER DATABASE ADD STANDBY LOGFILE GROUP ' || v_group_num || 
+                 ' (''$REDO_LOCATION/stdbyredo' || LPAD(i, 2, '0') || '.log'') SIZE $REDO_SIZE';
+      END IF;
+      EXECUTE IMMEDIATE v_sql;
+      DBMS_OUTPUT.PUT_LINE('Executed: ' || v_sql);
+      v_group_num := v_group_num + 1;
+    END LOOP;
+  END;
+  /
+  EXIT;
+EOF
+
+  # Capture SQL exit status for redo log addition
+  sql_exit_code=$?
+
+  # Check if the SQL command was successful
+  if [[ $sql_exit_code -ne 0 ]]; then
+      echo "ERROR: SQL command for adding standby redo logs failed with exit status $sql_exit_code. Check logs for details." | tee -a "$FAILURE_LOG"
+      exit 1
+  fi
+fi
+
+# 7. Handle PFILE/SPFILE
+if [[ "$SPFILE_CHECK" -eq 1 ]]; then
+  echo "Database is using SPFILE. Creating PFILE from SPFILE..."
+  ADD_INIT_CMDS="CREATE PFILE='{{ scripts_dir }}/primary.pfile' FROM SPFILE;"
+else
+  echo "Database is not using SPFILE. Creating PFILE from MEMORY..."
+  ADD_INIT_CMDS="CREATE PFILE='{{ scripts_dir }}/primary.pfile' FROM MEMORY;"
+fi
+
+# 8. Execute PFile command
+sqlplus -s / as sysdba <<EOF | tee -a $MASTER_LOG
+  SET ECHO ON;
+  SET SERVEROUTPUT ON;
+  WHENEVER SQLERROR EXIT SQL.SQLCODE;
+  WHENEVER OSERROR EXIT FAILURE;
+  $ADD_INIT_CMDS
+  EXIT;
+EOF
+
+# Capture SQL exit status for PFILE creation
+sql_exit_code=$?
+
+# Check if the SQL command was successful
+if [[ $sql_exit_code -ne 0 ]]; then
+    echo "ERROR: SQL command for creating PFILE failed with exit status $sql_exit_code. Check logs for details." | tee -a "$FAILURE_LOG"
+    exit 1
+fi
+
+# 9. Update tnsnames.ora
+# Define the standard entry
+STDBY_ENTRY="
+$standby_unique_name=
+(DESCRIPTION =
+  (ADDRESS_LIST =
+    (ADDRESS=(PROTOCOL=TCP) (HOST={{ standby_host }})(PORT={{ databases.standby.listener_port }}))
+  )
+  (CONNECT_DATA =
+    (SERVER=DEDICATED)
+    (SERVICE_NAME={{ databases.standby.db_service_name }})
+  )
+)"
+
+# Add temporary entry only if {{ with_backup }} is false
+{% if not with_backup | bool %}
+STDBY_ENTRY+="
+
+${standby_unique_name}_temp=
+(DESCRIPTION =
+  (ADDRESS_LIST =
+    (ADDRESS=(PROTOCOL=TCP) (HOST={{ standby_host }})(PORT={{ available_port | default('0000') }}))
+  )
+  (CONNECT_DATA =
+    (SERVER=DEDICATED)
+    (SERVICE_NAME={{ databases.standby.db_service_name }})
+  )
+)"
+{% endif %}
+
+# Check if tnsnames.ora file exists
+if [[ ! -f "$tnsnames_file" ]]; then
+  echo "Error: TNS names file $tnsnames_file does not exist in $ORACLE_HOME." | tee -a "$FAILURE_LOG"
+else
+  # Check if the entry already exists in tnsnames.ora before appending
+  if ! grep -q "$standby_unique_name=" "$tnsnames_file"; then    
+    echo "$STDBY_ENTRY" >> "$tnsnames_file"
+    echo "TNS alias added for standby database tnsnames.ora."
+  else
+    echo "Entry already exists. Skipping update."
+  fi
+fi
+
+# 10. Set log_archive_dest_2 dynamically based on data protection modes
+case "{{ dataguard_protection_mode }}" in
+    maximum_performance)
+        log_archive_dest_2="'service=${standby_unique_name} ASYNC NOAFFIRM valid_for=(ONLINE_LOGFILE,PRIMARY_ROLE) db_unique_name=${standby_unique_name}'"
+        ;;
+    maximum_availability)
+        log_archive_dest_2="'service=${standby_unique_name} SYNC NOAFFIRM valid_for=(ONLINE_LOGFILE,PRIMARY_ROLE) db_unique_name=${standby_unique_name}'"
+        ;;
+    maximum_protection)
+        log_archive_dest_2="'service=${standby_unique_name} SYNC AFFIRM valid_for=(ONLINE_LOGFILE,PRIMARY_ROLE) db_unique_name=${standby_unique_name}'"
+        ;;
+    *)
+        echo "Invalid data protection mode! Provide data protection modes out of three: maximum_availability, maximum_performance, or maximum_protection." | tee -a "$FAILURE_LOG"
+        exit 1
+        ;;
+esac
+
+# 11. Modify the primary initialization parameter for dataguard on primary
+sqlplus -s / as sysdba <<EOF | tee -a $MASTER_LOG
+  SET ECHO ON;
+  SET SERVEROUTPUT ON;
+  WHENEVER SQLERROR EXIT SQL.SQLCODE;
+  WHENEVER OSERROR EXIT FAILURE;
+  alter system set LOG_ARCHIVE_CONFIG='DG_CONFIG=(${primary_unique_name},${standby_unique_name})' scope=both;
+  alter system set LOG_ARCHIVE_DEST_2=${log_archive_dest_2} scope=both;
+  alter system set LOG_ARCHIVE_DEST_STATE_2=ENABLE scope=both;
+  alter system set FAL_SERVER=${standby_unique_name} scope=both;
+  alter system set FAL_CLIENT=${primary_unique_name} scope=both;
+  alter system set DB_FILE_NAME_CONVERT='${standby_diskgroup}/${standby_unique_name}','${primary_diskgroup}/${primary_unique_name}' scope=spfile;
+  alter system set LOG_FILE_NAME_CONVERT='${standby_diskgroup}/${standby_unique_name}','${primary_diskgroup}/${primary_unique_name}' scope=spfile;
+  EXIT;
+EOF
+
+# Capture SQL exit status for initialization parameter modification
+sql_exit_code=$?
+
+# Check if the SQL command was successful
+if [ $sql_exit_code -eq 0 ]; then
+    echo "DB initialization parameter set completed successfully." | tee -a $MASTER_LOG
+    touch "{{ done_dir }}/dataguard_primary_config.success"
+else
+    echo "DB initialization parameter failed! Check logs for details: $MASTER_LOG" | tee -a "$FAILURE_LOG"
+    exit 1
+fi
+
+# Check for failures and exit accordingly
+if [[ -s "$FAILURE_LOG" ]]; then
+    cat "$FAILURE_LOG"
+    rm -f "$FAILURE_LOG"
+    exit 1
+fi
+
+echo "Standby redo logs added, PFILE copied, TNS entries updated and init params modified for dataguard on primary"
+echo "All pre-config performed for primary database successfully!"
+rm -f "$FAILURE_LOG"
+exit 0

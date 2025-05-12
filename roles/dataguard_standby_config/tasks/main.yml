@@ -1,0 +1,137 @@
+---
+# Copyright (c) IBM Corporation 2025
+# tasks file for dataguard_standby_config
+
+- name: Run initialization tasks
+  ansible.builtin.include_tasks: ../../dataguard_precheck/tasks/init.yml
+  when: not init_done is defined
+
+- name: Checking if Dataguard setup was already done
+  ansible.builtin.stat:
+    path: "{{ done_dir }}/dataguard.success"
+  register: dataguarddone
+  when: inventory_hostname == primary_host
+
+- name: Exit if Dataguard setup was already done
+  ansible.builtin.fail:
+    msg: "Dataguard setup already done. Exiting."
+  when:
+    - dataguarddone.stat.exists
+    - inventory_hostname == primary_host
+  run_once: true
+
+- name: End play if Dataguard setup Task was done
+  ansible.builtin.meta: end_play
+  when: dataguarddone.stat.exists
+  run_once: true
+
+- name: Checking if Standby configuration was already done
+  ansible.builtin.stat:
+    path: "{{ done_dir }}/dataguard_standby_config.success"
+  register: standbyconfigdone
+  when: inventory_hostname == standby_host
+
+- name: Standby configuration block
+  when:
+    - inventory_hostname == standby_host
+    - standbyconfigdone is defined and not standbyconfigdone.stat.exists
+  block:
+    - name: Create necessary directories for standby configuration
+      ansible.builtin.file:
+        path: "{{ databases.standby.oracle_db_base }}/admin/{{ databases.standby.db_unique_name }}/{{ item }}"
+        state: directory
+        owner: "{{ db_oracle_user }}"
+        group: "{{ db_oinstall_group }}"
+        mode: '0755'
+      loop:
+        - adump
+        - dpump
+
+    - name: Fetch available_port from standby
+      ansible.builtin.slurp:
+        src: "{{ done_dir }}/dataguard_precheck.log"
+      register: available_port_slurp
+      when: not with_backup | bool
+
+    - name: Set available_port as fact on standby
+      ansible.builtin.set_fact:
+        available_port: "{{ (available_port_slurp['content'] | b64decode | regex_search('Available port:\\s*(\\d+)', '\\1'))[0] }}"
+      when:
+        - available_port_slurp['content'] is defined
+        - "'Available port:' in (available_port_slurp['content'] | b64decode)"
+        - not with_backup | bool
+
+    - name: Copy Dataguard Pre-config script for standby
+      ansible.builtin.template:
+        src: dataguard_standby_config.sh.j2
+        dest: "{{ scripts_dir }}/dataguard_standby_config.sh"
+        mode: '0755'
+      vars:
+        database_name: "standby"
+      when: with_backup | bool
+
+    - name: Copy Dataguard Pre-config script for standby with available_port
+      ansible.builtin.template:
+        src: dataguard_standby_config.sh.j2
+        dest: "{{ scripts_dir }}/dataguard_standby_config.sh"
+        mode: '0755'
+      vars:
+        database_name: "standby"
+        available_port: "{{ available_port }}"
+      when: not with_backup | bool
+
+    - name: Execute Dataguard config script on standby
+      ansible.builtin.command: "{{ scripts_dir }}/dataguard_standby_config.sh"
+      register: precheck_output
+      failed_when: precheck_output.rc != 0
+      changed_when: false
+
+    - name: Debug config Output for standby database
+      ansible.builtin.debug:
+        msg: "{{ precheck_output.stdout_lines }}"
+
+- name: Check connectivity and validate from standby to primary
+  when: inventory_hostname == standby_host
+  block:
+    - name: Check connectivity to primary database from standby site
+      ansible.builtin.shell: |
+        export ORACLE_HOME={{ databases.primary.oracle_db_home }}
+        export PATH={{ databases.primary.oracle_db_home }}/bin:$PATH
+        export TNS_ADMIN={{ databases.primary.oracle_db_home }}/network/admin
+        tnsping {{ databases.primary.db_unique_name }}
+      register: tnsping_primaryresult
+      changed_when: false
+      failed_when: false
+
+    - name: Validate primary database connectivity from standby site
+      ansible.builtin.fail:
+        msg: "Error: Remote primary database cannot be reached using TNS alias. Check listener status and tnsnames configuration."
+      when: tnsping_primaryresult is not defined or 'OK' not in tnsping_primaryresult.stdout
+
+    - name: Confirm successful TNS connections from standby site
+      ansible.builtin.debug:
+        msg: "All good for TNS connections from standby!"
+      when: tnsping_primaryresult is defined and 'OK' in tnsping_primaryresult.stdout
+
+- name: Check connectivity and validate from primary to standby
+  when: inventory_hostname == primary_host
+  block:
+    - name: Check connectivity to standby database from primary site
+      ansible.builtin.shell: |
+        export ORACLE_HOME={{ databases.standby.oracle_db_home }}
+        export PATH={{ databases.standby.oracle_db_home }}/bin:$PATH
+        export TNS_ADMIN={{ databases.standby.oracle_db_home }}/network/admin
+        tnsping {{ databases.standby.db_unique_name }}
+      register: tnsping_standbyresult
+      changed_when: false
+      failed_when: false
+
+    - name: Validate standby database connectivity from primary site
+      ansible.builtin.fail:
+        msg: "Error: Standby database cannot be reached using TNS alias. Check listener status and tnsnames configuration."
+      when: tnsping_standbyresult is not defined or 'OK' not in tnsping_standbyresult.stdout
+
+    - name: Confirm successful TNS connections from primary site
+      ansible.builtin.debug:
+        msg: "All good for TNS connections from primary!"
+      when: tnsping_standbyresult is defined and 'OK' in tnsping_standbyresult.stdout

@@ -1,0 +1,86 @@
+#!/bin/bash
+
+export ORACLE_SID={{ databases[database_name].db_sid }}
+export ORACLE_HOME={{ databases[database_name].oracle_db_home }}
+export PATH={{ databases[database_name].oracle_db_home }}/bin:$PATH
+
+
+MASTER_LOG="{{ done_dir }}/primary_rman_backup.log"
+FAILURE_LOG="{{ done_dir }}/primary_rman_backup_fail.log"
+
+# Ensure log files are empty before running
+> "$MASTER_LOG"
+> "$FAILURE_LOG"
+
+# Fetch the number of CPU cores on AIX
+primary_cpu_core={{ primary_cpu_core }}
+
+# Check DB in ARCHIVELOG_MODE
+sqlplus -s / as sysdba <<SQL | tee "$MASTER_LOG"
+SET HEADING OFF
+SET FEEDBACK OFF
+SET PAGESIZE 0
+SET LINESIZE 1000
+SET TRIMOUT ON
+SET TRIMSPOOL ON
+
+-- Precheck 1: ARCHIVELOG mode and DB size
+SELECT 'ARCHIVELOG_MODE:' || log_mode FROM v\$database;
+SQL
+
+SQL_STATUS=$?
+if [[ "$SQL_STATUS" -ne 0 ]]; then
+    echo "ERROR: SQL execution failed!" | tee -a "$FAILURE_LOG"
+    exit 1
+fi
+
+# Extracting values using grep and awk
+ARCHIVELOG_MODE=$(grep "ARCHIVELOG_MODE:" "$MASTER_LOG" | awk -F ':' '{print $2}')
+
+# 1. Validate ARCHIVELOG mode
+if [[ "$ARCHIVELOG_MODE" != "ARCHIVELOG" ]]; then
+    echo "ERROR: Database is NOT in ARCHIVELOG mode!" | tee -a "$FAILURE_LOG"
+    exit 1
+fi
+
+# Run rman backup
+
+{% set backup_format = backup_location ~ '/%U' %}
+{% set ctrl_backup_format = backup_location ~ '/controlfile_%d_%T_%s_%p.bkp' %}
+{% set controlfile_tag = "CONTROLFILE_BACKUP" %}
+{% set fullbackup_tag = "FULL_ARC_BACKUP" %}
+
+rman target / <<EOF | tee "$MASTER_LOG"
+RUN {
+    $(for (( i=1; i<=primary_cpu_core; i++ )); do
+        echo "    ALLOCATE CHANNEL ch$i DEVICE TYPE DISK FORMAT '{{ backup_format }}';"
+    done)
+    
+    # Backup full database with a distinct tag
+    BACKUP DATABASE FORMAT '{{ backup_format }}' TAG '{{ fullbackup_tag }}' PLUS ARCHIVELOG;
+    
+    # Backup control file separately with a distinct tag
+    BACKUP CURRENT CONTROLFILE FOR STANDBY FORMAT '{{ ctrl_backup_format }}' TAG '{{ controlfile_tag }}';
+    
+    $(for (( i=1; i<=primary_cpu_core; i++ )); do
+        echo "    RELEASE CHANNEL ch$i;"
+    done)
+}
+EXIT;
+EOF
+
+# Capture RMAN exit status
+rman_exit_code=$?
+
+# Check if the RMAN command was successful
+if [ $rman_exit_code -eq 0 ] && ! grep -q "ORA-" "$MASTER_LOG" && ! grep -q "ERROR" "$MASTER_LOG"; then
+    echo "RMAN Backup completed successfully." | tee -a $MASTER_LOG
+    touch "{{ done_dir }}/rman.success"
+else
+    echo "RMAN Backup failed! Check logs for details: $MASTER_LOG" | tee -a "$FAILURE_LOG"
+    exit 1
+fi
+
+echo "RMAN backup performed for primary database successfully!" | tee -a $MASTER_LOG
+rm -f "$FAILURE_LOG"
+exit 0

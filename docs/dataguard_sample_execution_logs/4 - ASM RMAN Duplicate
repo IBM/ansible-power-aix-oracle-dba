@@ -1,0 +1,959 @@
+ansible-playbook dataguard_playbook.yml -i inventory
+
+PLAY [Configure Data Guard for 19c] *********************************************************************************************************************************************************
+
+TASK [dataguard_precheck : Run initialization tasks] ****************************************************************************************************************************************
+included: /var/lib/awx/projects/_161__dg_setup/roles/dataguard_precheck/tasks/../../dataguard_precheck/tasks/init.yml for primary-db, standby-db
+
+TASK [dataguard_precheck : Set fact init_done] **********************************************************************************************************************************************
+ok: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_precheck : Set fact scripts dir] ********************************************************************************************************************************************
+ok: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_precheck : Set fact done dir] ***********************************************************************************************************************************************
+ok: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_precheck : Create work dir] *************************************************************************************************************************************************
+ok: [standby-db]
+changed: [primary-db]
+
+TASK [dataguard_precheck : Create scripts dir] **********************************************************************************************************************************************
+changed: [standby-db]
+changed: [primary-db]
+
+TASK [dataguard_precheck : Create done dir] *************************************************************************************************************************************************
+changed: [standby-db]
+changed: [primary-db]
+
+TASK [dataguard_precheck : Checking if Dataguard setup was already done] ********************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_precheck : Exit if Dataguard setup was already done] ************************************************************************************************************************
+skipping: [primary-db]
+
+TASK [dataguard_precheck : End play if Dataguard setup Task was done] ***********************************************************************************************************************
+skipping: [primary-db]
+
+TASK [dataguard_precheck : Verify primary can ping standby host] ****************************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_precheck : Fail if primary cannot reach standby] ****************************************************************************************************************************
+skipping: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_precheck : Verify standby can ping primary host] ****************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_precheck : Fail if standby cannot reach primary] ****************************************************************************************************************************
+skipping: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_precheck : Get release patch details from site] *****************************************************************************************************************************
+ok: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_precheck : Set patch level and patches facts] *******************************************************************************************************************************
+ok: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_precheck : Set standby patch details for comparison (on standby only)] ******************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_precheck : Set primary patch details for comparison (on primary only)] ******************************************************************************************************
+ok: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_precheck : Fail if patch levels or patches do not match between primary and standby for Oracle Clusterware] *****************************************************************
+skipping: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_precheck : Get applied patch from Oracle DB home] ***************************************************************************************************************************
+ok: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_precheck : Set patch fact] **************************************************************************************************************************************************
+ok: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_precheck : Set standby patch details for comparison (on standby only)] ******************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_precheck : Set primary patch details for comparison (on primary only)] ******************************************************************************************************
+ok: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_precheck : Fail if patch numbers do not match between primary and standby] **************************************************************************************************
+skipping: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_precheck : Checking if Dataguard setup was already done] ********************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_precheck : Copy Dataguard Pre-check script for primary] *********************************************************************************************************************
+skipping: [standby-db]
+changed: [primary-db]
+
+TASK [dataguard_precheck : Execute Dataguard Pre-check script on primary] *******************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_precheck : Debug Pre-check Output for primary database] *********************************************************************************************************************
+ok: [primary-db] => {
+    "msg": [
+        "ARCHIVELOG_MODE:ARCHIVELOG",
+        "DATABASE_SIZE:1.43",
+        "DISK_COUNT:1",
+        "REDO_SIZES:209715200,209715200,209715200",
+        "MULTIPLEX_CHECK:1",
+        "MULTIPLEX_CHECK:1",
+        "MULTIPLEX_CHECK:1",
+        "All pre-checks passed for primary database successfully!"
+    ]
+}
+skipping: [standby-db]
+
+TASK [dataguard_precheck : Extract DATABASE_SIZE from log] **********************************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_precheck : Set DATABASE_SIZE fact on primary] *******************************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_precheck : Fetch DATABASE_SIZE fact from primary to standby] ****************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_precheck : Checking if Dataguard setup was already done] ********************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_precheck : Copy Dataguard Pre-check script for standby] *********************************************************************************************************************
+skipping: [primary-db]
+changed: [standby-db]
+
+TASK [dataguard_precheck : Allow grid user to access Ansible temporary directory] ***********************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_precheck : Execute Dataguard Pre-check script on standby] *******************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_precheck : Debug Pre-check Output for standby database] *********************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db] => {
+    "msg": [
+        "Checking existence of Disk Group or Filesystem: +DATAS",
+        "disk_count:1",
+        "Disk group +DATAS exists.",
+        "Checking existence of Disk Group or Filesystem: +DATAS",
+        "disk_count:1",
+        "Disk group +DATAS exists.",
+        "Checking existence of Disk Group or Filesystem: +DATAS",
+        "disk_count:1",
+        "Disk group +DATAS exists.",
+        "Checking available space for +DATAS...",
+        "available_space:95.05",
+        "Available space in +DATAS: 95.05G",
+        "Required space: 1.43G",
+        "Sufficient space available in +DATAS.",
+        "Available port: 1522",
+        "All checks completed successfully.",
+        "Pre-checks passed for standby database!"
+    ]
+}
+
+TASK [dataguard_precheck : Execute Dataguard Pre-check script on standby without ssh] *******************************************************************************************************
+skipping: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_precheck : Debug Pre-check Output for standby database] *********************************************************************************************************************
+skipping: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_precheck : Gather system information (CPU, Memory) on all nodes] ************************************************************************************************************
+ok: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_precheck : Set system facts for comparison] *********************************************************************************************************************************
+ok: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_precheck : Fetch primary system configuration on standby] *******************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_precheck : Show warning if system configurations do not match] **************************************************************************************************************
+skipping: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_primary_config : Run initialization tasks] ********************************************************************************************************************************************
+skipping: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_primary_config : Checking if Dataguard setup was already done] ************************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_primary_config : Exit if Dataguard setup was already done] ****************************************************************************************************************************
+skipping: [primary-db]
+
+TASK [dataguard_primary_config : End play if Dataguard setup Task was done] ***************************************************************************************************************************
+skipping: [primary-db]
+
+TASK [dataguard_primary_config : Checking if Primary pre-configure was already done] ******************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_primary_config : Fetch available_port from standby] ***********************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_primary_config : Set available_port as fact on standby] *******************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_primary_config : Share available_port from standby to primary] ************************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_primary_config : Copy Dataguard Pre-config script for primary] ************************************************************************************************************************
+skipping: [standby-db]
+skipping: [primary-db]
+
+TASK [dataguard_primary_config : Copy Dataguard Pre-config script for primary with available_port] ****************************************************************************************************
+skipping: [standby-db]
+changed: [primary-db]
+
+TASK [dataguard_primary_config : Execute Dataguard Pre-config script on primary] **********************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_primary_config : Debug Pre-config Output for primary database] ************************************************************************************************************************
+ok: [primary-db] => {
+    "msg": [
+        "DB_LOGGING:YES",
+        "STDBY_FILE_MANAGEMENT:AUTO",
+        "REDO_COUNT:3,MAX_GROUP:3",
+        "REDO_LOCATION:+DATA/ORCL/ONLINELOG/group_1.258.1196268193,REDO_SIZE:209715200",
+        "SRL_COUNT:0",
+        "SPFILE_CHECK:1",
+        "Executed: ALTER DATABASE ADD STANDBY LOGFILE GROUP 4 ('+DATA') SIZE 209715200",
+        "Executed: ALTER DATABASE ADD STANDBY LOGFILE GROUP 5 ('+DATA') SIZE 209715200",
+        "Executed: ALTER DATABASE ADD STANDBY LOGFILE GROUP 6 ('+DATA') SIZE 209715200",
+        "Executed: ALTER DATABASE ADD STANDBY LOGFILE GROUP 7 ('+DATA') SIZE 209715200",
+        "",
+        "PL/SQL procedure successfully completed.",
+        "",
+        "Database is using SPFILE. Creating PFILE from SPFILE...",
+        "",
+        "File created.",
+        "",
+        "TNS alias added for standby database tnsnames.ora.",
+        "",
+        "System altered.",
+        "",
+        "",
+        "System altered.",
+        "",
+        "",
+        "System altered.",
+        "",
+        "",
+        "System altered.",
+        "",
+        "",
+        "System altered.",
+        "",
+        "",
+        "System altered.",
+        "",
+        "",
+        "System altered.",
+        "",
+        "DB initialization parameter set completed successfully.",
+        "Standby redo logs added, PFILE copied, TNS entries updated and init params modified for dataguard on primary",
+        "All pre-config performed for primary database successfully!"
+    ]
+}
+skipping: [standby-db]
+
+TASK [dataguard_primary_config : Fetch password and PFILE file from primary] **************************************************************************************************************************
+skipping: [standby-db] => (item={'src': '/tmp/ansible/scripts/primary.pfile', 'dest': 'standby.pfile'})
+skipping: [standby-db] => (item={'src': '/u01/product/19.3.0.0.0/database/dbs/orapworcl', 'dest': 'orapworcl'})
+skipping: [standby-db]
+ok: [primary-db] => (item={'src': '/tmp/ansible/scripts/primary.pfile', 'dest': 'standby.pfile'})
+ok: [primary-db] => (item={'src': '/u01/product/19.3.0.0.0/database/dbs/orapworcl', 'dest': 'orapworcl'})
+
+TASK [dataguard_primary_config : Copy fetched files from control node to standby] *********************************************************************************************************************
+ok: [primary-db -> standby-db(129.40.76.242)] => (item={'src': 'orapworcl', 'mode': '0640'})
+ok: [primary-db -> standby-db(129.40.76.242)] => (item={'src': 'standby.pfile', 'mode': '0644'})
+
+TASK [dataguard_standby_config : Run initialization tasks] ********************************************************************************************************************************************
+skipping: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_standby_config : Checking if Dataguard setup was already done] ************************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_standby_config : Exit if Dataguard setup was already done] ****************************************************************************************************************************
+skipping: [primary-db]
+
+TASK [dataguard_standby_config : End play if Dataguard setup Task was done] ***************************************************************************************************************************
+skipping: [primary-db]
+
+TASK [dataguard_standby_config : Checking if Standby configuration was already done] ******************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_standby_config : Create necessary directories for standby configuration] **************************************************************************************************************
+skipping: [primary-db] => (item=adump)
+skipping: [primary-db] => (item=dpump)
+skipping: [primary-db]
+ok: [standby-db] => (item=adump)
+ok: [standby-db] => (item=dpump)
+
+TASK [dataguard_standby_config : Fetch available_port from standby] ***********************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_standby_config : Set available_port as fact on standby] *******************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_standby_config : Copy Dataguard Pre-config script for standby] ************************************************************************************************************************
+skipping: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_standby_config : Copy Dataguard Pre-config script for standby with available_port] ****************************************************************************************************
+skipping: [primary-db]
+changed: [standby-db]
+
+TASK [dataguard_standby_config : Execute Dataguard config script on standby] **************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_standby_config : Debug config Output for standby database] ****************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db] => {
+    "msg": [
+        "TNS alias added for standby database tnsnames.ora.",
+        "TNS alias added for primary database tnsnames.ora.",
+        "tnsnames.ora not found. Creating new file...",
+        "File /u01/product/19.3.0.0.0/database/network/admin/orcls_rman_listener/listener.ora does not exist. Creating it...",
+        "Updating /u01/product/19.3.0.0.0/database/network/admin/orcls_rman_listener/listener.ora...",
+        "RMAN listener entry added successfully.",
+        "Listener start successful",
+        "Listener is running successfully",
+        "Instance 'orcl' is in UNKNOWN state!",
+        "TNS alias added for standby database tnsnames.ora.",
+        "TNS alias added for primary database tnsnames.ora.",
+        "Standby PFILE, PWD file copied, and TNS entries updated.",
+        "All pre-config performed for standby database successfully!"
+    ]
+}
+
+TASK [dataguard_standby_config : Check connectivity to primary database from standby site] ************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_standby_config : Validate primary database connectivity from standby site] ************************************************************************************************************
+skipping: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_standby_config : Confirm successful TNS connections from standby site] ****************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db] => {
+    "msg": "All good for TNS connections from standby!"
+}
+
+TASK [dataguard_standby_config : Check connectivity to standby database from primary site] ************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_standby_config : Validate standby database connectivity from primary site] ************************************************************************************************************
+skipping: [standby-db]
+skipping: [primary-db]
+
+TASK [dataguard_standby_config : Confirm successful TNS connections from primary site] ****************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db] => {
+    "msg": "All good for TNS connections from primary!"
+}
+
+TASK [dataguard_create_standby : Run initialization tasks] ********************************************************************************************************************************************
+skipping: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_create_standby : Checking if Dataguard setup was already done] ************************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_create_standby : Exit if Dataguard setup was already done] ****************************************************************************************************************************
+skipping: [primary-db]
+
+TASK [dataguard_create_standby : End play if Dataguard setup Task was done] ***************************************************************************************************************************
+skipping: [primary-db]
+
+TASK [dataguard_create_standby : Checking if Dataguard restore was already done] **********************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_create_standby : Copy DBID and control file location script from primary database] ****************************************************************************************************
+skipping: [standby-db]
+changed: [primary-db]
+
+TASK [dataguard_create_standby : Execute DBID and control file location script on primary database] ***************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_create_standby : Fetch DBID file content] *********************************************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_create_standby : Set DBID as facts] ***************************************************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_create_standby : Fetch DBID facts from primary to standby] ****************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_create_standby : Copy RMAN restore script for standby] ********************************************************************************************************************************
+skipping: [primary-db]
+changed: [standby-db]
+
+TASK [dataguard_create_standby : Execute restore script for standby] **********************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_create_standby : Debug restore Output for standby database] ***************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db] => {
+    "msg": [
+        "Starting standby database...",
+        "ORACLE instance started.",
+        "",
+        "Total System Global Area  583000016 bytes",
+        "Fixed Size\t\t    9101264 bytes",
+        "Variable Size\t\t  297795584 bytes",
+        "Database Buffers\t  268435456 bytes",
+        "Redo Buffers\t\t    7667712 bytes",
+        "",
+        "Recovery Manager: Release 19.0.0.0.0 - Production on Fri Apr 4 13:46:20 2025",
+        "Version 19.26.0.0.0",
+        "",
+        "Copyright (c) 1982, 2019, Oracle and/or its affiliates.  All rights reserved.",
+        "",
+        "connected to target database: ORCL (DBID=1724048925)",
+        "connected to auxiliary database: ORCL (not mounted)",
+        "",
+        "RMAN> RUN {",
+        "2>     ALLOCATE CHANNEL prmy1 DEVICE TYPE DISK ;",
+        "3>     ALLOCATE CHANNEL prmy2 DEVICE TYPE DISK ;",
+        "4>     ALLOCATE CHANNEL prmy3 DEVICE TYPE DISK ;",
+        "5>     ALLOCATE CHANNEL prmy4 DEVICE TYPE DISK ;",
+        "6>     ALLOCATE auxiliary CHANNEL stby TYPE DISK;",
+        "7> ",
+        "8>  duplicate target database for standby from active database NOFILENAMECHECK",
+        "9>  spfile",
+        "10>    parameter_value_convert 'orcl','orcls'",
+        "11>    set db_name='orcl'",
+        "12>    set db_create_file_dest='+DATAS'",
+        "13>    set db_unique_name='orcls'",
+        "14>    set db_file_name_convert='+DATA/orcl','+DATAS/orcls'",
+        "15>    set log_file_name_convert='+DATA/orcl','+DATAS/orcls'",
+        "16>    set control_files='+DATAS/orcls_control01.ctl'",
+        "17>    set log_archive_max_processes='5'",
+        "18>    set fal_client='orcls'",
+        "19>    set fal_server='orcl'",
+        "20>    set standby_file_management='MANUAL'",
+        "21>    set log_archive_config='dg_config=(orcl,orcls)'",
+        "22>    set log_archive_dest_2='service=orcl ASYNC NOAFFIRM valid_for=(ONLINE_LOGFILE,PRIMARY_ROLE) db_unique_name=orcl'",
+        "23>    set db_create_online_log_dest_1='+DATAS'",
+        "24>    set log_archive_dest_1='LOCATION=USE_DB_RECOVERY_FILE_DEST'",
+        "25>    set db_recovery_file_dest='+DATAS'",
+        "26>    set db_recovery_file_dest_size='10G'",
+        "27>  ;",
+        "28> }",
+        "29> EXIT;",
+        "using target database control file instead of recovery catalog",
+        "allocated channel: prmy1",
+        "channel prmy1: SID=292 device type=DISK",
+        "",
+        "allocated channel: prmy2",
+        "channel prmy2: SID=574 device type=DISK",
+        "",
+        "allocated channel: prmy3",
+        "channel prmy3: SID=858 device type=DISK",
+        "",
+        "allocated channel: prmy4",
+        "channel prmy4: SID=1140 device type=DISK",
+        "",
+        "allocated channel: stby",
+        "channel stby: SID=87 device type=DISK",
+        "",
+        "Starting Duplicate Db at 04-APR-25",
+        "",
+        "contents of Memory Script:",
+        "{",
+        "   backup as copy reuse",
+        "   passwordfile auxiliary format  '/u01/product/19.3.0.0.0/database/dbs/orapworcl'   targetfile ",
+        " '+DATA/ORCL/PARAMETERFILE/spfile.266.1196269363' auxiliary format ",
+        " '/u01/product/19.3.0.0.0/database/dbs/spfileorcl.ora'   ;",
+        "   sql clone \"alter system set spfile= ''/u01/product/19.3.0.0.0/database/dbs/spfileorcl.ora''\";",
+        "}",
+        "executing Memory Script",
+        "",
+        "Starting backup at 04-APR-25",
+        "Finished backup at 04-APR-25",
+        "",
+        "sql statement: alter system set spfile= ''/u01/product/19.3.0.0.0/database/dbs/spfileorcl.ora''",
+        "",
+        "contents of Memory Script:",
+        "{",
+        "   sql clone \"alter system set  audit_file_dest = ",
+        " ''/u01/base/admin/orcls/adump'' comment=",
+        " '''' scope=spfile\";",
+        "   sql clone \"alter system set  dispatchers = ",
+        " ''(PROTOCOL=TCP) (SERVICE=orclsXDB)'' comment=",
+        " '''' scope=spfile\";",
+        "   sql clone \"alter system set  db_name = ",
+        " ''orcl'' comment=",
+        " '''' scope=spfile\";",
+        "   sql clone \"alter system set  db_create_file_dest = ",
+        " ''+DATAS'' comment=",
+        " '''' scope=spfile\";",
+        "   sql clone \"alter system set  db_unique_name = ",
+        " ''orcls'' comment=",
+        " '''' scope=spfile\";",
+        "   sql clone \"alter system set  db_file_name_convert = ",
+        " ''+DATA/orcl'', ''+DATAS/orcls'' comment=",
+        " '''' scope=spfile\";",
+        "   sql clone \"alter system set  log_file_name_convert = ",
+        " ''+DATA/orcl'', ''+DATAS/orcls'' comment=",
+        " '''' scope=spfile\";",
+        "   sql clone \"alter system set  control_files = ",
+        " ''+DATAS/orcls_control01.ctl'' comment=",
+        " '''' scope=spfile\";",
+        "   sql clone \"alter system set  log_archive_max_processes = ",
+        " 5 comment=",
+        " '''' scope=spfile\";",
+        "   sql clone \"alter system set  fal_client = ",
+        " ''orcls'' comment=",
+        " '''' scope=spfile\";",
+        "   sql clone \"alter system set  fal_server = ",
+        " ''orcl'' comment=",
+        " '''' scope=spfile\";",
+        "   sql clone \"alter system set  standby_file_management = ",
+        " ''MANUAL'' comment=",
+        " '''' scope=spfile\";",
+        "   sql clone \"alter system set  log_archive_config = ",
+        " ''dg_config=(orcl,orcls)'' comment=",
+        " '''' scope=spfile\";",
+        "   sql clone \"alter system set  log_archive_dest_2 = ",
+        " ''service=orcl ASYNC NOAFFIRM valid_for=(ONLINE_LOGFILE,PRIMARY_ROLE) db_unique_name=orcl'' comment=",
+        " '''' scope=spfile\";",
+        "   sql clone \"alter system set  db_create_online_log_dest_1 = ",
+        " ''+DATAS'' comment=",
+        " '''' scope=spfile\";",
+        "   sql clone \"alter system set  log_archive_dest_1 = ",
+        " ''LOCATION=USE_DB_RECOVERY_FILE_DEST'' comment=",
+        " '''' scope=spfile\";",
+        "   sql clone \"alter system set  db_recovery_file_dest = ",
+        " ''+DATAS'' comment=",
+        " '''' scope=spfile\";",
+        "   sql clone \"alter system set  db_recovery_file_dest_size = ",
+        " 10G comment=",
+        " '''' scope=spfile\";",
+        "   shutdown clone immediate;",
+        "   startup clone nomount;",
+        "}",
+        "executing Memory Script",
+        "",
+        "sql statement: alter system set  audit_file_dest =  ''/u01/base/admin/orcls/adump'' comment= '''' scope=spfile",
+        "",
+        "sql statement: alter system set  dispatchers =  ''(PROTOCOL=TCP) (SERVICE=orclsXDB)'' comment= '''' scope=spfile",
+        "",
+        "sql statement: alter system set  db_name =  ''orcl'' comment= '''' scope=spfile",
+        "",
+        "sql statement: alter system set  db_create_file_dest =  ''+DATAS'' comment= '''' scope=spfile",
+        "",
+        "sql statement: alter system set  db_unique_name =  ''orcls'' comment= '''' scope=spfile",
+        "",
+        "sql statement: alter system set  db_file_name_convert =  ''+DATA/orcl'', ''+DATAS/orcls'' comment= '''' scope=spfile",
+        "",
+        "sql statement: alter system set  log_file_name_convert =  ''+DATA/orcl'', ''+DATAS/orcls'' comment= '''' scope=spfile",
+        "",
+        "sql statement: alter system set  control_files =  ''+DATAS/orcls_control01.ctl'' comment= '''' scope=spfile",
+        "",
+        "sql statement: alter system set  log_archive_max_processes =  5 comment= '''' scope=spfile",
+        "",
+        "sql statement: alter system set  fal_client =  ''orcls'' comment= '''' scope=spfile",
+        "",
+        "sql statement: alter system set  fal_server =  ''orcl'' comment= '''' scope=spfile",
+        "",
+        "sql statement: alter system set  standby_file_management =  ''MANUAL'' comment= '''' scope=spfile",
+        "",
+        "sql statement: alter system set  log_archive_config =  ''dg_config=(orcl,orcls)'' comment= '''' scope=spfile",
+        "",
+        "sql statement: alter system set  log_archive_dest_2 =  ''service=orcl ASYNC NOAFFIRM valid_for=(ONLINE_LOGFILE,PRIMARY_ROLE) db_unique_name=orcl'' comment= '''' scope=spfile",
+        "",
+        "sql statement: alter system set  db_create_online_log_dest_1 =  ''+DATAS'' comment= '''' scope=spfile",
+        "",
+        "sql statement: alter system set  log_archive_dest_1 =  ''LOCATION=USE_DB_RECOVERY_FILE_DEST'' comment= '''' scope=spfile",
+        "",
+        "sql statement: alter system set  db_recovery_file_dest =  ''+DATAS'' comment= '''' scope=spfile",
+        "",
+        "sql statement: alter system set  db_recovery_file_dest_size =  10G comment= '''' scope=spfile",
+        "",
+        "Oracle instance shut down",
+        "",
+        "connected to auxiliary database (not started)",
+        "Oracle instance started",
+        "",
+        "Total System Global Area   10334714016 bytes",
+        "",
+        "Fixed Size                    13842592 bytes",
+        "Variable Size               1610612736 bytes",
+        "Database Buffers            8690597888 bytes",
+        "Redo Buffers                  19660800 bytes",
+        "allocated channel: stby",
+        "channel stby: SID=2551 device type=DISK",
+        "",
+        "contents of Memory Script:",
+        "{",
+        "   backup as copy current controlfile for standby auxiliary format  '+DATAS/orcls_control01.ctl';",
+        "}",
+        "executing Memory Script",
+        "",
+        "Starting backup at 04-APR-25",
+        "channel prmy1: starting datafile copy",
+        "copying standby control file",
+        "output file name=/u01/product/19.3.0.0.0/database/dbs/snapcf_orcl.f tag=TAG20250404T134645",
+        "channel prmy1: datafile copy complete, elapsed time: 00:00:03",
+        "Finished backup at 04-APR-25",
+        "",
+        "contents of Memory Script:",
+        "{",
+        "   sql clone 'alter database mount standby database';",
+        "}",
+        "executing Memory Script",
+        "",
+        "sql statement: alter database mount standby database",
+        "RMAN-05529: warning: DB_FILE_NAME_CONVERT resulted in invalid ASM names; names changed to disk group only.",
+        "",
+        "contents of Memory Script:",
+        "{",
+        "   set newname for tempfile  1 to ",
+        " \"+DATAS\";",
+        "   switch clone tempfile all;",
+        "   set newname for datafile  1 to ",
+        " \"+DATAS\";",
+        "   set newname for datafile  2 to ",
+        " \"+DATAS\";",
+        "   set newname for datafile  3 to ",
+        " \"+DATAS\";",
+        "   set newname for datafile  4 to ",
+        " \"+DATAS\";",
+        "   backup as copy reuse",
+        "   datafile  1 auxiliary format ",
+        " \"+DATAS\"   datafile ",
+        " 2 auxiliary format ",
+        " \"+DATAS\"   datafile ",
+        " 3 auxiliary format ",
+        " \"+DATAS\"   datafile ",
+        " 4 auxiliary format ",
+        " \"+DATAS\"   ;",
+        "   sql 'alter system archive log current';",
+        "}",
+        "executing Memory Script",
+        "",
+        "executing command: SET NEWNAME",
+        "",
+        "renamed tempfile 1 to +DATAS in control file",
+        "",
+        "executing command: SET NEWNAME",
+        "",
+        "executing command: SET NEWNAME",
+        "",
+        "executing command: SET NEWNAME",
+        "",
+        "executing command: SET NEWNAME",
+        "",
+        "Starting backup at 04-APR-25",
+        "channel prmy1: starting datafile copy",
+        "input datafile file number=00002 name=+DATA/ORCL/DATAFILE/sysaux.262.1196268195",
+        "channel prmy2: starting datafile copy",
+        "input datafile file number=00001 name=+DATA/ORCL/DATAFILE/system.261.1196268193",
+        "channel prmy3: starting datafile copy",
+        "input datafile file number=00003 name=+DATA/ORCL/DATAFILE/undotbs1.263.1196268197",
+        "channel prmy4: starting datafile copy",
+        "input datafile file number=00004 name=+DATA/ORCL/DATAFILE/users.265.1196268203",
+        "output file name=+DATAS/ORCLS/DATAFILE/users.334.1197553613 tag=TAG20250404T134653",
+        "channel prmy4: datafile copy complete, elapsed time: 00:00:01",
+        "output file name=+DATAS/ORCLS/DATAFILE/sysaux.277.1197553613 tag=TAG20250404T134653",
+        "channel prmy1: datafile copy complete, elapsed time: 00:00:04",
+        "output file name=+DATAS/ORCLS/DATAFILE/system.269.1197553613 tag=TAG20250404T134653",
+        "channel prmy2: datafile copy complete, elapsed time: 00:00:04",
+        "output file name=+DATAS/ORCLS/DATAFILE/undotbs1.335.1197553613 tag=TAG20250404T134653",
+        "channel prmy3: datafile copy complete, elapsed time: 00:00:04",
+        "Finished backup at 04-APR-25",
+        "",
+        "sql statement: alter system archive log current",
+        "",
+        "contents of Memory Script:",
+        "{",
+        "   switch clone datafile all;",
+        "}",
+        "executing Memory Script",
+        "",
+        "datafile 1 switched to datafile copy",
+        "input datafile copy RECID=1 STAMP=1197553617 file name=+DATAS/ORCLS/DATAFILE/system.269.1197553613",
+        "datafile 2 switched to datafile copy",
+        "input datafile copy RECID=2 STAMP=1197553617 file name=+DATAS/ORCLS/DATAFILE/sysaux.277.1197553613",
+        "datafile 3 switched to datafile copy",
+        "input datafile copy RECID=3 STAMP=1197553617 file name=+DATAS/ORCLS/DATAFILE/undotbs1.335.1197553613",
+        "datafile 4 switched to datafile copy",
+        "input datafile copy RECID=4 STAMP=1197553617 file name=+DATAS/ORCLS/DATAFILE/users.334.1197553613",
+        "Finished Duplicate Db at 04-APR-25",
+        "released channel: prmy1",
+        "released channel: prmy2",
+        "released channel: prmy3",
+        "released channel: prmy4",
+        "released channel: stby",
+        "",
+        "Recovery Manager complete.",
+        "RMAN completed successfully.",
+        "Dataguard setup completed successfully!"
+    ]
+}
+
+TASK [dataguard_create_standby : Checking if Dataguard restore was already done] **********************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_create_standby : Set fact for primary if restore was already done on standby] *********************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_create_standby : Fetch post restore status from standby to primary] *******************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_create_standby : Checking if Dataguard post restore was already done] *****************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_create_standby : Copy RMAN Restore Post-Processing Script] ****************************************************************************************************************************
+skipping: [primary-db]
+changed: [standby-db]
+
+TASK [dataguard_create_standby : Run RMAN Restore Post-Processing Script] *****************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_create_standby : Display RMAN Restore Post-Processing Script Output] ******************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db] => {
+    "msg": [
+        "RMAN Listener stop successful",
+        "RMAN Listener successfully stopped",
+        "RMAN Listener directory removed successfully",
+        "ORA-01109: database not open",
+        "",
+        "",
+        "Database dismounted.",
+        "ORACLE instance shut down.",
+        "ORACLE instance started.",
+        "",
+        "Total System Global Area 1.0335E+10 bytes",
+        "Fixed Size\t\t   13842592 bytes",
+        "Variable Size\t\t 1610612736 bytes",
+        "Database Buffers\t 8690597888 bytes",
+        "Redo Buffers\t\t   19660800 bytes",
+        "Database mounted.",
+        "",
+        "System altered.",
+        "",
+        "",
+        "System altered.",
+        "",
+        "",
+        "System altered.",
+        "",
+        "Dataguard recovery process started successfully"
+    ]
+}
+
+TASK [dataguard_create_standby : Checking if Dataguard post restore was already done on standby] ******************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_create_standby : Set fact for post restore status] ************************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_create_standby : Retrieve post restore status from standby] ***************************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_create_standby : Set fact for condition evaluation] ***********************************************************************************************************************************
+ok: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_create_standby : Copy Protection Mode Post-Processing Script on primary] **************************************************************************************************************
+skipping: [standby-db]
+changed: [primary-db]
+
+TASK [dataguard_create_standby : Execute Protection Mode Post-Processing Script on primary] ***********************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_create_standby : Display Protection Mode Post-Processing Output] **********************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db] => {
+    "msg": [
+        "PROTECTION_MODE:MAXIMUM PERFORMANCE",
+        "Dataguard successfully configured with PROTECTION_MODE: MAXIMUM PERFORMANCE",
+        "Dataguard configured successfully"
+    ]
+}
+
+TASK [dataguard_post_sync_check : Run initialization tasks] *******************************************************************************************************************************************
+skipping: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_post_sync_check : Copy Data Guard sync check script to primary] ***********************************************************************************************************************
+skipping: [standby-db]
+changed: [primary-db]
+
+TASK [dataguard_post_sync_check : Copy Data Guard sync check script to standby] ***********************************************************************************************************************
+skipping: [primary-db]
+changed: [standby-db]
+
+TASK [dataguard_post_sync_check : Execute Data Guard sync check on Primary] ***************************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_post_sync_check : Execute Data Guard sync check on Standby] ***************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_post_sync_check : Fetch Standby Sequence on Primary] **********************************************************************************************************************************
+ok: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_post_sync_check : Compare sequence numbers between primary and standby] ***************************************************************************************************************
+ok: [primary-db]
+
+TASK [dataguard_post_sync_check : Display message if standby is in sync] ******************************************************************************************************************************
+skipping: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_post_sync_check : End play if standby is in sync with primary] ************************************************************************************************************************
+skipping: [primary-db]
+
+TASK [dataguard_post_sync_check : Continue if standby is not in sync] *********************************************************************************************************************************
+ok: [primary-db] => {
+    "msg": "Standby is not in sync with Primary. Proceeding with further actions."
+}
+ok: [standby-db] => {
+    "msg": "Standby is not in sync with Primary. Proceeding with further actions."
+}
+
+TASK [dataguard_post_sync_check : Copy Data Guard sync script to primary and standby] *****************************************************************************************************************
+changed: [standby-db]
+changed: [primary-db]
+
+TASK [dataguard_post_sync_check : Execute Data Guard sync check on Primary] ***************************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_post_sync_check : Set fact for Primary output] ****************************************************************************************************************************************
+ok: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_post_sync_check : Fail the play if Data Guard is not in sync] *************************************************************************************************************************
+skipping: [primary-db]
+
+TASK [dataguard_post_sync_check : End the play if Data Guard is not in sync] **************************************************************************************************************************
+skipping: [primary-db]
+
+TASK [dataguard_post_sync_check : Extract Primary Sequence Number] ************************************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db]
+
+TASK [dataguard_post_sync_check : Debug Primary Sequence Number] **************************************************************************************************************************************
+skipping: [standby-db]
+ok: [primary-db] => {
+    "msg": "PRIMARY_SEQ:88\nSTATUS:VALID,ERROR:\nPrimary database sync status is valid"
+}
+
+TASK [dataguard_post_sync_check : Execute Data Guard sync check on Standby] ***************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_post_sync_check : Extract Standby Sequence Number] ************************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_post_sync_check : Debug Standby Sequence Number] **************************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db] => {
+    "msg": "MRP_RUNNING:0\nMRP0 process not running. Enabling managed recovery...\nMRP_RUNNING:1\nWaiting for 180 seconds to allow standby to sync...\nSTANDBY_SEQ:88"
+}
+
+TASK [dataguard_post_sync_check : Fetch Standby Sequence on Primary] **********************************************************************************************************************************
+ok: [primary-db]
+skipping: [standby-db]
+
+TASK [dataguard_post_sync_check : Debug Standby and primary Sequence Number] **************************************************************************************************************************
+ok: [primary-db] => {
+    "msg": "Primary:  ['88'], Standby: ['88']"
+}
+skipping: [standby-db]
+
+TASK [dataguard_post_sync_check : Fail if Data Guard is out of sync] **********************************************************************************************************************************
+skipping: [primary-db]
+
+TASK [dataguard_post_sync_check : Query Data Guard Sync Status on Standby] ****************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_post_sync_check : Debug Raw SQL Output] ***********************************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db] => {
+    "dg_sync_status.stdout_lines": [
+        "",
+        "    Thread Last Sequence Received Last Sequence Applied Difference",
+        "---------- ---------------------- --------------------- ----------",
+        "\t 1\t\t       87\t\t     87 \t 0"
+    ]
+}
+
+TASK [dataguard_post_sync_check : Extract Data Guard Sync Status] *************************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db]
+
+TASK [dataguard_post_sync_check : Print Data Guard Sync Status] ***************************************************************************************************************************************
+skipping: [primary-db]
+ok: [standby-db] => {
+    "msg": "**Data Guard Sync Check**\n------------------------------------\n**Thread:** 1\n**Last Sequence Received:** 87\n**Last Sequence Applied:** 87\n**Difference:** 0\n------------------------------------\n**Status:** In Sync\n"
+}
+
+PLAY RECAP **********************************************************************************************************************************************************************************
+primary-db                 : ok=57   changed=9    unreachable=0    failed=0    skipped=65   rescued=0    ignored=0
+standby-db                 : ok=59   changed=8    unreachable=0    failed=0    skipped=55   rescued=0    ignored=0

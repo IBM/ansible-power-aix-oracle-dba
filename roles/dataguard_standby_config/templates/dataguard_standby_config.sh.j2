@@ -1,0 +1,260 @@
+#!/bin/bash
+
+# Define values dynamically
+ORACLE_HOME="{{ databases[database_name].oracle_db_home }}"
+GRID_HOME="{{ databases[database_name].grid_db_home }}"
+ORACLE_SID="{{ databases[database_name].db_sid }}"
+PFILE=${ORACLE_HOME}/dbs/init${ORACLE_SID}.ora
+oracle_db_base="{{ databases[database_name].oracle_db_base }}"
+primary_diskgroup="{{ databases.primary.file_dest }}"
+standby_diskgroup="{{ databases[database_name].file_dest }}"
+primary_unique_name="{{ databases.primary.db_unique_name }}"
+primary_db_name="{{ databases.primary.db_name }}"
+standby_unique_name="{{ databases[database_name].db_unique_name }}"
+db_recovery_file_dest="{{ databases[database_name].db_recovery_file_dest }}"
+db_recovery_file_dest_size="{{ databases[database_name].db_recovery_file_dest_size }}"
+db_create_online_log_dest_1="{{ databases[database_name].online_log_dest1 }}"
+controlfile_location="{{ databases[database_name].controlfile_location }}"
+tnsnames_file="$ORACLE_HOME/network/admin/tnsnames.ora"
+MASTER_LOG="{{ done_dir }}/standby_tns.log"
+FAILURE_LOG="{{ done_dir }}/standby_tns_fail.log"
+
+log_archive_dest_1="'LOCATION=USE_DB_RECOVERY_FILE_DEST'"
+log_archive_config="'DG_CONFIG=(${standby_unique_name},${primary_unique_name})'"
+log_file_name_convert="'${primary_diskgroup}/${primary_unique_name}','${standby_diskgroup}/${standby_unique_name}'"
+db_file_name_convert="'${primary_diskgroup}/${primary_unique_name}','${standby_diskgroup}/${standby_unique_name}'"
+audit_file_dest="'${oracle_db_base}/admin/${standby_unique_name}/adump'"
+local_listener="'(ADDRESS=(PROTOCOL=TCP)(HOST={{ standby_host }})(PORT={{ databases[database_name].listener_port }}))'"
+listener_file=${GRID_HOME}/network/admin/listener.ora
+
+db_create_file_dest="'${standby_diskgroup}'"
+db_recovery_file_dest="'${db_recovery_file_dest}'"
+db_create_online_log_dest_1="'${db_create_online_log_dest_1}'"
+controlfile_location="'${controlfile_location}/${standby_unique_name}_control01.ctl'"
+
+# Ensure log files are empty before running
+> "$MASTER_LOG"
+> "$FAILURE_LOG"
+
+# Update tnsnames.ora
+# Define the new entries
+STDBY_ENTRY="
+${standby_unique_name}=
+(DESCRIPTION =
+  (ADDRESS_LIST =
+    (ADDRESS=(PROTOCOL=TCP) (HOST={{ standby_host }})(PORT={{ databases[database_name].listener_port }}))
+  )
+  (CONNECT_DATA =
+    (SERVER=DEDICATED)
+    (SERVICE_NAME={{ databases.standby.db_service_name}})
+  )
+)"
+
+PRIMY_ENTRY="
+${primary_unique_name}=
+(DESCRIPTION =
+  (ADDRESS_LIST =
+    (ADDRESS=(PROTOCOL=TCP) (HOST={{ primary_host }})(PORT={{ databases.primary.listener_port }}))
+  )
+  (CONNECT_DATA =
+    (SERVER=DEDICATED)
+    (SERVICE_NAME={{ databases.primary.db_service_name}})
+  )
+)"
+
+# Check if the entries already exist in tnsnames.ora before appending
+if ! grep -q "$standby_unique_name=" "$tnsnames_file"; then    
+  echo "$STDBY_ENTRY" >> "$tnsnames_file"
+  echo "TNS alias added for standby database tnsnames.ora."
+else
+  echo "Entry already exists. Skipping update."
+fi
+
+if ! grep -q "$primary_unique_name=" "$tnsnames_file"; then    
+  echo "$PRIMY_ENTRY" >> "$tnsnames_file"
+  echo "TNS alias added for primary database tnsnames.ora."
+else
+  echo "Entry already exists. Skipping update."
+fi
+
+# Convert 'with_backup' variable to lowercase for consistency
+WITH_BACKUP="$(echo {{ with_backup }} | tr '[:upper:]' '[:lower:]')"
+
+if [[ "$WITH_BACKUP" == "true" ]]; then 
+  # Take a backup before modifying
+  cp ${ORACLE_HOME}/dbs/standby.pfile "$PFILE"
+  TMP_FILE="${PFILE}.tmp"
+
+  # Remove all matching parameters in one go and create a temp file
+  awk 'tolower($0) !~ /(db_unique_name|audit_file_dest|log_archive_dest_1|control_files|log_file_name_convert|db_file_name_convert|db_create_file_dest|db_create_online_log_dest_1|db_recovery_file_dest|db_recovery_file_dest_size|LOG_ARCHIVE_CONFIG|LOCAL_LISTENER)/' "$PFILE" > "$TMP_FILE"
+
+  # Append updated parameters at the end
+  cat <<EOF >> "$TMP_FILE"
+*.db_unique_name=${standby_unique_name}
+*.audit_file_dest=${audit_file_dest}
+*.log_archive_dest_1=${log_archive_dest_1}
+*.control_files=${controlfile_location}
+*.LOG_FILE_NAME_CONVERT=${log_file_name_convert}
+*.DB_FILE_NAME_CONVERT=${db_file_name_convert}
+*.db_create_file_dest=${db_create_file_dest}
+*.db_create_online_log_dest_1=${db_create_online_log_dest_1}
+*.db_recovery_file_dest=${db_recovery_file_dest}
+*.db_recovery_file_dest_size=${db_recovery_file_dest_size} 
+*.LOG_ARCHIVE_CONFIG=${log_archive_config}
+*.LOCAL_LISTENER=${local_listener}
+EOF
+
+  # Replace the original file
+  mv "$TMP_FILE" "$PFILE"
+  chown {{ db_oracle_user }}:{{ db_oinstall_group }} "$PFILE"
+  chmod 755 "$PFILE"
+
+  # Verify changes
+  echo "Updated standby.pfile:"
+  cat "$PFILE"
+
+elif [[ "$WITH_BACKUP" == "false" ]]; then
+
+  rman_listener_file="${ORACLE_HOME}/network/admin/${standby_unique_name}_rman_listener/listener.ora"
+  tnsnames_file="${ORACLE_HOME}/network/admin/${standby_unique_name}_rman_listener/tnsnames.ora"
+  tnsnames_dir="${ORACLE_HOME}/network/admin/${standby_unique_name}_rman_listener"
+  
+  # Create  if it doesn't exist
+  if [[ ! -d "${tnsnames_dir}" ]]; then
+      mkdir -p "${tnsnames_dir}"
+  fi
+  
+  if [[ ! -f "$tnsnames_file" ]]; then
+      echo "tnsnames.ora not found. Creating new file..."
+      touch "$tnsnames_file"
+  else 
+     cp "$tnsnames_file" "$tnsnames_file.bak"
+     echo "Using existing tnsnames.ora file..."
+  fi
+  
+  # Ensure rman_listener_file exists
+  if [ ! -f "$rman_listener_file" ]; then
+    echo "File $rman_listener_file does not exist. Creating it..."
+    touch "$rman_listener_file"
+  fi
+
+  # Insert a static entry for standby in the listener.ora file if not updated before
+  if ! grep -q "${standby_unique_name}" "$rman_listener_file"; then
+    cp "$rman_listener_file" "${rman_listener_file}.bak"
+    echo "Updating $rman_listener_file..."  
+    cat <<EOL >> "$rman_listener_file"  
+# listener.ora Network Configuration File: ${ORACLE_HOME}/network/admin/${standby_unique_name}_rman_listener/listener.ora
+# Generated by Dataguard Ansible playbook
+
+RMAN_LISTENER =
+  (DESCRIPTION_LIST =
+    (DESCRIPTION =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = {{ standby_host }})(PORT ={{ available_port | default('0000') }}))
+    )
+  )
+
+SID_LIST_RMAN_LISTENER =
+  (SID_LIST =
+    (SID_DESC =
+     (GLOBAL_DBNAME = ${standby_unique_name})
+     (ORACLE_HOME = ${ORACLE_HOME})
+     (SID_NAME = ${ORACLE_SID})
+    )
+   )
+EOL
+    echo "RMAN listener entry added successfully."
+  else
+    echo "Entry for ${standby_unique_name} already exists. Skipping update."
+  fi
+   
+   export TNS_ADMIN="${tnsnames_dir}"
+   export ORACLE_HOME="${ORACLE_HOME}"
+   export PATH="${ORACLE_HOME}/bin:$PATH"
+   export ORACLE_SID="${ORACLE_SID}"
+   
+   $ORACLE_HOME/bin/lsnrctl start rman_listener >> "$MASTER_LOG"
+  if [ $? -eq 0 ]; then
+    echo "Listener start successful" | tee -a "$MASTER_LOG"
+  else
+    echo "Listener start failed" | tee -a "$FAILURE_LOG"
+    exit 1
+  fi
+
+  $ORACLE_HOME/bin/lsnrctl status rman_listener >> "$MASTER_LOG"
+  if [ $? -eq 0 ]; then
+    echo "Listener is running successfully" | tee -a "$MASTER_LOG"
+  else
+    echo "Listener status check failed" | tee -a "$FAILURE_LOG"
+    exit 1
+  fi
+
+  if grep -q "Instance \"${ORACLE_SID}\", status UNKNOWN" "$MASTER_LOG"; then
+    echo "Instance '${ORACLE_SID}' is in UNKNOWN state!" | tee -a "$MASTER_LOG"
+  else
+    echo "Instance '${ORACLE_SID}' is not in UNKNOWN state." | tee -a "$FAILURE_LOG"
+    exit 1
+  fi
+
+# Update tnsnames.ora
+# Define the new entries
+STDBY_ENTRY="
+${standby_unique_name}_temp=
+(DESCRIPTION =
+  (ADDRESS_LIST =
+    (ADDRESS=(PROTOCOL=TCP) (HOST={{ standby_host }})(PORT={{ available_port | default('0000') }}))
+  )
+  (CONNECT_DATA =
+    (SERVER=DEDICATED)
+    (SERVICE_NAME={{ databases.standby.db_service_name}})
+  )
+)"
+
+PRIMY_ENTRY="
+${primary_unique_name}=
+(DESCRIPTION =
+  (ADDRESS_LIST =
+    (ADDRESS=(PROTOCOL=TCP) (HOST={{ primary_host }})(PORT={{ databases.primary.listener_port }}))
+  )
+  (CONNECT_DATA =
+    (SERVER=DEDICATED)
+    (SERVICE_NAME={{ databases.primary.db_service_name}})
+  )
+)"
+
+  # Check if  the entries already exist in tnsnames.ora before appending
+  if ! grep -q "$standby_unique_name=" "$tnsnames_file"; then    
+    echo "$STDBY_ENTRY" >> "$tnsnames_file"
+    echo "TNS alias added for standby database tnsnames.ora."
+  else
+    echo "Entry already exists. Skipping update."
+  fi
+  
+  if ! grep -q "$primary_unique_name=" "$tnsnames_file"; then    
+    echo "$PRIMY_ENTRY" >> "$tnsnames_file"
+    echo "TNS alias added for primary database tnsnames.ora."
+  else
+    echo "Entry already exists. Skipping update."
+  fi
+  
+    # Create an initialization parameter with only DB_NAME
+    echo "DB_NAME=${primary_db_name}" > "$PFILE"
+    chown {{ db_oracle_user }}:{{ db_oinstall_group }} "$PFILE"
+    chmod 755 "$PFILE"
+  
+else
+  echo "ERROR: Invalid value for 'with_backup'. Please provide 'true' or 'false'." | tee -a "$FAILURE_LOG"
+  exit 1
+fi
+
+# Check for failures and exit accordingly
+if [[ -s "$FAILURE_LOG" ]]; then
+  cat "$FAILURE_LOG"
+  rm -f "$FAILURE_LOG"
+  exit 1
+fi
+
+echo "Standby PFILE, PWD file copied, and TNS entries updated."
+echo "All pre-config performed for standby database successfully!"
+rm -f "$FAILURE_LOG"
+touch "{{ done_dir }}/dataguard_standby_config.success"
+exit 0

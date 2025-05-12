@@ -1,0 +1,16 @@
+---
+# defaults file for dataguard_create_standby
+
+scripts_dir: ["{{ work_dir }}", "scripts"]
+done_dir: ["{{ work_dir }}", "done"]
+
+prenfsconfig:
+ lpp_src:
+    # !!! update !!!
+ subdir: ''
+
+
+standby_cpu_core: 4
+primary_cpu_core: 4
+with_backup: false
+dataguard_protection_mode: maximum_performance

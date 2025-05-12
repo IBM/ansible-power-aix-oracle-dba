@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: dataguard_backup_primary_db
+  author: Naved Afroz
+  description: Ansible role performs RMAN backup on primary site required to setup dataguard.
+  company: IBM
+
+  license: Apache-2.0
+
+  min_ansible_version: '2.9'
+
+  platforms:
+    - name: AIX
+      versions:
+        - all
+
+  galaxy_tags: [aix]
+dependencies: []

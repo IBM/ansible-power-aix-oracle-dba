@@ -1,0 +1,44 @@
+# This playbook is used to configure dataguard for 19c.
+# Before executing this playbook, please refer the documentation inside the docs directory.
+#
+# - hosts: all_nodes                     # Provide the name of the target lpar registered in ansible inventory.
+#  remote_user: oracle                     # This needs to be run by "oracle" user.
+#  gather_facts: False
+#  vars_files:
+#      - vars/dataguard/dataguard_vars.yml  # update all the required variables
+#      - vars/vault.yml       # update the passwords
+
+
+- name: Configure Data Guard for 19c
+  hosts: all
+  remote_user: "{{ db_oracle_user }}"
+  gather_facts: false
+  vars_files:
+    - vars/dataguard/dataguard_vars.yml
+    - vars/vault.yml
+
+  pre_tasks:
+    - name: Validate user input - only 'maximum_performance' is allowed
+      ansible.builtin.assert:
+        that:
+          - dataguard_protection_mode == 'maximum_performance'
+        fail_msg: "Invalid protection mode '{{ dataguard_protection_mode }}'. Only 'maximum_performance' is allowed in this release."
+      delegate_to: localhost
+      run_once: true
+      tags: always
+
+  roles:
+    - role: dataguard_precheck
+      tags: dataguard_precheck
+
+    - role: dataguard_primary_config
+      tags: dataguard_primary_config
+
+    - role: dataguard_standby_config
+      tags: dataguard_standby_config
+
+    - role: dataguard_create_standby
+      tags: dataguard_create_standby
+
+    - role: dataguard_post_sync_check
+      tags: dataguard_post_sync_check

@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# Set environment variables
+export ORACLE_SID={{ databases[database_name].db_sid }}
+export ORACLE_HOME={{ databases[database_name].oracle_db_home }}
+export PATH={{ databases[database_name].oracle_db_home }}/bin:$PATH
+
+# Determine DB role
+DB_ROLE=$(
+sqlplus -s / as sysdba <<EOF
+SET HEADING OFF FEEDBACK OFF VERIFY OFF ECHO OFF
+SELECT DATABASE_ROLE FROM V\$DATABASE;
+EXIT;
+EOF
+)
+
+DB_ROLE=$(echo "$DB_ROLE" | tr -d '[:space:]')
+
+# Based on role, prepare the correct query
+case "$DB_ROLE" in
+  PRIMARY)
+    QUERY="SELECT SEQUENCE# FROM V\$LOG WHERE STATUS='CURRENT';"
+    SEQ_LABEL="PRIMARY_SEQ"
+    ;;
+  "PHYSICALSTANDBY")
+    QUERY="SELECT SEQUENCE# FROM V\$MANAGED_STANDBY WHERE PROCESS='MRP0';"
+    SEQ_LABEL="STANDBY_SEQ"
+    ;;
+  *)
+    echo "ERROR: Unknown or unsupported database role: $DB_ROLE"
+    exit 1
+    ;;
+esac
+
+# Run SQL Query
+SEQUENCE_NUM=$(sqlplus -s / as sysdba <<EOF
+SET PAGESIZE 0 FEEDBACK OFF VERIFY OFF HEADING OFF ECHO OFF;
+$QUERY
+EXIT;
+EOF
+)
+
+# Capture SQL*Plus exit status
+sqlplus_exit_code=$?
+
+# Check if the SQL*Plus command was successful
+if [[ $sqlplus_exit_code -ne 0 ]]; then
+    echo "ERROR: SQL*Plus command failed with exit status $sqlplus_exit_code. Exiting."
+    exit 1
+fi
+
+# Print Sequence Number with label
+echo "$SEQ_LABEL: $SEQUENCE_NUM"

@@ -1,0 +1,187 @@
+#!/bin/bash
+
+# Extract ORACLE_SID and ORACLE_HOME dynamically
+export ORACLE_SID=$(ps -ef | grep pmon | grep ASM | awk '{match($NF, /\+ASM[0-9]*/); print substr($NF, RSTART, RLENGTH)}')
+export ORACLE_HOME=$(awk -F: -v sid="$ORACLE_SID" '$1 == sid {print $2}' /etc/oratab)
+export PATH=$ORACLE_HOME/bin:$PATH
+
+MASTER_LOG="{{ done_dir }}/dataguard_precheck.log"
+FAILURE_LOG="{{ done_dir }}/failure_check.log"
+
+# Ensure log files are empty before running
+> "$MASTER_LOG"
+> "$FAILURE_LOG"
+
+# Input variables
+file_dest="{{ databases[database_name].file_dest }}"
+online_log_dest1="{{ databases[database_name].online_log_dest1 }}"
+db_recovery_file_dest="{{ databases[database_name].db_recovery_file_dest }}"
+db_size="{{ db_size }}"  # Required database size
+grid_asm_flag="{{ grid_asm_flag | lower }}"  # ASM or JFS2 flag
+WITH_BACKUP="{{ with_backup | lower }}"  # Backup-Based or RMAN ACTIVE Duplicate
+standby_db_unique_name="{{ databases.standby.db_unique_name }}"
+db_oracle_user="{{ db_oracle_user }}"
+db_oinstall_group="{{ db_oinstall_group }}"
+
+check_existence() {
+    local dg="$1"
+    local dg_name="'${dg#+}'"  # Remove leading '+' if present
+
+    echo "Checking existence of Disk Group or Filesystem: $dg" | tee -a "$MASTER_LOG"
+
+    if [[ "$grid_asm_flag" == "true" ]]; then
+        # ASM Disk Group Existence Check
+
+sqlplus -s / as sysasm <<SQL | tee "$MASTER_LOG"
+SET HEADING OFF
+SET FEEDBACK OFF
+SET PAGESIZE 0
+SET LINESIZE 1000
+SET TRIMOUT ON
+SET TRIMSPOOL ON
+
+-- Precheck 1: Diskgroup existence
+SELECT 'disk_count:' || COUNT(*) FROM v\$asm_diskgroup WHERE name=UPPER($dg_name);
+EXIT;
+SQL
+        SQL_STATUS=$?
+        if [[ "$SQL_STATUS" -ne 0 ]]; then
+            echo "ERROR: SQL execution failed!" | tee -a "$FAILURE_LOG"
+            exit 1
+        fi
+
+        # Extracting values using grep and awk
+        disk_count=$(grep "disk_count:" "$MASTER_LOG" | awk -F ':' '{print $2}')
+
+        if [[ -z "$disk_count" || "$disk_count" -eq 0 ]]; then
+            echo "Error: Disk group $dg does not exist or SQL command failed." | tee -a "$FAILURE_LOG"
+        else
+           echo "Disk group $dg exists." | tee -a "$MASTER_LOG"
+        fi
+    else
+        # JFS2 File System Existence Check
+        if df -g "$dg" &>/dev/null; then
+            echo "Filesystem $dg exists." | tee -a "$MASTER_LOG"
+        else
+            echo "Error: Filesystem $dg does not exist." | tee -a "$FAILURE_LOG"
+        fi
+    fi
+}
+
+
+check_size() {
+    local dg="$1"
+    local dg_name="'${dg#+}'"
+
+    echo "Checking available space for $dg..." | tee -a "$MASTER_LOG"
+
+    if [[ "$grid_asm_flag" == "true" ]]; then
+        # ASM Disk Group Available Space Check
+sqlplus -s / as sysasm <<SQL | tee "$MASTER_LOG"
+SET HEADING OFF
+SET FEEDBACK OFF
+SET PAGESIZE 0
+SET LINESIZE 1000
+SET TRIMOUT ON
+SET TRIMSPOOL ON
+
+-- Precheck 1: Diskgroup existence
+SELECT 'available_space:' || ROUND(USABLE_FILE_MB / 1024, 2) FROM v\$asm_diskgroup WHERE name=UPPER($dg_name);
+EXIT;
+SQL
+
+        SQL_STATUS=$?
+        if [[ "$SQL_STATUS" -ne 0 ]]; then
+            echo "ERROR: SQL execution failed!" | tee -a "$FAILURE_LOG"
+            exit 1
+        fi
+
+        # Extracting values from SQL output
+        available_space=$(grep "available_space:" "$MASTER_LOG" | awk -F ':' '{print $2}')
+
+        if [[ -z "$available_space" ]]; then
+            echo "Error: Failed to retrieve available space from ASM or SQL command failed." | tee -a "$FAILURE_LOG"
+        fi
+
+        available_space=$(echo "$available_space" | tr -d '[:space:]')
+    else
+        # JFS2 File System Available Space Check
+        available_space=$(df -g "$dg" | awk 'NR==2 {print $3}')
+    fi
+
+    echo "Available space in $dg: ${available_space}G" | tee -a "$MASTER_LOG"
+    echo "Required space: ${db_size}G" | tee -a "$MASTER_LOG"
+
+
+    db_size_int=$(echo "$db_size" | awk -F. '{print $1}')
+
+    if [[ "${available_space%.*}" -ge "${db_size%.*}" ]]; then
+        echo "Sufficient space available in $dg." | tee -a "$MASTER_LOG"
+    else
+        echo "Error: Not enough space available in $dg. Required: ${db_size}G, Available: ${available_space}G" | tee -a "$FAILURE_LOG"
+    fi
+}
+
+create_directories() {
+    local base_dir=$1
+    local db_unique_name=$2
+    local user=$3
+    local group=$4
+
+    echo "Creating directories for JFS2..." | tee -a "$MASTER_LOG"
+    mkdir -p "${base_dir}/${db_unique_name}"/{controlfiles,datafiles,redologs}
+    chown -R "${user}:${group}" "${base_dir}/${db_unique_name}"
+    echo "Directories created and ownership set." | tee -a "$MASTER_LOG"
+}
+
+# Validate existence for all three
+check_existence "$file_dest"
+check_existence "$online_log_dest1"
+check_existence "$db_recovery_file_dest"
+
+# Validate available space only for "$file_dest"
+check_size "$file_dest"
+
+# Create directories for JFS2 if not ASM [ignore release 1]
+#if [[ "$grid_asm_flag" == "false" ]]; then
+#    create_directories "$file_dest" "$standby_db_unique_name" "$db_oracle_user" "$db_oinstall_group"
+#fi
+
+# Define port range
+if [[ "$WITH_BACKUP" == "false" ]]; then
+  START_PORT=1521
+  END_PORT=1600
+  
+  # Find the first available port
+  PORT=""
+  typeset -i P=$START_PORT
+  
+  while [ $P -le $END_PORT ]; do
+      if ! netstat -an | awk '/LISTEN/ {print $4}' | grep -E ".*\.$P$" >/dev/null; then
+          PORT=$P
+          echo "Available port: $PORT" | tee -a "$MASTER_LOG"
+          break
+      fi
+      P=$((P + 1))  # Increment
+  done
+  
+  # If no port was found, log the failure and exit
+  if [[ -z "$PORT" ]]; then
+      echo "No available ports found in range 1521-1600" | tee -a "$FAILURE_LOG"
+      exit 1
+  fi
+fi
+
+echo "All checks completed successfully." | tee -a "$MASTER_LOG"
+
+# Check for failures and exit accordingly
+if [[ -s "$FAILURE_LOG" ]]; then
+    cat "$FAILURE_LOG"
+    rm -f "$FAILURE_LOG"
+    exit 1
+fi
+
+echo "Pre-checks passed for standby database!" | tee -a "$MASTER_LOG"
+touch "{{ done_dir }}/drprecheck.success"
+rm -f "$FAILURE_LOG"
+exit 0
