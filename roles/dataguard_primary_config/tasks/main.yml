@@ -1,0 +1,113 @@
+---
+# Copyright (c) IBM Corporation 2025
+# tasks file for dataguard_primary_config
+
+- name: Run initialization tasks
+  ansible.builtin.include_tasks: ../../dataguard_precheck/tasks/init.yml
+  when: not init_done is defined
+
+- name: Checking if Dataguard setup was already done
+  ansible.builtin.stat:
+    path: "{{ done_dir }}/dataguard.success"
+  register: dataguarddone
+  when: inventory_hostname == primary_host
+
+- name: Exit if Dataguard setup was already done
+  ansible.builtin.fail:
+    msg: "Dataguard setup already done. Exiting."
+  when:
+    - dataguarddone.stat.exists
+    - inventory_hostname == primary_host
+  run_once: true
+
+- name: End play if Dataguard setup Task was done
+  ansible.builtin.meta: end_play
+  when: dataguarddone.stat.exists
+  run_once: true
+
+- name: Checking if Primary pre-configure was already done
+  ansible.builtin.stat:
+    path: "{{ done_dir }}/dataguard_primary_config.success"
+  register: primarypreconfigdone
+  when: inventory_hostname == primary_host
+
+- name: Assign available port from stnadby to primary for RMAN Duplicate
+  when: not with_backup | bool
+  block:
+    - name: Fetch available_port from standby
+      ansible.builtin.slurp:
+        src: "{{ done_dir }}/dataguard_precheck.log"
+      register: available_port_slurp
+      when: inventory_hostname == standby_host
+
+    - name: Set available_port as fact on standby
+      ansible.builtin.set_fact:
+        available_port: "{{ (available_port_slurp['content'] | b64decode | regex_search('Available port:\\s*(\\d+)', '\\1'))[0] }}"
+      when:
+        - inventory_hostname == standby_host
+        - available_port_slurp['content'] is defined
+        - "'Available port:' in (available_port_slurp['content'] | b64decode)"
+
+    - name: Share available_port from standby to primary
+      ansible.builtin.set_fact:
+        available_port: "{{ hostvars[standby_host].available_port }}"
+      when:
+        - inventory_hostname == primary_host
+        - hostvars[standby_host].available_port is defined
+
+- name: Run Dataguard Pre-config tasks for primary
+  when:
+    - inventory_hostname == primary_host
+    - not primarypreconfigdone.stat.exists
+  block:
+    - name: Copy Dataguard Pre-config script for primary
+      ansible.builtin.template:
+        src: dataguard_primary_config.sh.j2
+        dest: "{{ scripts_dir }}/dataguard_primary_config.sh"
+        mode: '0755'
+      vars:
+        database_name: "primary"
+      when: with_backup | bool
+
+    - name: Copy Dataguard Pre-config script for primary with available_port
+      ansible.builtin.template:
+        src: dataguard_primary_config.sh.j2
+        dest: "{{ scripts_dir }}/dataguard_primary_config.sh"
+        mode: '0755'
+      vars:
+        database_name: "primary"
+        available_port: "{{ available_port }}"
+      when: not with_backup | bool
+
+    - name: Execute Dataguard Pre-config script on primary
+      ansible.builtin.command: "{{ scripts_dir }}/dataguard_primary_config.sh"
+      register: precheck_output
+      failed_when: precheck_output.rc != 0
+      changed_when: false
+
+    - name: Debug Pre-config Output for primary database
+      ansible.builtin.debug:
+        msg: "{{ precheck_output.stdout_lines }}"
+
+- name: Fetch password and PFILE file from primary
+  ansible.builtin.fetch:
+    src: "{{ item.src }}"
+    dest: "/tmp/{{ item.dest }}"   # Files are saved on the Ansible control node
+    flat: true
+  loop:
+    - { src: "{{ scripts_dir }}/primary.pfile", dest: "standby.pfile" }
+    - { src: "{{ databases.primary.oracle_db_home }}/dbs/orapw{{ databases.primary.db_sid }}", dest: "orapw{{ databases.standby.db_sid }}" }
+  when: inventory_hostname == primary_host
+
+- name: Copy fetched files from control node to standby
+  delegate_to: "{{ standby_host }}"
+  run_once: true
+  ansible.builtin.copy:
+    src: "/tmp/{{ item.src }}"
+    dest: "{{ databases.standby.oracle_db_home }}/dbs/{{ item.src }}"
+    owner: "{{ db_oracle_user }}"
+    group: "{{ db_oinstall_group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { src: "orapw{{ databases.standby.db_sid }}", mode: "0640" }
+    - { src: "standby.pfile", mode: "0644" }

@@ -1,0 +1,14 @@
+---
+# defaults file for dataguard_standby_config
+
+scripts_dir: [ "{{ work_dir }}", "scripts" ]
+done_dir: [ "{{ work_dir }}", "done" ]
+
+prenfsconfig:
+ lpp_src:
+    # !!! update !!!
+  subdir: ''
+
+
+with_backup: false
+listener_port: 1521

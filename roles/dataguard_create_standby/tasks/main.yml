@@ -1,0 +1,187 @@
+---
+# Copyright (c) IBM Corporation 2025
+# tasks file for dataguard_create_standby
+
+- name: Run initialization tasks
+  ansible.builtin.include_tasks: ../../dataguard_precheck/tasks/init.yml
+  when: not init_done is defined
+
+- name: Check if Dataguard setup was already done
+  block:
+    - name: Checking if Dataguard setup was already done
+      ansible.builtin.stat:
+        path: "{{ done_dir }}/dataguard.success"
+      register: dataguarddone
+      when: inventory_hostname == primary_host
+
+    - name: Exit if Dataguard setup was already done
+      ansible.builtin.fail:
+        msg: "Dataguard setup already done. Exiting."
+      when:
+        - dataguarddone.stat.exists
+        - inventory_hostname == primary_host
+      run_once: true
+
+    - name: End play if Dataguard setup Task was done
+      ansible.builtin.meta: end_play
+      when: dataguarddone.stat.exists
+      run_once: true
+
+    - name: Checking if Dataguard restore was already done
+      ansible.builtin.stat:
+        path: "{{ done_dir }}/standby_restore.success"
+      register: restoredone
+      when: inventory_hostname == standby_host
+
+- name: Fetch DBID and control file location from primary database
+  when:
+    - inventory_hostname == primary_host
+    - restoredone.stat.exists is not defined or not restoredone.stat.exists
+  block:
+    - name: Copy DBID and control file location script from primary database
+      ansible.builtin.template:
+        src: files/primary_dbid.sh
+        dest: "{{ scripts_dir }}/primary_dbid.sh"
+        mode: '0755'
+
+    - name: Execute DBID and control file location script on primary database
+      ansible.builtin.command: "{{ scripts_dir }}/primary_dbid.sh"
+      register: precheck_output
+      failed_when: precheck_output.rc != 0
+      changed_when: false
+
+    - name: Fetch DBID file content
+      ansible.builtin.slurp:
+        src: "{{ scripts_dir }}/dbid.txt"
+      register: dbid_content
+
+    - name: Set DBID as facts
+      ansible.builtin.set_fact:
+        standby_dbid: "{{ dbid_content['content'] | b64decode | trim }}"
+      when:
+        - dbid_content['content'] is defined
+
+- name: Fetch DBID facts from primary to standby
+  ansible.builtin.set_fact:
+    standby_dbid: "{{ hostvars[primary_host].standby_dbid }}"
+  when:
+    - inventory_hostname == standby_host
+    - hostvars[primary_host].standby_dbid is defined
+    - restoredone.stat.exists is not defined or not restoredone.stat.exists
+
+- name: Run Dataguard Restore Script on standby
+  when:
+    - inventory_hostname == standby_host
+    - not restoredone.stat.exists
+  block:
+    - name: Copy RMAN restore script for standby
+      ansible.builtin.template:
+        src: dataguard_restore_standby_db.sh.j2
+        dest: "{{ scripts_dir }}/dataguard_restore_standby_db.sh"
+        mode: '0755'
+      vars:
+        database_name: "standby"
+        dbid: "{{ standby_dbid }}"
+
+    - name: Execute restore script for standby
+      ansible.builtin.command: "{{ scripts_dir }}/dataguard_restore_standby_db.sh '{{ default_dbpass }}'"
+      register: precheck_output
+      failed_when: precheck_output.rc != 0
+      changed_when: false
+
+    - name: Debug restore Output for standby database
+      ansible.builtin.debug:
+        msg: "{{ precheck_output.stdout_lines }}"
+
+- name: Validate Dataguard restore Status
+  block:
+    - name: Checking if Dataguard restore was already done
+      ansible.builtin.stat:
+        path: "{{ done_dir }}/standby_restore.success"
+      register: restoredone
+      when: inventory_hostname == standby_host
+
+    - name: Set fact for primary if restore was already done on standby
+      ansible.builtin.set_fact:
+        restore_done_primary: "{{ restoredone.stat.exists }}"
+      when: inventory_hostname == standby_host
+
+    - name: Fetch post restore status from standby to primary
+      ansible.builtin.set_fact:
+        restore_done_primary: "{{ hostvars[standby_host]['restore_done_primary'] | default(false) }}"
+      when: inventory_hostname == primary_host
+
+    - name: Checking if Dataguard post restore was already done
+      ansible.builtin.stat:
+        path: "{{ done_dir }}/post_restore.success"
+      register: postrestoredone
+      when: inventory_hostname == standby_host
+
+- name: Run Restore Post-Processing Script on standby
+  when:
+    - inventory_hostname == standby_host
+    - restoredone.stat.exists
+    - not postrestoredone.stat.exists
+  block:
+    - name: Copy RMAN Restore Post-Processing Script
+      ansible.builtin.template:
+        src: files/standby_postcheck.sh
+        dest: "{{ scripts_dir }}/standby_postcheck.sh"
+        mode: '0755'
+      vars:
+        database_name: "standby"
+
+    - name: Run RMAN Restore Post-Processing Script
+      ansible.builtin.command: "{{ scripts_dir }}/standby_postcheck.sh"
+      register: script_output
+      changed_when: false
+
+    - name: Display RMAN Restore Post-Processing Script Output
+      ansible.builtin.debug:
+        msg: "{{ script_output.stdout_lines }}"
+
+- name: Validate Post-Processing Status
+  block:
+    - name: Checking if Dataguard post restore was already done on standby
+      ansible.builtin.stat:
+        path: "{{ done_dir }}/post_restore.success"
+      register: postrestoredone
+      when: inventory_hostname == standby_host
+
+    - name: Set fact for post restore status
+      ansible.builtin.set_fact:
+        postrestore_status: "{{ postrestoredone.stat.exists | default(false) }}"
+      when: inventory_hostname == standby_host
+
+    - name: Retrieve post restore status from standby
+      ansible.builtin.set_fact:
+        postrestore_status: "{{ hostvars[standby_host].postrestore_status | default(false) }}"
+      when: inventory_hostname == primary_host
+
+    - name: Set fact for condition evaluation
+      ansible.builtin.set_fact:
+        postcheck_required: "{{ postrestore_status | bool }}"
+
+- name: Run Protection Mode Post-Processing on primary
+  when:
+    - inventory_hostname == primary_host
+    - restore_done_primary
+    - not dataguarddone.stat.exists
+    - postcheck_required
+  block:
+    - name: Copy Protection Mode Post-Processing Script on primary
+      ansible.builtin.template:
+        src: files/primary_postcheck.sh
+        dest: "{{ scripts_dir }}/primary_postcheck.sh"
+        mode: '0755'
+      vars:
+        database_name: "primary"
+
+    - name: Execute Protection Mode Post-Processing Script on primary
+      ansible.builtin.command: "{{ scripts_dir }}/primary_postcheck.sh"
+      register: script_output
+      changed_when: false
+
+    - name: Display Protection Mode Post-Processing Output
+      ansible.builtin.debug:
+        msg: "{{ script_output.stdout_lines }}"

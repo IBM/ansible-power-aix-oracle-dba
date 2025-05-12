@@ -1,0 +1,99 @@
+#!/bin/bash
+
+export ORACLE_SID={{ databases[database_name].db_sid }}
+export ORACLE_HOME={{ databases[database_name].oracle_db_home }}
+export PATH={{ databases[database_name].oracle_db_home }}/bin:$PATH
+diskgroup={{ databases[database_name].file_dest }}
+diskgroup=${diskgroup#+}
+
+MASTER_LOG="{{ done_dir }}/dataguard_precheck.log"
+FAILURE_LOG="{{ done_dir }}/failure_check.log"
+
+# Ensure log files are empty before running
+> "$MASTER_LOG"
+> "$FAILURE_LOG"
+
+# Run all queries in a single SQL*Plus session
+sqlplus -s / as sysdba <<SQL | tee "$MASTER_LOG"
+SET HEADING OFF
+SET FEEDBACK OFF
+SET PAGESIZE 0
+SET LINESIZE 1000
+SET TRIMOUT ON
+SET TRIMSPOOL ON
+
+-- Precheck 1: ARCHIVELOG mode and DB size
+SELECT 'ARCHIVELOG_MODE:' || log_mode FROM v\$database;
+SELECT 'DATABASE_SIZE:' || ROUND(SUM(bytes) * 1.025 / 1024 / 1024 / 1024, 2) FROM dba_segments;
+
+-- Precheck 2: Fetch ASM disk group if applicable
+SELECT 'DISK_COUNT:' || COUNT(*) FROM v\$asm_diskgroup WHERE STATE='CONNECTED' AND NAME='${diskgroup}';
+
+-- Precheck 3: Redo log sizes
+SELECT 'REDO_SIZES:' || LISTAGG(bytes, ',') WITHIN GROUP (ORDER BY group#) FROM v\$log;
+
+-- Precheck 4: Redo logs multiplexing
+SELECT 'MULTIPLEX_CHECK:' || COUNT(*) FROM v\$logfile lf JOIN v\$log l ON lf.group# = l.group# GROUP BY lf.group# HAVING COUNT(*) < 2;
+
+-- Precheck 4: Dataguard already exists
+SELECT 'DG_EXISTS:' || LISTAGG(DB_UNIQUE_NAME,',') WITHIN GROUP (ORDER BY 1) AS LIST FROM v\$dataguard_config WHERE db_unique_name <> (SELECT db_unique_name FROM v\$database);
+
+EXIT;
+SQL
+
+SQL_STATUS=$?
+if [[ "$SQL_STATUS" -ne 0 ]]; then
+    echo "ERROR: SQL execution failed!" | tee -a "$FAILURE_LOG"
+    exit 1
+fi
+
+# Extracting values using grep and awk
+ARCHIVELOG_MODE=$(grep "ARCHIVELOG_MODE:" "$MASTER_LOG" | awk -F ':' '{print $2}')
+DATABASE_SIZE=$(grep "DATABASE_SIZE:" "$MASTER_LOG" | awk -F ':' '{print $2}')
+DISK_COUNT=$(grep "DISK_COUNT:" "$MASTER_LOG" | awk -F ':' '{print $2}')
+REDO_SIZES=$(grep "REDO_SIZES:" "$MASTER_LOG" | awk -F ':' '{print $2}')
+UNIQUE_SIZES=$(echo "$REDO_SIZES" | tr ',' '\n' | sort -u | uniq | wc -l | awk '{print $1}')
+MULTIPLEX_COUNT=$(grep "MULTIPLEX_CHECK:" "$MASTER_LOG" | awk -F ':' '{print $2}' | awk '$1 < 2' | wc -l)
+DG_EXISTS=$(grep "DG_EXISTS:" "$MASTER_LOG" | awk -F ':' '{print $2}')
+
+# 1. Validate ARCHIVELOG mode
+if [[ "$ARCHIVELOG_MODE" != "ARCHIVELOG" ]]; then
+    echo "ERROR: Database is NOT in ARCHIVELOG mode!" | tee -a "$FAILURE_LOG"
+fi
+
+# 2. Validate Disk in primary (ASM or JFS2 check)
+if [[ "$DISK_COUNT" -eq 0 ]]; then
+    if [[ -d "{{ databases[database_name].file_dest }}" ]]; then
+        echo "INFO: File destination exists." | tee -a "$MASTER_LOG"
+    else
+        echo "ERROR: Primary Database file destination does not exist." | tee -a "$FAILURE_LOG"
+    fi
+fi
+
+# 3. Validate redo log sizes are identical
+if [[ "$UNIQUE_SIZES" -gt 1 ]]; then
+    echo "ERROR: Redo log sizes are not identical!" | tee -a "$FAILURE_LOG"
+fi
+
+# 4. Validate redo log multiplexing
+if [[ "$MULTIPLEX_COUNT" -gt 0 ]] && [[ {{ ignore_precheck }} == "false" ]]; then
+    echo "ERROR: Redo logs are NOT multiplexed!" | tee -a "$FAILURE_LOG"
+fi
+
+# 5. Validate dataguard do not exists
+if [[ "$DG_EXISTS" == {{ databases.standby.db_unique_name }} ]]; then
+    echo "ERROR: Dataguard setup already exists!" | tee -a "$FAILURE_LOG"
+    exit 1
+fi
+
+# 6. Check for failures and exit accordingly
+if [[ -s "$FAILURE_LOG" ]]; then
+    cat "$FAILURE_LOG"
+    rm -f "$FAILURE_LOG"
+    exit 1
+fi
+
+echo "All pre-checks passed for primary database successfully!" | tee -a "$MASTER_LOG"
+rm -f "$FAILURE_LOG"
+touch "{{ done_dir }}/drprecheck.success"
+exit 0

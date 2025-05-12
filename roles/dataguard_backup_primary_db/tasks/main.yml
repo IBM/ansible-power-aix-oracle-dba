@@ -1,0 +1,42 @@
+---
+# Copyright (c) IBM Corporation 2025
+# tasks file for dataguard_backup_primary_db
+
+- name: Run initialization tasks
+  ansible.builtin.include_tasks: ../../dataguard_precheck/tasks/init.yml
+  when: not init_done is defined
+
+- name: Checking if RMAN backup was already taken
+  ansible.builtin.stat:
+    path: "{{ done_dir }}/rman.success"
+  register: rmandone
+  when: inventory_hostname == primary_host
+
+- name: Perform RMAN backup tasks
+  when:
+    - inventory_hostname == primary_host
+    - not rmandone.stat.exists | default(false)
+  block:
+    - name: Create RMAN backup dir
+      ansible.builtin.file:
+        path: "{{ backup_location }}"
+        state: "directory"
+        mode: '0777'
+
+    - name: Copy RMAN backup script for primary
+      ansible.builtin.template:
+        src: dataguard_backup_primary_db.sh.j2
+        dest: "{{ scripts_dir }}/dataguard_backup_primary_db.sh"
+        mode: '0755'
+      vars:
+        database_name: "primary"
+
+    - name: Execute RMAN backup script on primary
+      ansible.builtin.command:
+        cmd: "{{ scripts_dir }}/dataguard_backup_primary_db.sh"
+        creates: "{{ done_dir }}/rman.success"
+      register: precheck_output
+
+    - name: Debug Output for RMAN backup
+      ansible.builtin.debug:
+        msg: "{{ precheck_output.stdout_lines }}"

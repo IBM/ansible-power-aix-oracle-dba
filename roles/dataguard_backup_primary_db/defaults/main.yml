@@ -1,0 +1,13 @@
+---
+# defaults file for dataguard_backup_primary_db
+
+scripts_dir: ["{{ work_dir }}", "scripts"]
+done_dir: ["{{ work_dir }}", "done"]
+
+prenfsconfig:
+ lpp_src:
+    # !!! update !!!
+  subdir: ''
+
+
+primary_cpu_core: 4

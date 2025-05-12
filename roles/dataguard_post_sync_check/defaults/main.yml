@@ -1,0 +1,12 @@
+---
+# defaults file for sync_gap
+
+scripts_dir: ["{{ work_dir }}", "scripts"]
+done_dir: ["{{ work_dir }}", "done"]
+
+prenfsconfig:
+ lpp_src:
+    # !!! update !!!
+  subdir: ''
+
+

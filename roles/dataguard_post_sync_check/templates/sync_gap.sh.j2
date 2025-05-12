@@ -1,0 +1,131 @@
+#!/bin/bash
+
+# Set environment variables
+export ORACLE_SID={{ databases[database_name].db_sid }}
+export ORACLE_HOME={{ databases[database_name].oracle_db_home }}
+export PATH={{ databases[database_name].oracle_db_home }}/bin:$PATH
+
+MASTER_LOG="{{ done_dir }}/dg_sync.log"
+FAILURE_LOG="{{ done_dir }}/dg_sync_failure.log"
+
+# Ensure log files are empty before running
+> "$MASTER_LOG"
+> "$FAILURE_LOG"
+
+# Determine DB role
+DB_ROLE=$(
+sqlplus -s / as sysdba <<EOF
+SET HEADING OFF FEEDBACK OFF ECHO OFF
+SELECT DATABASE_ROLE FROM V\$DATABASE;
+EXIT;
+EOF
+)
+
+DB_ROLE=$(echo "$DB_ROLE" | tr -d '[:space:]')
+
+if [[ "$DB_ROLE" == "PRIMARY" ]]; then
+
+    sqlplus -s / as sysdba <<SQL | tee -a "$MASTER_LOG"
+SET HEADING OFF
+SET FEEDBACK OFF
+SET PAGESIZE 0
+SET LINESIZE 1000
+SET TRIMOUT ON
+SET TRIMSPOOL ON
+
+alter system set log_archive_dest_state_2='DEFER' scope=both sid='*';
+alter system set log_archive_dest_state_2='ENABLE' scope=both sid='*';
+alter system switch logfile;
+alter system switch logfile;
+alter system switch logfile;
+SELECT 'PRIMARY_SEQ:' || SEQUENCE# FROM V\$LOG WHERE STATUS='CURRENT';
+SELECT 'STATUS:' || STATUS || ',ERROR:' || ERROR FROM V\$ARCHIVE_DEST WHERE DEST_ID=2;
+EXIT;
+SQL
+
+    PRIMARY_SEQ=$(grep "PRIMARY_SEQ:" "$MASTER_LOG" | awk -F '[:,]' '{print $2}')
+    STATUS=$(grep "STATUS:" "$MASTER_LOG" | awk -F '[:,]' '{print $2}')
+    ERROR=$(grep "ERROR:" "$MASTER_LOG" | awk -F '[:,]' '{print $4}')
+
+    # Validate Data Guard Synchronization
+    if [[ "$STATUS" == "VALID" && -z "$ERROR" ]]; then
+        echo "Primary database sync status is valid" | tee -a "$MASTER_LOG"
+        rm -f "$FAILURE_LOG"
+        exit 0
+    else
+        echo "ERROR: Data Guard out of sync or error detected!" | tee -a "$FAILURE_LOG"
+        echo "Status: $STATUS" | tee -a "$FAILURE_LOG"
+        echo "Error: $ERROR" | tee -a "$FAILURE_LOG"
+        exit 1
+    fi
+
+elif [[ "$DB_ROLE" == "PHYSICALSTANDBY" ]]; then
+
+    sqlplus -s / as sysdba <<SQL | tee -a "$MASTER_LOG"
+SET HEADING OFF
+SET FEEDBACK OFF
+SET PAGESIZE 0
+SET LINESIZE 1000
+SET TRIMOUT ON
+SET TRIMSPOOL ON
+
+SELECT 'MRP_RUNNING:' || COUNT(*) FROM V\$MANAGED_STANDBY WHERE PROCESS='MRP0';
+EXIT;
+SQL
+
+    MRP_RUNNING=$(grep "MRP_RUNNING:" "$MASTER_LOG" | awk -F '[:,]' '{print $2}')
+
+    # Check if MRP process is running, if not, enable it
+    if [[ "$MRP_RUNNING" -eq 0 ]]; then
+        echo "MRP0 process not running. Enabling managed recovery..." | tee -a "$MASTER_LOG"
+        sqlplus -s / as sysdba <<SQL | tee -a "$MASTER_LOG"
+SET HEADING OFF
+SET FEEDBACK OFF
+SET PAGESIZE 0
+SET LINESIZE 1000
+SET TRIMOUT ON
+SET TRIMSPOOL ON
+
+ALTER DATABASE RECOVER MANAGED STANDBY DATABASE DISCONNECT FROM SESSION;
+SELECT 'MRP_RUNNING:' || COUNT(*) FROM V\$MANAGED_STANDBY WHERE PROCESS='MRP0';
+EXIT;
+SQL
+        # Recheck if MRP0 started
+        MRP_RUNNING=$(grep "MRP_RUNNING:" "$MASTER_LOG" | awk -F '[:,]' '{print $2}')
+        if [[ "$MRP_RUNNING" -eq 0 ]]; then
+            echo "ERROR: MRP0 process failed to start!" | tee -a "$FAILURE_LOG"
+            exit 1
+        fi
+    fi
+
+    # Wait for standby to catch up
+    echo "Waiting for 180 seconds to allow standby to sync..." | tee -a "$MASTER_LOG"
+    sleep 180
+
+    # Capture latest sequence number on standby
+    sqlplus -s / as sysdba <<SQL | tee -a "$MASTER_LOG"
+SET HEADING OFF
+SET FEEDBACK OFF
+SET PAGESIZE 0
+SET LINESIZE 1000
+SET TRIMOUT ON
+SET TRIMSPOOL ON
+
+SELECT 'STANDBY_SEQ:' || SEQUENCE# FROM V\$MANAGED_STANDBY WHERE PROCESS='MRP0';
+EXIT;
+SQL
+
+    STANDBY_SEQ=$(grep "STANDBY_SEQ:" "$MASTER_LOG" | awk -F '[:,]' '{print $2}')
+else
+    echo "ERROR: Database ROLE should be PRIMAY or PHYSICAL STANDBY" | tee -a "$FAILURE_LOG"
+fi
+
+# Check for failures and exit accordingly
+if [[ -s "$FAILURE_LOG" ]]; then
+    cat "$FAILURE_LOG"
+    rm -f "$FAILURE_LOG"
+    exit 1
+fi
+
+rm -f "$FAILURE_LOG"
+exit 0

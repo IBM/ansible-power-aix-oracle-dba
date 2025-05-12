@@ -1,0 +1,94 @@
+# Sample 1. JFS2 RMAN Backup based 
+###############################################################################
+# This File contain all the Global Variables required to do the dataguard configuration for 19c database.
+# Please update the variables by reading the comments provided at the 
+# beginning of each section.
+# This variables file contain 4 sections:
+#      A - Common Variables.
+#      B - Primary and standby database details
+###############################################################################
+
+## Section A - Common Variables
+# primary_host:              Provide hostname for primary server
+# standby_host:              Provide hostname for standby server
+# db_oracle_user:            Provide the RDBMS software owner, ex: oracle.
+# grid_user:                 Provide the Grid software owner.
+# db_oinstall_group:         Provide the RDBMS software owner's primary group, ex: oinstall.
+# with_backup:               Specify true for Backup-Based (No Target Connection) from external RMAN backup. 
+#                            Specify false for Standby Duplication Using RMAN DUPLICATE...FROM ACTIVE DATABASE. Default value false .
+# backup_location:           Provide backup location available on primary and standby site having valid access for db_oracle_user.
+# sys_user:                  Provide the sys user name. Default value sys
+# grid_asm_flag:             Specify true if ASM is used for storage or false if not used. Default value true
+# ignore_precheck:           Provide true or false based on requirement to continue with warnings. Default value  false .
+# dataguard_protection_mode: Provide data protection modes out of three maximum_availability, maximum_performance, or maximum_protection.
+#                            default to maximum_performance. Phase 1 rollout is with maximum_performance mode only in this release.
+#
+#                                   |----------------------------------------|---------------------------------|
+#                                   |             Standby Mode	              |        Transport Process        |
+#                                   |----------------------------------------|---------------------------------|
+#                                   |         Maximum Performance            |        ASYNC    NOAFFIRM	      |
+#                                   |         Maximum Availability           |        SYNC     NOAFFIRM/AFFIRM |
+#                                   |         Maximum Protection             |        SYNC     AFFIRM          |
+#                                   |----------------------------------------|---------------------------------|
+
+
+# Section B - Primary and standby database details provide in each section respectively 
+
+# db_name:                         Provide database name 
+# db_sid:                          Provide SID name
+# db_unique_name:                  Provide Database Unique name must be different for both primary and standby
+# db_service_name:                 Provide Database Service name must be different for both primary and standby
+# oracle_db_home:                  Provide oracle software home location
+# oracle_db_base:                  Provide oracle base  location
+# grid_db_home:                    Provide grid software home location
+# file_dest:                       Provide the value of db_create_file_dest db parameter in primary and standby DB
+# online_log_dest1:                Provide the value of db_create_online_log_dest_1 parameter in standby DB
+# db_recovery_file_dest:           Provide the value of db_recovery_file_dest parameter in standby DB
+# db_recovery_file_dest_size:      Provide recovery destination size only for standby site
+# listener_port:                   Provide port# for both primary and standby database . Default listener_port 1521
+
+# Provide the ansible work directory on target system
+work_dir:   &work_dir "/tmp/ansible"
+
+# Section A - Update the Common Variables.
+
+primary_host: primary-db
+standby_host: standby-db
+db_oracle_user: oracle
+grid_user: grid
+db_oinstall_group: oinstall
+with_backup: true
+backup_location: /u01/backup/dbcl
+sys_user: sys
+ignore_precheck: true
+grid_asm_flag: false
+#In this release maximum_performance mode only.
+dataguard_protection_mode: maximum_performance
+
+# Section B - Primary and standby database details
+
+databases:  
+  primary:
+         db_name: dbcl
+         db_sid: dbcl
+         db_unique_name: dbcl
+         db_service_name: dbcl
+         oracle_db_home: /u01/product/19c/database
+         oracle_db_base: /u01/base
+         grid_db_home: /u01/grid/home
+         file_dest: /DB01/dbcl/datafiles                # the value of db_create_file_dest db parameter in primary DB
+         listener_port: 1521
+  standby:
+         db_name: dbcl
+         db_sid: dbcl
+         db_unique_name: dbcls
+         db_service_name: dbcls
+         oracle_db_home: /u01/product/19c/database
+         oracle_db_base: /u01/base
+         grid_db_home: /u01/grid/home
+         file_dest: /DB01/dbcl/datafiles                # the value of db_create_file_dest db parameter in standby DB , just file system in case of JFS2
+         online_log_dest1: /DB01/dbcl/redologs          # the value of db_create_online_log_dest_1 parameter in standby DB , just file system in case of JFS2
+         db_recovery_file_dest: /DB01                   # the value of db_recovery_file_dest parameter in standby DB , just file system in case of JFS2
+         controlfile_location: /DB01/dbcl/controlfiles           # the value of controlfile location in standby DB , just file system in case of JFS2
+         db_recovery_file_dest_size: 2G
+         listener_port: 1521

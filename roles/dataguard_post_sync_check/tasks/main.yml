@@ -1,0 +1,209 @@
+---
+# Copyright (c) IBM Corporation 2025
+# tasks file for dataguard_post_sync_check
+- name: Run initialization tasks
+  ansible.builtin.include_tasks: ../../dataguard_precheck/tasks/init.yml
+  when: not init_done is defined
+
+- name: Copy Data Guard sync check script to primary
+  ansible.builtin.template:
+    src: check_sync.sh.j2
+    dest: "{{ scripts_dir }}/check_sync.sh"
+    mode: '0755'
+  vars:
+    database_name: "primary"
+  when:
+    - inventory_hostname == primary_host
+
+- name: Copy Data Guard sync check script to standby
+  ansible.builtin.template:
+    src: check_sync.sh.j2
+    dest: "{{ scripts_dir }}/check_sync.sh"
+    mode: '0755'
+  vars:
+    database_name: "standby"
+  when:
+    - inventory_hostname == standby_host
+
+- name: Execute Data Guard sync check on Primary
+  ansible.builtin.command:
+    cmd: "{{ scripts_dir }}/check_sync.sh"
+  register: primary_seq
+  when: inventory_hostname == primary_host
+  changed_when: false
+
+- name: Execute Data Guard sync check on Standby
+  ansible.builtin.command:
+    cmd: "{{ scripts_dir }}/check_sync.sh"
+  register: standby_seq
+  when: inventory_hostname == standby_host
+  changed_when: false
+
+# Store Standby Sequence on Primary Host
+- name: Fetch Standby Sequence on Primary
+  ansible.builtin.set_fact:
+    standby_seq: "{{ hostvars[standby_host].standby_seq }}"
+  when: inventory_hostname == primary_host
+
+- name: Compare sequence numbers between primary and standby
+  ansible.builtin.set_fact:
+    is_synced: >-
+      {{
+        (primary_seq.stdout | regex_search('[0-9]+') | trim) ==
+        (standby_seq.stdout | regex_search('[0-9]+') | trim)
+      }}
+  when: inventory_hostname == primary_host
+  run_once: true
+
+- name: Display sequence numbers of primary and standby
+  ansible.builtin.debug:
+    msg:
+      - "Primary : {{ primary_seq.stdout }}"
+      - "Standby : {{ standby_seq.stdout }}"
+  when: inventory_hostname == primary_host
+  run_once: true
+
+- name: Display message if standby is in sync
+  ansible.builtin.debug:
+    msg: "Standby is in sync with Primary. Ending play gracefully."
+  when: is_synced | bool
+
+- name: End play if standby is in sync with primary
+  ansible.builtin.meta: end_play
+  when: is_synced | bool
+
+- name: Continue if standby is not in sync
+  ansible.builtin.debug:
+    msg: "Standby is not in sync with Primary. Proceeding with further actions."
+  run_once: true
+
+- name: Copy Data Guard sync gap script to primary
+  ansible.builtin.template:
+    src: sync_gap.sh.j2
+    dest: "{{ scripts_dir }}/sync_gap.sh"
+    mode: '0755'
+  vars:
+    database_name: "primary"
+  when:
+    - inventory_hostname == primary_host
+
+- name: Copy Data Guard sync gap script to standby
+  ansible.builtin.template:
+    src: sync_gap.sh.j2
+    dest: "{{ scripts_dir }}/sync_gap.sh"
+    mode: '0755'
+  vars:
+    database_name: "standby"
+  when:
+    - inventory_hostname == standby_host
+
+- name: Execute Data Guard sync gap on Primary
+  ansible.builtin.command:
+    cmd: "{{ scripts_dir }}/sync_gap.sh"
+  register: primary_output
+  failed_when: primary_output.rc != 0
+  changed_when: false
+  when: inventory_hostname == primary_host
+
+- name: Extract Primary Sequence Number
+  ansible.builtin.set_fact:
+    primary_seq: "{{ (primary_output.stdout | regex_search('PRIMARY_SEQ:\\s*(\\d+)', '\\1')) }}"
+  when:
+    - inventory_hostname == primary_host
+    - primary_output.stdout is defined
+
+- name: Debug Primary Sequence Number
+  ansible.builtin.debug:
+    msg: "{{ primary_output.stdout }}"
+  when:
+    - inventory_hostname == primary_host
+    - primary_output.stdout is defined
+
+- name: Execute Data Guard sync gap on Standby
+  ansible.builtin.command:
+    cmd: "{{ scripts_dir }}/sync_gap.sh"
+  register: standby_output
+  failed_when: standby_output.rc != 0
+  changed_when: false
+  when: inventory_hostname == standby_host
+
+- name: Extract Standby Sequence Number
+  ansible.builtin.set_fact:
+    standby_seq: "{{ (standby_output.stdout | regex_search('STANDBY_SEQ:\\s*(\\d+)', '\\1')) }}"
+  when:
+    - inventory_hostname == standby_host
+    - standby_output.stdout_lines is defined
+
+- name: Debug Standby Sequence Number
+  ansible.builtin.debug:
+    msg: "{{ standby_output.stdout }}"
+  when:
+    - inventory_hostname == standby_host
+    - standby_output.stdout_lines is defined
+
+# Store Standby Sequence on Primary Host
+- name: Fetch Standby Sequence on Primary
+  ansible.builtin.set_fact:
+    standby_seq: "{{ hostvars[standby_host].standby_seq }}"
+  when: inventory_hostname == primary_host
+
+- name: Debug Standby and primary Sequence Number
+  ansible.builtin.debug:
+    msg: "Primary:  {{ primary_seq }}, Standby: {{ standby_seq }}"
+  when:
+    - inventory_hostname == primary_host
+
+- name: Fail if Data Guard is out of sync
+  ansible.builtin.fail:
+    msg: "Data Guard is not in sync! Please check Manually ! Primary:  {{ primary_seq }}, Standby: {{ standby_seq }}"
+  when:
+    - inventory_hostname == primary_host
+    - primary_seq != standby_seq
+  run_once: true
+
+- name: Query Data Guard Sync Status on Standby
+  ansible.builtin.shell: |
+    export ORACLE_SID={{ databases.standby.db_sid }}
+    export ORACLE_HOME={{ databases.standby.oracle_db_home }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<EOF
+    SELECT ARCH.THREAD# "Thread", ARCH.SEQUENCE# "Last Sequence Received",
+           APPL.SEQUENCE# "Last Sequence Applied",
+           (ARCH.SEQUENCE# - APPL.SEQUENCE#) "Difference"
+    FROM
+      (SELECT THREAD#, SEQUENCE# FROM V\$ARCHIVED_LOG
+       WHERE (THREAD#, FIRST_TIME) IN
+       (SELECT THREAD#, MAX(FIRST_TIME) FROM V\$ARCHIVED_LOG GROUP BY THREAD#)) ARCH,
+      (SELECT THREAD#, SEQUENCE# FROM V\$LOG_HISTORY
+       WHERE (THREAD#, FIRST_TIME) IN
+       (SELECT THREAD#, MAX(FIRST_TIME) FROM V\$LOG_HISTORY GROUP BY THREAD#)) APPL
+    WHERE ARCH.THREAD# = APPL.THREAD#
+    ORDER BY 1;
+    EXIT;
+    EOF
+  register: dg_sync_status
+  when: inventory_hostname == standby_host
+  changed_when: false
+
+- name: Debug SQL Output
+  ansible.builtin.debug:
+    var: dg_sync_status.stdout_lines
+  when: inventory_hostname == standby_host
+
+- name: Extract Data Guard Sync Status
+  ansible.builtin.set_fact:
+    dg_sync_data: "{{ dg_sync_status.stdout_lines | select('match', '^\\s*\\d+\\s+\\d+\\s+\\d+\\s+\\d+') | list | first | split() }}"
+  when: inventory_hostname == standby_host and dg_sync_status.stdout_lines | length == 4
+
+- name: Print Data Guard Sync Status
+  ansible.builtin.debug:
+    msg: |
+      **Data Guard Sync Check**
+      ------------------------------------
+      **Thread:** {{ dg_sync_data[0] | default('N/A') }}
+      **Last Sequence Received:** {{ dg_sync_data[1] | default('N/A') }}
+      **Last Sequence Applied:** {{ dg_sync_data[2] | default('N/A') }}
+      **Difference:** {{ dg_sync_data[3] | default('N/A') }}
+      ------------------------------------
+      **Status:** {{ 'In Sync' if dg_sync_data[3] | default('1') == '0' else 'Lagging' }}
+  when: inventory_hostname == standby_host and dg_sync_data is defined

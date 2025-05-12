@@ -1,0 +1,22 @@
+# This playbook is used to secure backup to create dataguard for 19c.
+# Before executing this playbook, please refer the documentation inside the docs directory.
+#
+# - hosts: all_nodes                            # Provide the name of the target lpar registered in ansible inventory.
+#  remote_user: oracle                     # This needs to be run by "oracle" user.
+#  gather_facts: False
+#  vars_files:
+#      - vars/dataguard/dataguard_vars.yml  # update all the required variables
+#      - vars/vault.yml       # update the passwords
+
+
+- name: Configure Data Guard for 19c
+  hosts: all
+  remote_user: "{{ db_oracle_user }}"
+  gather_facts: false
+  vars_files:
+    - vars/dataguard/dataguard_vars.yml
+    - vars/vault.yml
+
+  roles:
+    - role: dataguard_backup_primary_db
+      tags: dataguard_backup_primary_db

@@ -1,0 +1,14 @@
+---
+# defaults file for dataguard_primary_config
+
+scripts_dir: [ "{{ work_dir }}", "scripts" ]
+done_dir: [ "{{ work_dir }}", "done" ]
+
+prenfsconfig:
+ lpp_src:
+    # !!! update !!!
+  subdir: ''
+
+
+listener_port: 1521
+dataguard_protection_mode: maximum_performance
