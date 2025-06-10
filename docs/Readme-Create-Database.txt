@@ -32,28 +32,88 @@ $ ansible-vault encrypt vault.yml
    - { role: oradb_create }
  
  6. Update the following variables in {{ collection_dir }}/power_aix_oracle_dba/playbooks/vars/create-db-vars.yml 
- oracle_stage: /tmp # Location on the target AIX LPAR to stage response files.
- oracle_inventory_loc: /u01/app/oraInventory
- oracle_base: /u01/base
- oracle_dbf_dir_asm: '+DATA1' # If storage_type=ASM this is where the database is placed.
- oracle_reco_dir_asm: '+DATA1' # If storage_type=ASM this is where the fast recovery area is 
- oracle_databases: # Dictionary describing the databases to be created.
-  - home: db1 
-    oracle_version_db: 19.3.0.0 # For a 19c database, the version should be 19.3.0.0
-    oracle_home: /u01/app/19c_ansible # Oracle Home location.
-    oracle_edition: EE # The edition of database-server (EE,SE,SEONE)
-    oracle_db_name: devdb # Database name
-    oracle_db_type: RAC # Type of database (RAC,RACONENODE,SI)
-    is_container: True # (true/false) Is the database a container database.
-    pdb_prefix: devpdb # Pluggable database name.
-    num_pdbs: 1 # Number of pluggable databases.
-    storage_type: ASM # Database storage to be used. ASM or FS.
-    service_name: db19c # Inital service to be created.
-    oracle_init_params: "" # initialization parameters, comma separated
-    oracle_db_mem_totalmb: 10000 # Amount of RAM to be used for SGA + PGA
-    oracle_database_type: MULTIPURPOSE # MULTIPURPOSE|DATA_WAREHOUSING|OLTP
-    redolog_size_in_mb: 512 # Redolog size in MB
-    state: present 	# present | absent 
+
+   a. Variables for Single Instance File system
+# Create/Drop database variables section
+oracle_user: oracle             # Provide the username who owns the Oracle Installations.
+oracle_group: oinstall          # Primary group for oracle_user.
+oracle_stage: /u01/devdb/tmp     # Provide path on the target AIX lpar to stage response files.
+oracle_base: /u01/base
+oracle_dbf_dir_fs: /u01/devdb/datafiles      # Provide path on the Lpar to store datafiles.If storage_type=FS this is where the database is placed.
+
+
+# This is an example layout to create a database.
+oracle_databases:                                     # Dictionary describing the databases to be installed.
+      - home: db1                                   # 'Last' directory in ORACLE_HOME path (e.g /u01/app/oracle/db1)
+        oracle_version_db: 19c                  # Oracle version. Ex:For 12cR1 - 12.1.0.2, 19c
+        oracle_home: /u01/product/19c/database              # Oracle Home path.
+        oracle_db_name: devdb                         # Provide Database name.
+        oracle_db_type: SI                           # Type of database (RAC,RACONENODE,SI)
+        is_container: True                            # (true/false) Is the database a container database
+        pdb_prefix: devpdb                            # Provide Pluggable database name.
+        num_pdbs: 1                                   # Number of pluggable databases.
+        storage_type: FS                              # Database storage to be used. ASM or FS. ASM mandatory for RAC DB type.
+        state: present                                # present - Create database | absent - Skip database creation
+        redolog_size_in_mb: 40                        # Redolog size in MB
+        oracle_init_params: "db_create_online_log_dest_1=/u01/abcl/redo"
+
+   b. Variables for Single Instance ASM
+# Create/Drop database variables section
+oracle_user: oracle             # Provide the username who owns the Oracle Installations.
+oracle_group: oinstall          # Primary group for oracle_user.
+oracle_stage: /u01/devdb/tmp     # Provide path on the target AIX lpar to stage response files.
+oracle_base: /u01/base
+oracle_dbf_dir_asm: '+DATA'                 # If storage_type=ASM this is where the database is placed.
+
+# This is an example layout to create a database.
+oracle_databases:                                     # Dictionary describing the databases to be installed.
+      - home: db1                                    # 'Last' directory in ORACLE_HOME path (e.g /u01/app/oracle/db1)
+        oracle_version_db: 19c                  # Oracle version. Ex:For 12cR1 - 12.1.0.2, 19c
+        oracle_home: /u01/product/19c/database              # Oracle Home path.
+        oracle_db_name: devdb                         # Provide Database name.
+        oracle_db_type: SI                           # Type of database (RAC,RACONENODE,SI)
+        is_container: True                            # (true/false) Is the database a container database
+        pdb_prefix: devpdb                            # Provide Pluggable database name.
+        num_pdbs: 1                                   # Number of pluggable databases.
+        storage_type: ASM                              # Database storage to be used. ASM or FS. ASM mandatory for RAC DB type.
+        state: present                                # present - Create database | absent - Skip database creation
+        redolog_size_in_mb: 40                        # Redolog size in MB
+        oracle_init_params: "db_create_online_log_dest_1=+DATA"
+
+   c. Variables for RAC ASM. ASM mandatory for RAC DB type.
+# Create/Drop database variables section
+oracle_user: oracle             # Provide the username who owns the Oracle Installations.
+oracle_group: oinstall          # Primary group for oracle_user.
+oracle_stage: /u01/devdb/tmp     # Provide path on the target AIX lpar to stage response files.
+oracle_base: /u01/base
+oracle_dbf_dir_asm: '+DATA'                 # If storage_type=ASM this is where the database is placed.
+
+# This is an example layout to create a database.
+oracle_databases:                                     # Dictionary describing the databases to be installed.
+      - home: db1                                    # 'Last' directory in ORACLE_HOME path (e.g /u01/app/oracle/db1)
+        oracle_version_db: 19c                  # Oracle version. Ex:For 12cR1 - 12.1.0.2, 19c
+        oracle_home: /u01/product/19c/database              # Oracle Home path.
+        oracle_db_name: devdb                         # Provide Database name.
+        oracle_db_type: RAC                           # Type of database (RAC,RACONENODE,SI)
+        is_container: True                            # (true/false) Is the database a container database
+        pdb_prefix: devpdb                            # Provide Pluggable database name.
+        num_pdbs: 1                                   # Number of pluggable databases.
+        storage_type: ASM                              # Database storage to be used. ASM or FS. ASM mandatory for RAC DB type.
+        state: present                                # present - Create database | absent - Skip database creation
+        redolog_size_in_mb: 40                        # Redolog size in MB
+        oracle_init_params: "db_create_online_log_dest_1=+REDO"
+
+   d. Optional Variables can be modified with desired value from default section
+        oracle_db_mem_percent: 20
+        oracle_reco_dir_asm: /u01/dbcl/reco # If storage_type=FS this is where the fast recovery area is 
+        oracle_reco_dir_asm: '+RECO' # If storage_type=ASM this is where the fast recovery area is 
+        # initialization parameters in "", comma separated
+        oracle_init_params: "db_create_online_log_dest_1=/u01/devdb/redo" # To create redo in separate FS . 
+        oracle_init_params: "db_create_online_log_dest_1=+REDO" # To create redo in separate ASM 
+        oracle_edition: EE # The edition of database-server (EE,SE,SEONE)
+        service_name: db19c # Inital service to be created.
+        oracle_db_mem_totalmb: 10000 # Amount of RAM to be used for SGA + PGA
+        oracle_database_type: MULTIPURPOSE # MULTIPURPOSE|DATA_WAREHOUSING|OLTP
 
 7. Verify the DB does not currently exist as shown below
 bash-5.1$ srvctl status database -d devdb
