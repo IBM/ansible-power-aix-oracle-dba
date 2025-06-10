@@ -642,7 +642,7 @@ memoryPercentage={{ item.0.oracle_db_mem_percent }}
 # Default value : MULTIPURPOSE
 # Mandatory     : NO
 #-----------------------------------------------------------------------------
-databaseType={{ item.0.oracle_database_type }}
+#databaseType=
 
 #-----------------------------------------------------------------------------
 # Name          : automaticMemoryManagement
@@ -662,8 +662,4 @@ automaticMemoryManagement=false
 # Default value :
 # Mandatory     : NO
 #-----------------------------------------------------------------------------
-{% if item.0.oracle_db_mem_totalmb is defined %}
-totalMemory={{ item.0.oracle_db_mem_totalmb }}
-{% else %}
 #totalMemory =
-{% endif %}
