@@ -20,6 +20,10 @@ Following functionalities can be achieved with this collection.
 
 Version Change:
 
+PODBA v2.0.8
+
+- Refactored oradb_create role for integration with Oracle SI ansible collection.
+
 PODBA v2.0.7
 
 - Introduced Dataguard feature for single instance database using RMAN Backup and RMAN DUPLICATE method.
