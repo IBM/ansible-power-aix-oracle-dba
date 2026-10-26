@@ -1,15 +1,20 @@
-- oracle_parameter:
-        hostname: "{{ hostname }}"
-        service_name: "{{ service_name }}"
-        port: "{{ listener_port }}"
-        user: "{{ db_user }}"
-        password: "{{ db_password_cdb }}"
-        mode: "{{ db_mode }}"
-        name: "{{ param_name }}"
-        value: "{{ param_value }}"
-        state: "{{ state }}"
-  environment: "{{ oracle_env }}"
+---
+- name: Manage Oracle initialization parameter
+  oracle_parameter:
+    hostname: "{{ hostname }}"
+    service_name: "{{ service_name }}"
+    port: "{{ listener_port }}"
+    user: "{{ db_user }}"
+    password: "{{ db_password_cdb }}"
+    mode: "{{ db_mode }}"
+    name: "{{ param_name }}"
+    value: "{{ '' if (param_value is not defined or param_value is none) else param_value }}"
+    scope: "{{ param_scope | default(scope | default('both')) }}"
+    sid: "{{ param_sid | default(sid | default('*')) }}"
+    comment: "{{ param_comment | default(comment | default(omit)) }}"
+    state: "{{ state | default('present') }}"
   register: parameter
 
-- debug:
-    var: parameter
+- name: Parameter change status
+  debug:
+    var: parameter.msg

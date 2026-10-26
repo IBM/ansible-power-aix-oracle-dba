@@ -1,1 +1,7 @@
 ---
+grid_home: /ora/grid
+
+oracle_env:
+  ORACLE_HOME: "{{ grid_home }}"
+  LD_LIBRARY_PATH: "{{ grid_home }}/lib"
+  PATH: "{{ grid_home }}/bin:{{ grid_home }}/OPatch:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"

@@ -1,0 +1,2 @@
+# Gather Grid Infrastructure Facts - Variables section
+grid_home: /u01/19c/grid/home       # Oracle Grid Infrastructure Home path on target AIX LPAR (e.g. /u01/19c/grid/home)

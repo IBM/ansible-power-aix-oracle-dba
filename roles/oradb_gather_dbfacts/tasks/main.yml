@@ -1,4 +1,5 @@
-- name: gather database facts
+---
+- name: Gather database facts
   oracle_facts:
     hostname: "{{ hostname }}"
     port: "{{ listener_port }}"
@@ -8,5 +9,57 @@
     mode: "{{ db_mode }}"
   environment: "{{ oracle_env }}"
   register: dbfacts
-- debug:
-    var: dbfacts
+
+- name: "1. Database & Instance Status"
+  debug:
+    var: dbfacts.ansible_facts.oracle_db_facts.database_and_instance
+
+- name: "2. Oracle Home & Patch Details (OPatch)"
+  debug:
+    var: dbfacts.ansible_facts.oracle_db_facts.oracle_home_and_patches
+
+- name: "3. Pluggable Databases (PDBs)"
+  debug:
+    var: dbfacts.ansible_facts.oracle_db_facts.pluggable_databases
+
+- name: "4. Control Files"
+  debug:
+    var: dbfacts.ansible_facts.oracle_db_facts.control_files
+
+- name: "5a. Tablespaces Summary (GB & %)"
+  debug:
+    var: dbfacts.ansible_facts.oracle_db_facts.tablespace_summary
+
+- name: "5b. Datafiles Details (GB & %)"
+  debug:
+    var: dbfacts.ansible_facts.oracle_db_facts.datafiles
+
+- name: "5c. Tempfiles"
+  debug:
+    var: dbfacts.ansible_facts.oracle_db_facts.tempfiles
+
+- name: "6a. Online Redo Logs (Primary)"
+  debug:
+    var: dbfacts.ansible_facts.oracle_db_facts.online_redo_logs
+
+- name: "6b. Standby Redo Logs"
+  debug:
+    var: dbfacts.ansible_facts.oracle_db_facts.standby_redo_logs
+
+- name: "7a. Archive Destinations"
+  debug:
+    var: dbfacts.ansible_facts.oracle_db_facts.archive_destinations
+
+- name: "7b. Flash Recovery Area (FRA) & Flashback"
+  debug:
+    msg:
+      - "FRA: {{ dbfacts.ansible_facts.oracle_db_facts.flash_recovery_area }}"
+      - "Flashback: {{ dbfacts.ansible_facts.oracle_db_facts.flashback_status }}"
+
+- name: "8. RMAN Backup History"
+  debug:
+    var: dbfacts.ansible_facts.oracle_db_facts.rman_backup_history
+
+- name: "9. Scheduled Jobs"
+  debug:
+    var: dbfacts.ansible_facts.oracle_db_facts.scheduled_jobs

@@ -1,10 +1,20 @@
+ANSIBLE_METADATA = {
+    'metadata_version': '1.1',
+    'status': ['preview'],
+    'supported_by': 'community'
+}
+
 DOCUMENTATION = '''
 ---
 module: oracle_facts
-short_description: Returns some facts about Oracle DB
+short_description: Gather comprehensive Oracle Database facts (read-only)
 description:
-    - Returns some facts about Oracle DB
-version_added: "2.2.1"
+    - Gathers comprehensive read-only facts about an Oracle database (CDB, PDB, Standalone, RAC).
+    - Collects Oracle Home & version/patches (OPatch lsinventory / dba_registry_sqlpatch),
+      Database & Instance status, PDBs, Control files, Tablespaces & Datafiles with free/used space in GB and %,
+      Redo logs (primary & standby), Archive & Flashback status/destinations, RMAN backup history, and Scheduled jobs.
+    - Connects using python-oracledb thin mode from localhost.
+version_added: "2.4"
 options:
     hostname:
         description:
@@ -18,51 +28,42 @@ options:
         default: 1521
     service_name:
         description:
-            - The database service name to connect to
+            - The database service name to connect to (CDB, PDB, or Standalone)
         required: true
     user:
         description:
-            - The Oracle user name to connect to the database, must have DBA privilege
-        required: False
+            - The Oracle user name to connect with (must have DBA / SYSDBA privilege)
+        required: false
+        default: sys
     password:
         description:
-            - The Oracle user password for 'user'
-        required: False
+            - The Oracle user password
+        required: false
     mode:
         description:
-            - The mode with which to connect to the database
+            - Connect mode (normal or sysdba)
         required: false
-        default: normal
-        choices:
-            - normal
-            - sysdba
+        default: sysdba
+        choices: ['normal', 'sysdba']
 notes:
-    - oracledb needs to be installed
-    - Uses Thin mode by default, which requires no Oracle client installation
-    - Oracle RDBMS 10gR2 or later required
+    - python-oracledb is required on the control node (thin mode, no Oracle client needed)
 requirements: [ "oracledb" ]
-author: Ilmar Kerm, ilmar.kerm@gmail.com, @ilmarkerm
+author: IBM Power AIX Oracle DBA Collection Team
 '''
 
 EXAMPLES = '''
 - hosts: localhost
-  vars:
-    oraclehost: 192.168.56.101
-    oracleport: 1521
-    oracleservice: orcl
-    oracleuser: system
-    oraclepassword: oracle
+  gather_facts: false
   tasks:
-    - name: gather database facts
+    - name: Gather database facts
       oracle_facts:
-        hostname: "{{ oraclehost }}"
-        port: "{{ oracleport }}"
-        service_name: "{{ oracleservice }}"
-        user: "{{ oracleuser }}"
-        password: "{{ oraclepassword }}"
+        hostname: ansible-db
+        port: 1521
+        service_name: prod
+        user: sys
+        password: "{{ default_dbpass }}"
+        mode: sysdba
       register: dbfacts
-    - debug:
-        var: dbfacts
 '''
 
 try:
@@ -72,120 +73,413 @@ except ImportError:
 else:
     oracledb_exists = True
 
+import xml.etree.ElementTree as ET
+from ansible.module_utils.basic import AnsibleModule
+
 def rows_to_dict_list(cursor):
-    columns = [i[0] for i in cursor.description]
-    return [dict(zip(columns, row)) for row in cursor]
+    if not cursor.description:
+        return []
+    columns = [col[0].lower() for col in cursor.description]
+    results = []
+    for row in cursor.fetchall():
+        row_dict = {}
+        for col, val in zip(columns, row):
+            if hasattr(val, 'read'):
+                val = val.read()
+            row_dict[col] = val
+        results.append(row_dict)
+    return results
 
-def query_result(query):
-    c = conn.cursor()
-    c.execute(query)
-    res = rows_to_dict_list(c)
-    c.close()
-    return res
+def safe_query(conn, query):
+    try:
+        cur = conn.cursor()
+        cur.execute(query)
+        res = rows_to_dict_list(cur)
+        cur.close()
+        return res
+    except Exception:
+        return []
 
-def star_query(rowsource):
-    return query_result("SELECT * FROM %s" % rowsource)
+def get_opatch_patches(conn):
+    patches = []
+    # 1. Try querying sys.dbms_qopatch.get_opatch_lsinventory()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT sys.dbms_qopatch.get_opatch_lsinventory() FROM dual")
+        row = cur.fetchone()
+        if row and row[0]:
+            clob_val = row[0]
+            xml_str = clob_val.read() if hasattr(clob_val, 'read') else str(clob_val)
+            if xml_str and '<patch' in xml_str.lower():
+                root = ET.fromstring(xml_str)
+                for p in root.iter():
+                    tag = p.tag.split('}')[-1].lower() if '}' in p.tag else p.tag.lower()
+                    if tag == 'patch' or tag.endswith('_patch') or tag == 'oneoff':
+                        p_id = ''
+                        p_desc = ''
+                        p_date = ''
+                        for child in p:
+                            ctag = child.tag.split('}')[-1].lower() if '}' in child.tag else child.tag.lower()
+                            if ctag in ('patchid', 'id', 'bug'):
+                                p_id = child.text or ''
+                            elif 'description' in ctag or 'desc' in ctag:
+                                p_desc = child.text or ''
+                            elif 'installedon' in ctag or 'applieddate' in ctag or 'date' in ctag or 'time' in ctag:
+                                p_date = child.text or ''
+                        if not p_id and 'id' in p.attrib:
+                            p_id = p.attrib['id']
+                        if not p_desc and 'description' in p.attrib:
+                            p_desc = p.attrib['description']
+                        if p_id:
+                            entry = {
+                                'patch_id': p_id.strip(),
+                                'description': p_desc.strip(),
+                                'installed_on': p_date.strip()
+                            }
+                            if entry not in patches:
+                                patches.append(entry)
+        cur.close()
+    except Exception:
+        pass
 
-# Ansible code
+    # 2. Try XMLTABLE query on dbms_qopatch if ElementTree got nothing
+    if not patches:
+        xmltable_query = """
+        SELECT
+            x.patch_id,
+            x.patch_description AS description,
+            x.installed_on
+        FROM XMLTABLE(
+            '//patch'
+            PASSING XMLTYPE(sys.dbms_qopatch.get_opatch_lsinventory())
+            COLUMNS
+                patch_id VARCHAR2(30) PATH 'patchID | @id | bug',
+                patch_description VARCHAR2(300) PATH 'patchDescription | description | desc',
+                installed_on VARCHAR2(50) PATH 'installedOn | appliedDate | date'
+        ) x
+        WHERE x.patch_id IS NOT NULL
+        """
+        patches = safe_query(conn, xmltable_query)
+
+    # 3. Fallback to dba_registry_sqlpatch
+    if not patches:
+        sqlpatch_query = """
+        SELECT patch_id, patch_uid, version, action, status, description,
+               to_char(action_time, 'YYYY-MM-DD HH24:MI:SS') AS action_time
+        FROM dba_registry_sqlpatch
+        ORDER BY action_time DESC
+        """
+        patches = safe_query(conn, sqlpatch_query)
+
+    # 4. Fallback to dba_registry
+    if not patches:
+        registry_query = """
+        SELECT comp_id, comp_name, version, status, modified
+        FROM dba_registry
+        ORDER BY comp_name
+        """
+        patches = safe_query(conn, registry_query)
+
+    return patches
+
 def main():
-    global conn
-    msg = ['']
     module = AnsibleModule(
         argument_spec = dict(
             hostname      = dict(default='localhost'),
             port          = dict(default=1521, type='int'),
             service_name  = dict(required=True),
-            user          = dict(required=False),
-            password      = dict(required=False),
-            mode          = dict(default='normal', choices=["normal","sysdba"])
+            user          = dict(default='sys', required=False),
+            password      = dict(required=False, no_log=True),
+            mode          = dict(default='sysdba', choices=["normal", "sysdba"]),
         ),
         supports_check_mode=True
     )
-    # Check for required modules
+
     if not oracledb_exists:
         module.fail_json(msg="The oracledb module is required. 'pip install oracledb' should do the trick. Thin mode is used by default and requires no Oracle client installation.")
-    # Connect to database
+
     hostname = module.params["hostname"]
     port = module.params["port"]
     service_name = module.params["service_name"]
     user = module.params["user"]
     password = module.params["password"]
     mode = module.params["mode"]
+
     wallet_connect = '/@%s' % service_name
     try:
-        if (not user and not password ): # If neither user or password is supplied, the use of an oracle wallet is assumed
+        if not user and not password:
             if mode == 'sysdba':
-                connect = wallet_connect
                 conn = oracledb.connect(dsn=wallet_connect, mode=oracledb.SYSDBA)
             else:
-                connect = wallet_connect
                 conn = oracledb.connect(dsn=wallet_connect)
-
-        elif (user and password ):
+        elif user and password:
+            dsn = oracledb.makedsn(host=hostname, port=port, service_name=service_name)
             if mode == 'sysdba':
-                dsn = oracledb.makedsn(host=hostname, port=port, service_name=service_name)
-                connect = dsn
                 conn = oracledb.connect(user=user, password=password, dsn=dsn, mode=oracledb.SYSDBA)
             else:
-                dsn = oracledb.makedsn(host=hostname, port=port, service_name=service_name)
-                connect = dsn
                 conn = oracledb.connect(user=user, password=password, dsn=dsn)
-
-        elif (not(user) or not(password)):
+        else:
             module.fail_json(msg='Missing username or password for oracledb')
 
     except oracledb.DatabaseError as exc:
-        msg[0] = 'Could not connect to database - %s, connect descriptor: %s' % (str(exc), connect)
-        module.fail_json(msg=msg[0], changed=False)
-    if conn.version < "10.2":
-        module.fail_json(msg="Database version must be 10gR2 or greater", changed=False)
-    #
-    if module.check_mode:
-        module.exit_json(changed=False)
-    #
-    facts = { 'version': conn.version }
-    # Execute PL/SQL to return some additional facts
-    database = star_query('v$database')[0]
-    instance = star_query('v$instance')[0]
-    if 'CDB' not in database:
-        database.update({'CDB': 'NO'})
-    #
-    try:
-        rac = query_result("SELECT inst_id, instance_name, host_name, startup_time FROM gv$instance ORDER BY inst_id")
-    except:
-        rac = []
-    try:
-        if database['CDB'] == 'YES':
-            pdb = query_result("SELECT con_id, rawtohex(guid) guid_hex, name, open_mode FROM v$pdbs ORDER BY name")
-        else:
-            pdb = []
-    except:
-        pdb = []
-    if conn.version >= '12.1':
-        tablespace = query_result("select ts.con_id, ts.name, ts.bigfile, round(sum(bytes)/1024/1024) size_mb, count(*) datafiles# from v$tablespace ts join v$datafile df on df.ts#=ts.ts# and df.con_id=ts.con_id group by ts.name, ts.bigfile, ts.con_id order by 1,2")
-        temp_tablespace = query_result("select ts.con_id, ts.name, ts.bigfile, round(sum(bytes)/1024/1024) size_mb, count(*) tempfiles# from v$tablespace ts join v$tempfile df on df.ts#=ts.ts# and df.con_id=ts.con_id group by ts.name, ts.bigfile, ts.con_id order by 1,2")
-    else:
-        tablespace = query_result("select 0 con_id, ts.name, ts.bigfile, round(sum(bytes)/1024/1024) size_mb, count(*) datafiles# from v$tablespace ts join v$datafile df on df.ts#=ts.ts# group by ts.name, ts.bigfile order by 1,2")
-        temp_tablespace = query_result("select 0 con_id, ts.name, ts.bigfile, round(sum(bytes)/1024/1024) size_mb, count(*) tempfiles# from v$tablespace ts join v$tempfile df on df.ts#=ts.ts# group by ts.name, ts.bigfile order by 1,2")
-    redolog = query_result("select group#, thread#, sequence#, round(bytes/1024/1024) mb, blocksize, archived, status from v$log order by thread#,group#")
-    option = star_query("v$option")
-    parameter = {}
-    for param in query_result("select name, value, isdefault from v$parameter order by 1"):
-      parameter[param['NAME']] = { 'isdefault': param['ISDEFAULT'], 'value': param['VALUE'] }
-    # USERENV
-    sql = "SELECT sys_context('USERENV','CURRENT_USER') current_user, sys_context('USERENV','DATABASE_ROLE') database_role, sys_context('USERENV','ISDBA') isdba, sys_context('USERENV','ORACLE_HOME') oracle_home"
-    if conn.version >= '12.1':
-        sql+= ", to_number(sys_context('USERENV','CON_ID')) con_id, sys_context('USERENV','CON_NAME') con_name"
-    if conn.version >= '11.1':
-        sql+= ", to_number(sys_context('USERENV','CURRENT_EDITION_ID')) CURRENT_EDITION_ID, sys_context('USERENV','CURRENT_EDITION_NAME') CURRENT_EDITION_NAME"
-    sql+= " FROM DUAL"
-    userenv = query_result(sql)[0]
-    #
-    facts.update({'database': database, 'instance': instance, 'rac': rac, 'pdb': pdb, 'tablespace': tablespace, 'temp_tablespace': temp_tablespace, 'userenv': userenv, 'redolog': redolog, 'option': option, 'parameter': parameter})
-    #
-    module.exit_json(msg=msg[0], changed=False, ansible_facts=facts)
+        module.fail_json(msg='Could not connect to database - %s' % (str(exc)), changed=False)
 
+    facts = {}
 
-from ansible.module_utils.basic import *
+    # 1. Database and Instance details & current status
+    db_inst_query = """
+    SELECT
+        d.name AS db_name,
+        d.db_unique_name,
+        d.database_role,
+        d.open_mode AS db_open_mode,
+        d.log_mode,
+        to_char(d.created, 'YYYY-MM-DD HH24:MI:SS') AS db_created,
+        d.platform_name,
+        d.cdb,
+        i.instance_name,
+        i.host_name,
+        i.version AS instance_version,
+        i.status AS instance_status,
+        i.database_status,
+        i.archiver,
+        i.logins,
+        to_char(i.startup_time, 'YYYY-MM-DD HH24:MI:SS') AS startup_time,
+        i.parallel AS is_rac
+    FROM v$database d, v$instance i
+    """
+    db_inst = safe_query(conn, db_inst_query)
+    facts['database_and_instance'] = db_inst[0] if db_inst else {}
+
+    # 2. Oracle Home, Version & Patches (OPatch / SQL Patch registry)
+    home_query = "SELECT sys_context('USERENV','ORACLE_HOME') AS oracle_home, sys_context('USERENV','CURRENT_USER') AS current_user, sys_context('USERENV','DB_NAME') AS current_db FROM dual"
+    home_info = safe_query(conn, home_query)
+    oracle_home = home_info[0].get('oracle_home', '') if home_info else ''
+
+    version_query = "SELECT banner, banner_full, version, version_full FROM v$version WHERE rownum <= 2"
+    version_rows = safe_query(conn, version_query)
+    db_version = version_rows[0].get('version_full') or version_rows[0].get('version') or conn.version if version_rows else conn.version
+
+    installed_patches = get_opatch_patches(conn)
+
+    facts['oracle_home_and_patches'] = {
+        'oracle_home': oracle_home,
+        'database_version': db_version,
+        'installed_patches': installed_patches
+    }
+
+    # 3. Pluggable databases and their statuses
+    pdbs_query = """
+    SELECT
+        con_id,
+        name AS pdb_name,
+        open_mode,
+        restricted,
+        to_char(open_time, 'YYYY-MM-DD HH24:MI:SS') AS open_time,
+        round(total_size / 1024 / 1024 / 1024, 2) AS total_size_gb
+    FROM v$pdbs
+    ORDER BY con_id
+    """
+    facts['pluggable_databases'] = safe_query(conn, pdbs_query)
+
+    # 4. Control file paths
+    cf_query = """
+    SELECT
+        name AS controlfile_path,
+        status,
+        is_recovery_dest_file,
+        block_size,
+        round((file_size_blks * block_size) / 1024 / 1024, 2) AS size_mb
+    FROM v$controlfile
+    ORDER BY name
+    """
+    facts['control_files'] = safe_query(conn, cf_query)
+
+    # 5. Tablespace names, Datafile paths, and Free space in GB and %
+    ts_summary_query = """
+    SELECT
+        t.tablespace_name,
+        t.contents,
+        t.status,
+        t.bigfile,
+        round(sum(df.bytes) / 1024 / 1024 / 1024, 2) AS total_gb,
+        round(sum(nvl(f.free_bytes, 0)) / 1024 / 1024 / 1024, 2) AS free_gb,
+        round((sum(df.bytes) - sum(nvl(f.free_bytes, 0))) / 1024 / 1024 / 1024, 2) AS used_gb,
+        round((sum(nvl(f.free_bytes, 0)) / nullif(sum(df.bytes), 0)) * 100, 2) AS free_pct,
+        round(((sum(df.bytes) - sum(nvl(f.free_bytes, 0))) / nullif(sum(df.bytes), 0)) * 100, 2) AS used_pct
+    FROM dba_tablespaces t
+    JOIN dba_data_files df ON t.tablespace_name = df.tablespace_name
+    LEFT JOIN (
+        SELECT tablespace_name, file_id, sum(bytes) free_bytes
+        FROM dba_free_space
+        GROUP BY tablespace_name, file_id
+    ) f ON df.file_id = f.file_id
+    GROUP BY t.tablespace_name, t.contents, t.status, t.bigfile
+    ORDER BY t.tablespace_name
+    """
+    facts['tablespace_summary'] = safe_query(conn, ts_summary_query)
+
+    df_query = """
+    SELECT
+        df.tablespace_name,
+        df.file_id,
+        df.file_name,
+        round(df.bytes / 1024 / 1024 / 1024, 2) AS total_gb,
+        round(nvl(f.free_bytes, 0) / 1024 / 1024 / 1024, 2) AS free_gb,
+        round((df.bytes - nvl(f.free_bytes, 0)) / 1024 / 1024 / 1024, 2) AS used_gb,
+        round((nvl(f.free_bytes, 0) / nullif(df.bytes, 0)) * 100, 2) AS free_pct,
+        round(((df.bytes - nvl(f.free_bytes, 0)) / nullif(df.bytes, 0)) * 100, 2) AS used_pct,
+        df.autoextensible,
+        round(df.maxbytes / 1024 / 1024 / 1024, 2) AS maxsize_gb,
+        df.status
+    FROM dba_data_files df
+    LEFT JOIN (
+        SELECT file_id, sum(bytes) free_bytes
+        FROM dba_free_space
+        GROUP BY file_id
+    ) f ON df.file_id = f.file_id
+    ORDER BY df.tablespace_name, df.file_id
+    """
+    facts['datafiles'] = safe_query(conn, df_query)
+
+    temp_query = """
+    SELECT
+        tf.tablespace_name,
+        tf.file_id,
+        tf.file_name,
+        round(tf.bytes / 1024 / 1024 / 1024, 2) AS total_gb,
+        tf.autoextensible,
+        round(tf.maxbytes / 1024 / 1024 / 1024, 2) AS maxsize_gb,
+        tf.status
+    FROM dba_temp_files tf
+    ORDER BY tf.tablespace_name, tf.file_id
+    """
+    facts['tempfiles'] = safe_query(conn, temp_query)
+
+    # 6. Redo log information (Online Primary & Standby logs)
+    redo_query = """
+    SELECT
+        l.group#,
+        l.thread#,
+        l.sequence#,
+        round(l.bytes / 1024 / 1024, 2) AS size_mb,
+        l.members,
+        l.archived,
+        l.status AS log_status,
+        lf.member AS member_path,
+        lf.type AS log_type,
+        lf.status AS member_status,
+        lf.is_recovery_dest_file
+    FROM v$log l
+    JOIN v$logfile lf ON l.group# = lf.group#
+    ORDER BY l.thread#, l.group#, lf.member
+    """
+    facts['online_redo_logs'] = safe_query(conn, redo_query)
+
+    stdby_redo_query = """
+    SELECT
+        sl.group#,
+        sl.thread#,
+        sl.sequence#,
+        round(sl.bytes / 1024 / 1024, 2) AS size_mb,
+        sl.archived,
+        sl.status AS standby_log_status,
+        lf.member AS member_path,
+        lf.type AS log_type,
+        lf.status AS member_status,
+        lf.is_recovery_dest_file
+    FROM v$standby_log sl
+    JOIN v$logfile lf ON sl.group# = lf.group#
+    ORDER BY sl.thread#, sl.group#, lf.member
+    """
+    facts['standby_redo_logs'] = safe_query(conn, stdby_redo_query)
+
+    # 7. Archive log, Flashback log status and destinations
+    arch_dest_query = """
+    SELECT
+        dest_id,
+        dest_name,
+        status,
+        target,
+        destination,
+        archiver,
+        error
+    FROM v$archive_dest
+    WHERE destination IS NOT NULL OR status = 'VALID'
+    ORDER BY dest_id
+    """
+    facts['archive_destinations'] = safe_query(conn, arch_dest_query)
+
+    fra_query = """
+    SELECT
+        name AS recovery_area_name,
+        round(space_limit / 1024 / 1024 / 1024, 2) AS space_limit_gb,
+        round(space_used / 1024 / 1024 / 1024, 2) AS space_used_gb,
+        round(space_reclaimable / 1024 / 1024 / 1024, 2) AS space_reclaimable_gb,
+        number_of_files,
+        round((space_used / nullif(space_limit, 0)) * 100, 2) AS space_used_pct
+    FROM v$recovery_file_dest
+    """
+    fra_info = safe_query(conn, fra_query)
+    facts['flash_recovery_area'] = fra_info[0] if fra_info else {}
+
+    flashback_query = """
+    SELECT
+        flashback_on,
+        log_mode,
+        force_logging
+    FROM v$database
+    """
+    fb_info = safe_query(conn, flashback_query)
+    facts['flashback_status'] = fb_info[0] if fb_info else {}
+
+    # 8. RMAN Backup Status
+    rman_query = """
+    SELECT * FROM (
+        SELECT
+            session_key,
+            session_recid,
+            command_id,
+            input_type,
+            status,
+            to_char(start_time, 'YYYY-MM-DD HH24:MI:SS') AS start_time,
+            to_char(end_time, 'YYYY-MM-DD HH24:MI:SS') AS end_time,
+            elapsed_seconds,
+            round(input_bytes / 1024 / 1024 / 1024, 2) AS input_gb,
+            round(output_bytes / 1024 / 1024 / 1024, 2) AS output_gb,
+            output_device_type,
+            time_taken_display
+        FROM v$rman_backup_job_details
+        ORDER BY start_time DESC
+    ) WHERE rownum <= 10
+    """
+    facts['rman_backup_history'] = safe_query(conn, rman_query)
+
+    # 9. Scheduled Jobs
+    jobs_query = """
+    SELECT
+        owner,
+        job_name,
+        job_type,
+        job_action,
+        state,
+        enabled,
+        restartable,
+        to_char(last_start_date, 'YYYY-MM-DD HH24:MI:SS') AS last_start_date,
+        to_char(next_run_date, 'YYYY-MM-DD HH24:MI:SS') AS next_run_date,
+        repeat_interval,
+        failure_count,
+        run_count
+    FROM dba_scheduler_jobs
+    WHERE owner NOT IN ('SYS', 'SYSTEM', 'AUDSYS', 'GSMADMIN_INTERNAL')
+       OR enabled = 'TRUE'
+    ORDER BY owner, job_name
+    """
+    facts['scheduled_jobs'] = safe_query(conn, jobs_query)
+
+    conn.close()
+
+    module.exit_json(msg="Database facts gathered successfully", changed=False, ansible_facts={'oracle_db_facts': facts})
+
 if __name__ == '__main__':
     main()
