@@ -3,9 +3,10 @@
 #
 - name: Create a Database
   hosts: all                    # Target LPAR hostname defined in the inventory
-  remote_user: oracle           # Oracle Database Username
+  remote_user: oracle           # Oracle OS user that owns the Oracle installation
+  gather_facts: false
   vars_files:
+   - vars/vault.yml             # SYS/GI passwords — load first so they are available to create-db-vars.yml
    - vars/create-db-vars.yml
-   - vars/vault.yml
   roles:
      - { role: oradb_create }

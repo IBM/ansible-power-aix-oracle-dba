@@ -1,1 +1,6 @@
 misc/
+docs/backup/
+scripts/
+.bob/
+*tracker*.html
+MIGRATION_CONTEXT.md

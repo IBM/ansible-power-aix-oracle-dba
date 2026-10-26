@@ -1,6 +1,12 @@
 default_gipass: Oracle4u             # ASM sys user password.
-default_dbpass: Oracle4u             # Sys user password.
+default_dbpass: oracle4u             # Sys user password (used to connect as SYS).
 
 asm_password: Oracle4u               # ASM sys user password for Single Instance GI Upgrade.
 mos_login:                           # My Oracle Support Username.
 mos_password:                        # My Oracle Support Password.
+
+# Per-schema passwords — keep this vault encrypted in production.
+schema_passwords:
+  pbatch:  "Pbatch#Pass1"
+  pwrite:  "Pwrite#Pass1"
+  pselect: "Pselect#Pass1"
