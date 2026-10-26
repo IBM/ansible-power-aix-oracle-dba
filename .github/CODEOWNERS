@@ -1,0 +1,20 @@
+# CODEOWNERS for ansible-power-aix-oracle-dba
+#
+# These owners will be automatically requested for review
+# when a pull request modifies the matching files.
+#
+# Syntax: <file pattern>  <owner> [owner2 ...]
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo
+*                               @shivasl2022
+
+# Playbooks and roles
+playbooks/                      @shivasl2022
+roles/                          @shivasl2022
+
+# Documentation
+docs/                           @shivasl2022
+
+# GitHub config (this file, workflows, etc.)
+.github/                        @shivasl2022
