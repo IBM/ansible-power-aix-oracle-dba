@@ -34,7 +34,7 @@ configure_cluster: False                # Set it to False in case of Standalone 
 ################################
 
 ora_binary_location: local      # local|nfs|remote. When using "nfs" option, provide sudo password "--ask-become-pass" when running the playbook, this will use the elevated privileges to configure NFS.
-ora_nfs_host: 129.40.76.1                       # NFS server name if "ora_binary_location is nfs".
+ora_nfs_host: nfshost                       # NFS server name if "ora_binary_location is nfs".
 ora_nfs_device: /repos                          # NFS filesystem if "ora_binary_location is nfs".
 ora_nfs_filesystem: /repos                      # Path on the target lpar to mount the NFS filesystem if "ora_binary_location is nfs".
 

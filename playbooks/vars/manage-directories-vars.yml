@@ -5,4 +5,4 @@ directory_name: TESTDIR                    # Desired directory name to be create
 path: /u01/dbdir                           # OS Path on AIX Lpar. This path must exist.
 state: present                             # To create a directory - present. To drop a directory - absent.
 mode: enforce
-oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+# oracle_db_home not needed - oracle_directory module uses Thin mode (pure Python, no Oracle client required)

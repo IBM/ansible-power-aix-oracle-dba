@@ -39,7 +39,7 @@ oracle_install_version_gi: 19.3.0
 ################################
 
 ora_binary_location: local                        # local|nfs|remote.
-ora_nfs_host: 129.40.76.1                       # NFS server name if "ora_binary_location is nfs".
+ora_nfs_host: nfshost                       # NFS server name if "ora_binary_location is nfs".
 ora_nfs_device: /repos                          # NFS filesystem if "ora_binary_location is nfs".
 ora_nfs_filesystem: /repos                      # Path on the target lpar to mount the NFS filesystem if "ora_binary_location is nfs".
 

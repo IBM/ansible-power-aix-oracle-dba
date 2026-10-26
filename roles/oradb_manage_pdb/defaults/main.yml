@@ -5,6 +5,6 @@ db_mode: sysdba
 pdbadmin_user: pdbadmin
 pdbadmin_password: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][item[1].pdb_name] is defined and dbpasswords[item[1].cdb][item[1].pdb_name][pdbadmin_user] is defined%}{{dbpasswords[item[1].cdb][item[1].pdb_name][pdbadmin_user]}}{% else %}{{ default_dbpass}}{% endif%}"
 oracle_env:
-     ORACLE_HOME: "{{ oracle_db_home }}"
-     LD_LIBRARY_PATH: "{{ oracle_db_home}}"
-     PATH: "{{ oracle_db_home}}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
+     ORACLE_HOME: "{{ oracle_db_home | default('') }}"
+     LD_LIBRARY_PATH: "{{ oracle_db_home | default('') }}"
+     PATH: "{{ oracle_db_home | default('') }}/bin:$PATH:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"

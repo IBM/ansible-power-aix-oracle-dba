@@ -1,7 +1,7 @@
 hostname: ansible_db                  # AIX hostname where the Database is running.
 listener_port: 1521                   # Database listener port.
 oracle_db_name: devdb                 # Database Service Name.
-oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+# oracle_db_home not needed - oracle_pdb module uses Thin mode (pure Python, no Oracle client required)
 
 create_pdb: False        # Set it to True to Create a fresh PDB. Otherwise, set False.
 drop_pdb: True         # Set it to True to Drop an existing PDB. Otherwise, set False.

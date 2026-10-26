@@ -3,4 +3,4 @@ service_name: devdb                            # Database service name.
 listener_port: 1521                            # Database port number.
 interval: 45                                   # Snapshot interval (in minutes). '0' disables.
 retention: 25                                  # Snapshot Retention period (in days)
-oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+# oracle_db_home not needed - oracle_awr module uses Thin mode (pure Python, no Oracle client required)
