@@ -1,35 +1,42 @@
-- name: Create Directory
-  oracle_directory:
-        hostname: "{{ hostname }}"
-        service_name: "{{ service_name }}"
-        port: "{{ listener_port }}"
-        user: "{{ db_user }}"
-        password: "{{ db_password_cdb }}"
-        mode: "{{ db_mode }}"
-        directory_name: "{{ directory_name }}"
-        directory_path: "{{ path }}"
-        state: "{{ state }}"
-        directory_mode: "{{ mode }}"
-  register: crdir
+- name: Create OS path on target LPAR (if state is present and path does not exist)
+  ansible.builtin.file:
+    path: "{{ path }}"
+    state: directory
+    mode: '0755'
+  delegate_to: "{{ hostname }}"
+  remote_user: "{{ os_user | default('oracle') }}"
   when: state == 'present'
-  environment: "{{ oracle_env }}"
-- debug:
-    var: crdir
 
-- name: Drop Directory
+- name: Manage directory (create or drop)
   oracle_directory:
-        hostname: "{{ hostname }}"
-        service_name: "{{ service_name }}"
-        port: "{{ listener_port }}"
-        user: "{{ db_user }}"
-        password: "{{ db_password_cdb }}"
-        mode: "{{ db_mode }}"
-        directory_name: "{{ directory_name }}"
-        directory_path: "{{ path }}"
-        state: "{{ state }}"
-        directory_mode: "{{ mode }}"
-  register: deldir
-  when: state == 'absent'
-  environment: "{{ oracle_env }}"
-- debug:
-    var: deldir
+    hostname: "{{ hostname }}"
+    service_name: "{{ service_name }}"
+    port: "{{ listener_port }}"
+    user: "{{ db_user }}"
+    password: "{{ db_password }}"
+    mode: "{{ db_mode }}"
+    directory_name: "{{ directory_name }}"
+    directory_path: "{{ path }}"
+    state: "{{ state }}"
+    directory_mode: "{{ mode }}"
+  register: dirout
+
+- name: Show directory result
+  ansible.builtin.debug:
+    msg: "{{ dirout.msg }}"
+  when: dirout.msg is defined
+
+- name: Verify directory in DBA_DIRECTORIES
+  oracle_sql:
+    username: "{{ db_user }}"
+    password: "{{ db_password }}"
+    hostname: "{{ hostname }}"
+    port: "{{ listener_port }}"
+    service_name: "{{ service_name }}"
+    mode: "{{ db_mode }}"
+    sql: "SELECT directory_name, directory_path FROM dba_directories WHERE directory_name = UPPER('{{ directory_name }}')"
+  register: dirverify
+
+- name: Show directory verification
+  ansible.builtin.debug:
+    msg: "{{ dirverify.msg }}"

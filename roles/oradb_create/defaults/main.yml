@@ -22,11 +22,14 @@ listener_name: LISTENER
 listener_protocols: TCP
 listener_port: 1521
 autostartup_service: false
+# Path to freeware lib directory on AIX — required so DBCA's internal asmcmd call can load libexpat.a.
+# Override in create-db-vars.yml if libexpat.a is installed elsewhere.
+libpath_freeware: /opt/freeware/lib
 
 dbca_templatename: General_Purpose.dbc
 dbca_initParams: "{% if '19c' in item.0.oracle_version_db %} -initParams db_name={{item.0.oracle_db_name}}{% if item.0.oracle_db_unique_name is defined %},db_unique_name={{item.0.oracle_db_unique_name}}{% endif %}{% endif %}"
 oracle_edition: EE
-oracle_dbf_dir_fs: /u01/abcl/datafiles                 # Provide path on the Lpar to store datafiles.
+oracle_dbf_dir_fs:                # Provide path on the Lpar to store datafiles.
 oracle_reco_dir_fs: 
 oracle_dbf_dir_asm:                      # Provide ASM diskgroup name to store datafiles.
 oracle_reco_dir_asm:
