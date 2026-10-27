@@ -1,0 +1,168 @@
+---
+- name: "Validate clone parameters"
+  ansible.builtin.assert:
+    that:
+      - dbclone_method in ['active', 'backup']
+      - dbclone_aux | length <= 8
+      - dbclone_aux is match('^[A-Za-z][A-Za-z0-9_]*$')
+      - dbclone.db_create_file_dest is defined or dbclone.db_file_name_convert is defined
+      - dbclone_method != 'active' or (dbclone.source_host is defined and dbclone.source_service is defined)
+      - dbclone_method != 'backup' or dbclone.backup_location is defined
+      - dbclone_channels | int > 0
+    fail_msg: >
+      Invalid clone parameters for {{ dbclone_aux }}: clone_method must be 'active' or 'backup';
+      aux_db_name must be a valid DB name of at most 8 characters; db_create_file_dest or
+      db_file_name_convert must be set; 'active' needs source_host and source_service;
+      'backup' needs backup_location.
+    quiet: true
+
+- name: "Create work directory and TNS_ADMIN directory"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0700'
+  loop:
+    - "{{ dbclone_dir }}"
+    - "{{ dbclone_tns_dir }}"
+
+- name: "Check running processes"
+  ansible.builtin.command: ps -ef
+  register: dbclone_ps
+  changed_when: false
+
+- name: "Set instance_running fact"
+  ansible.builtin.set_fact:
+    dbclone_running: "{{ dbclone_ps.stdout is search('ora_pmon_' ~ dbclone_aux ~ '$', multiline=True) }}"
+
+- name: "Get status of the running instance"
+  ansible.builtin.command:
+    argv:
+      - "{{ dbclone_home }}/bin/sqlplus"
+      - -S
+      - "/ as sysdba"
+    stdin: |
+      set heading off feedback off pagesize 0
+      select status from v$instance;
+      exit
+  environment: "{{ dbclone_env }}"
+  register: dbclone_status
+  changed_when: false
+  when: dbclone_running
+
+- name: "Set clone_exists fact"
+  ansible.builtin.set_fact:
+    dbclone_exists: "{{ (dbclone_status.stdout | default('') | trim) == 'OPEN' }}"
+
+- name: "Skip the duplicate when an open database with this SID exists"
+  ansible.builtin.debug:
+    msg: "Instance {{ dbclone_aux }} is already OPEN on this host. Skipping the duplicate (drop it first with oradb_delete to re-clone)."
+  when: dbclone_exists
+
+- name: "Duplicate the database"
+  when: not dbclone_exists
+  block:
+    - name: "Write temporary auxiliary pfile"
+      ansible.builtin.copy:
+        dest: "{{ dbclone_home }}/dbs/init{{ dbclone_aux }}.ora"
+        mode: '0640'
+        content: |
+          db_name='{{ dbclone_aux }}'
+          {% if dbclone.db_create_file_dest is defined %}
+          db_create_file_dest='{{ dbclone.db_create_file_dest }}'
+          {% endif %}
+          {% for key, value in dbclone_pfile_params.items() %}
+          {{ key }}='{{ value }}'
+          {% endfor %}
+
+    - name: "Create password file (needed for the remote auxiliary connection)"
+      ansible.builtin.command:
+        cmd: "{{ dbclone_home }}/bin/orapwd file={{ dbclone_home }}/dbs/orapw{{ dbclone_aux }} format=12.2 force=y"
+        stdin: "{{ db_clone_sys_password }}"
+      environment: "{{ dbclone_env }}"
+      no_log: true
+      changed_when: true
+      when: dbclone_method == 'active'
+
+    - name: "Shut down the leftover instance (not OPEN)"
+      ansible.builtin.command:
+        argv:
+          - "{{ dbclone_home }}/bin/sqlplus"
+          - -S
+          - "/ as sysdba"
+        stdin: |
+          shutdown abort
+          exit
+      environment: "{{ dbclone_env }}"
+      changed_when: true
+      when: dbclone_running
+
+    - name: "Start auxiliary instance in NOMOUNT"
+      ansible.builtin.command:
+        argv:
+          - "{{ dbclone_home }}/bin/sqlplus"
+          - -S
+          - "/ as sysdba"
+        stdin: |
+          startup nomount pfile='{{ dbclone_home }}/dbs/init{{ dbclone_aux }}.ora'
+          exit
+      environment: "{{ dbclone_env }}"
+      register: dbclone_startup
+      changed_when: true
+      failed_when: "'ORA-' in dbclone_startup.stdout or 'SP2-' in dbclone_startup.stdout"
+
+    - name: "Write TNS alias for the auxiliary instance"
+      ansible.builtin.copy:
+        dest: "{{ dbclone_tns_dir }}/tnsnames.ora"
+        mode: '0600'
+        content: |
+          {{ dbclone_aux }}_AUX =
+            (DESCRIPTION =
+              (ADDRESS = (PROTOCOL = TCP)(HOST = {{ dbclone_aux_host }})(PORT = {{ dbclone_aux_port }}))
+              (CONNECT_DATA = (SERVER = DEDICATED)(SERVICE_NAME = {{ dbclone_aux }})(UR = A))
+            )
+      when: dbclone_method == 'active'
+
+    - name: "Write RMAN DUPLICATE script"
+      ansible.builtin.template:
+        src: rman_duplicate.rcv.j2
+        dest: "{{ dbclone_cmdfile }}"
+        mode: '0600'
+      no_log: true
+
+    - name: "Run RMAN DUPLICATE"
+      ansible.builtin.command:
+        cmd: "{{ dbclone_home }}/bin/rman cmdfile={{ dbclone_cmdfile }}"
+      environment: "{{ dbclone_env }}"
+      register: dbclone_result
+      changed_when: true
+
+    - name: "Show RMAN DUPLICATE output (last 25 lines)"
+      ansible.builtin.debug:
+        msg: "{{ dbclone_result.stdout_lines[-25:] }}"
+
+    - name: "Verify the clone"
+      ansible.builtin.command:
+        argv:
+          - "{{ dbclone_home }}/bin/sqlplus"
+          - -S
+          - "/ as sysdba"
+        stdin: |
+          set heading off feedback off pagesize 0 linesize 200
+          select name || ',' || db_unique_name || ',' || open_mode || ',' || dbid from v$database;
+          exit
+      environment: "{{ dbclone_env }}"
+      register: dbclone_verify
+      changed_when: false
+
+    - name: "Show the cloned database (name, db_unique_name, open_mode, dbid)"
+      ansible.builtin.debug:
+        msg: "{{ dbclone_verify.stdout | trim }}"
+
+  always:
+    - name: "Remove the temporary RMAN script and TNS_ADMIN directory"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ dbclone_cmdfile }}"
+        - "{{ dbclone_tns_dir }}"

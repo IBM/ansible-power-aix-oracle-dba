@@ -1,0 +1,11 @@
+# Playbook to take RMAN backups (full, incremental level 0/1 or archivelog) of one or more databases.
+# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+#
+- name: RMAN Database Backup
+  hosts: pilotdb                   # AIX LPAR hostname where the database(s) run, make sure it's set in the inventory.
+  remote_user: oracle              # Oracle software owner (OS authentication, "rman target /").
+  gather_facts: false
+  vars_files:
+   - vars/db-backup-vars.yml
+  roles:
+   - { role: podba_db_backup }

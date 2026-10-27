@@ -1,0 +1,48 @@
+# Clone Database (RMAN DUPLICATE) - Variables section
+#
+# Optional defaults (override per clone below):
+# db_clone_method: active                 # active | backup
+# db_clone_work_dir: /tmp/ansible_rman    # Temporary RMAN command file / TNS_ADMIN location on the target host.
+# db_clone_sys_user: sys
+# db_clone_sys_password: "{{ default_dbpass }}"   # From vars/vault.yml.
+# db_clone_aux_listener_port: 1521        # Listener port on the clone host (active duplicate).
+# db_clone_source_port: 1521              # Listener port of the source database (active duplicate).
+# db_clone_channels: 4                    # Parallel auxiliary disk channels.
+# db_clone_use_backupset: false           # Active duplicate: true = USING BACKUPSET.
+# db_clone_compressed: false              # Active duplicate with backupset: USING COMPRESSED BACKUPSET.
+# db_clone_nofilenamecheck: false         # true = NOFILENAMECHECK (clone on a different host, same file paths).
+# db_clone_noopen: false                  # true = leave the clone MOUNTED.
+# db_clone_pfile_params: {}               # Extra parameters for the temporary auxiliary pfile.
+# db_clone_spfile_set: {}                 # Extra parameters for the SPFILE ... SET clause.
+
+db_clones:                                # List of databases to create.
+
+# ── Example 1: RMAN active duplicate (no backup needed, source must be open) ──
+- aux_db_name: clonedb                    # DB_NAME / ORACLE_SID of the clone (max. 8 characters).
+  oracle_db_home: /d01/19c/db19c          # ORACLE_HOME on the clone host.
+  clone_method: active
+  source_host: ansible-db                 # Host of the source database (TCP endpoint for the target connection).
+  source_service: prod                    # Service name of the source database.
+  db_create_file_dest: /d01/19c/oradata   # Where the cloned datafiles are created (OMF).
+  db_create_online_log_dest_1: /d01/19c/oradata
+  db_recovery_file_dest: /d01/19c/fra
+  db_recovery_file_dest_size: 10G
+  channels: 4
+  nofilenamecheck: true                   # Required when the clone is on a different host.
+
+# ── Example 2: RMAN duplicate from backup (no connection to the source) ──
+# - aux_db_name: clonedb
+#   oracle_db_home: /d01/19c/db19c
+#   clone_method: backup
+#   backup_location: /backup/prod         # Directory with the backup pieces (taken with db-backup.yml).
+#   source_dbid: 1234567890               # Optional. Needed when the location holds backups of several databases.
+#   until_time: "2025-01-31 23:00:00"     # Optional. Point in time to restore to.
+#   db_file_name_convert:                 # Alternative to db_create_file_dest (non-OMF). List of old, new pairs.
+#   - /d01/19c/oradata/PROD
+#   - /d02/19c/oradata/CLONEDB
+#   log_file_name_convert:
+#   - /d01/19c/oradata/PROD
+#   - /d02/19c/oradata/CLONEDB
+#   control_files:
+#   - /d02/19c/oradata/CLONEDB/control01.ctl
+#   channels: 4

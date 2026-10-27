@@ -1,0 +1,28 @@
+---
+# Copyright (c) IBM Corporation 2025
+# tasks file for podba_db_backup
+
+- name: Back up each database with RMAN
+  ansible.builtin.include_tasks: backup.yml
+  loop: "{{ rman_backups }}"
+  loop_control:
+    loop_var: dbbackup
+    label: "{{ dbbackup.oracle_db_name }}"
+  vars:
+    dbbackup_sid: "{{ dbbackup.oracle_db_name }}"
+    dbbackup_home: "{{ dbbackup.oracle_db_home }}"
+    dbbackup_type: "{{ dbbackup.backup_type | default(rman_backup_type) }}"
+    dbbackup_location: "{{ dbbackup.backup_location }}"
+    dbbackup_channels: "{{ dbbackup.channels | default(rman_backup_channels) }}"
+    dbbackup_compressed: "{{ dbbackup.compressed | default(rman_backup_compressed) | bool }}"
+    dbbackup_include_archivelog: "{{ dbbackup.include_archivelog | default(rman_backup_include_archivelog) | bool }}"
+    dbbackup_delete_input: "{{ dbbackup.delete_input_archivelog | default(rman_backup_delete_input_archivelog) | bool }}"
+    dbbackup_enable_archivelog: "{{ dbbackup.enable_archivelog | default(rman_backup_enable_archivelog) | bool }}"
+    dbbackup_validate: "{{ dbbackup.validate_backup | default(rman_backup_validate) | bool }}"
+    dbbackup_tag: "{{ dbbackup.tag | default('ANSIBLE_' ~ (dbbackup_type | upper)) }}"
+    dbbackup_retention_days: "{{ dbbackup.retention_days | default('') }}"
+    dbbackup_env:
+      ORACLE_SID: "{{ dbbackup_sid }}"
+      ORACLE_HOME: "{{ dbbackup_home }}"
+      PATH: "{{ dbbackup_home }}/bin:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
+      NLS_DATE_FORMAT: "YYYY-MM-DD HH24:MI:SS"

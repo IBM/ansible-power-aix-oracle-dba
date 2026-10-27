@@ -1,0 +1,65 @@
+{% set sys = db_clone_sys_user ~ '/' ~ db_clone_sys_password %}
+{% if dbclone_method == 'active' %}
+CONNECT TARGET {{ sys }}@//{{ dbclone.source_host }}:{{ dbclone_source_port }}/{{ dbclone.source_service }};
+CONNECT AUXILIARY {{ sys }}@{{ dbclone_aux }}_AUX;
+{% else %}
+CONNECT AUXILIARY /;
+{% endif %}
+RUN {
+{% for i in range(1, dbclone_channels | int + 1) %}
+  ALLOCATE AUXILIARY CHANNEL aux{{ i }} DEVICE TYPE DISK;
+{% endfor %}
+{% if dbclone_method == 'backup' %}
+{% if dbclone.source_dbid is defined %}
+  SET DBID {{ dbclone.source_dbid }};
+{% endif %}
+  DUPLICATE DATABASE TO {{ dbclone_aux }}
+    BACKUP LOCATION '{{ dbclone.backup_location }}'
+{% else %}
+  DUPLICATE TARGET DATABASE TO {{ dbclone_aux }}
+    FROM ACTIVE DATABASE
+{% if dbclone_use_backupset %}
+    USING {% if dbclone_compressed %}COMPRESSED {% endif %}BACKUPSET
+{% endif %}
+{% endif %}
+    SPFILE
+{% if dbclone.db_create_file_dest is defined %}
+      SET db_create_file_dest='{{ dbclone.db_create_file_dest }}'
+{% endif %}
+{% if dbclone.db_create_online_log_dest_1 is defined %}
+      SET db_create_online_log_dest_1='{{ dbclone.db_create_online_log_dest_1 }}'
+{% endif %}
+{% if dbclone.db_recovery_file_dest is defined %}
+      SET db_recovery_file_dest='{{ dbclone.db_recovery_file_dest }}'
+{% endif %}
+{% if dbclone.db_recovery_file_dest_size is defined %}
+      SET db_recovery_file_dest_size='{{ dbclone.db_recovery_file_dest_size }}'
+{% endif %}
+{% if dbclone.control_files is defined %}
+      SET control_files='{{ dbclone.control_files | join("','") }}'
+{% endif %}
+{% if dbclone.db_file_name_convert is defined %}
+      SET db_file_name_convert='{{ dbclone.db_file_name_convert | join("','") }}'
+{% endif %}
+{% if dbclone.log_file_name_convert is defined %}
+      SET log_file_name_convert='{{ dbclone.log_file_name_convert | join("','") }}'
+{% endif %}
+      SET db_unique_name='{{ dbclone.db_unique_name | default(dbclone_aux) }}'
+{% for key, value in dbclone_spfile_set.items() %}
+      SET {{ key }}='{{ value }}'
+{% endfor %}
+{% if dbclone.until_time is defined and dbclone_method == 'backup' %}
+    UNTIL TIME "TO_DATE('{{ dbclone.until_time }}','YYYY-MM-DD HH24:MI:SS')"
+{% endif %}
+{% if dbclone_nofilenamecheck %}
+    NOFILENAMECHECK
+{% endif %}
+{% if dbclone_noopen %}
+    NOOPEN
+{% endif %}
+  ;
+{% for i in range(1, dbclone_channels | int + 1) %}
+  RELEASE CHANNEL aux{{ i }};
+{% endfor %}
+}
+EXIT;

@@ -1,0 +1,33 @@
+---
+# Copyright (c) IBM Corporation 2025
+# tasks file for podba_db_clone
+
+- name: Clone each database with RMAN DUPLICATE
+  ansible.builtin.include_tasks: clone.yml
+  loop: "{{ db_clones }}"
+  loop_control:
+    loop_var: dbclone
+    label: "{{ dbclone.aux_db_name }}"
+  vars:
+    dbclone_aux: "{{ dbclone.aux_db_name }}"
+    dbclone_home: "{{ dbclone.oracle_db_home }}"
+    dbclone_method: "{{ dbclone.clone_method | default(db_clone_method) }}"
+    dbclone_dir: "{{ db_clone_work_dir }}"
+    dbclone_tns_dir: "{{ db_clone_work_dir }}/tns_{{ dbclone.aux_db_name }}"
+    dbclone_cmdfile: "{{ db_clone_work_dir }}/rman_duplicate_{{ dbclone.aux_db_name }}.rcv"
+    dbclone_channels: "{{ dbclone.channels | default(db_clone_channels) }}"
+    dbclone_nofilenamecheck: "{{ dbclone.nofilenamecheck | default(db_clone_nofilenamecheck) | bool }}"
+    dbclone_noopen: "{{ dbclone.noopen | default(db_clone_noopen) | bool }}"
+    dbclone_use_backupset: "{{ dbclone.use_backupset | default(db_clone_use_backupset) | bool }}"
+    dbclone_compressed: "{{ dbclone.compressed | default(db_clone_compressed) | bool }}"
+    dbclone_aux_host: "{{ dbclone.aux_host | default(ansible_host | default(inventory_hostname)) }}"
+    dbclone_aux_port: "{{ dbclone.aux_listener_port | default(db_clone_aux_listener_port) }}"
+    dbclone_source_port: "{{ dbclone.source_port | default(db_clone_source_port) }}"
+    dbclone_pfile_params: "{{ db_clone_pfile_params | combine(dbclone.pfile_params | default({})) }}"
+    dbclone_spfile_set: "{{ db_clone_spfile_set | combine(dbclone.spfile_set | default({})) }}"
+    dbclone_env:
+      ORACLE_SID: "{{ dbclone.aux_db_name }}"
+      ORACLE_HOME: "{{ dbclone.oracle_db_home }}"
+      PATH: "{{ dbclone.oracle_db_home }}/bin:/usr/local/bin:/bin:/sbin:/usr/bin:/usr/sbin"
+      TNS_ADMIN: "{{ db_clone_work_dir }}/tns_{{ dbclone.aux_db_name }}"
+      NLS_DATE_FORMAT: "YYYY-MM-DD HH24:MI:SS"

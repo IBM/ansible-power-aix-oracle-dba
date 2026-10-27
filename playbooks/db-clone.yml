@@ -1,0 +1,14 @@
+# Playbook to clone Oracle databases with RMAN DUPLICATE.
+#   clone_method: active  -> DUPLICATE TARGET DATABASE ... FROM ACTIVE DATABASE
+#   clone_method: backup  -> DUPLICATE DATABASE ... BACKUP LOCATION (backup taken with db-backup.yml)
+# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+#
+- name: Clone a Database with RMAN DUPLICATE
+  hosts: pilotdb                   # AIX LPAR hostname where the clone (auxiliary) database will be created.
+  remote_user: oracle              # Oracle software owner.
+  gather_facts: false
+  vars_files:
+   - vars/vault.yml              # SYS password (default_dbpass)
+   - vars/db-clone-vars.yml
+  roles:
+   - { role: podba_db_clone }

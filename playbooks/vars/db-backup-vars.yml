@@ -1,0 +1,30 @@
+# RMAN Database Backup - Variables section
+#
+# Intended for development and test databases - NOT for production use.
+# Cold backups and enable_archivelog restart the instance; only the CDB is reopened.
+# PDB open state afterwards is the user's responsibility (alter pluggable database all open;).
+#
+# Optional defaults (override per database below):
+# rman_backup_type: full                      # full | incremental_0 | incremental_1 | archivelog | cold
+# rman_backup_channels: 4                     # Parallel disk channels.
+# rman_backup_compressed: true                # AS COMPRESSED BACKUPSET.
+# rman_backup_include_archivelog: true        # PLUS ARCHIVELOG (not used for backup_type archivelog).
+# rman_backup_delete_input_archivelog: false  # DELETE INPUT after archived logs are backed up.
+# rman_backup_enable_archivelog: false         # true = switch a NOARCHIVELOG database to ARCHIVELOG first (RESTARTS the database).
+# rman_backup_validate: false                # true = RESTORE ... VALIDATE after the backup (slow: re-reads all backup pieces).
+# rman_log_dir: /tmp/ansible_rman             # Where the generated RMAN command file is written on the target host.
+
+rman_backups:                                 # List of databases to back up.
+- oracle_db_name: prod                        # ORACLE_SID of the database (instance on the target host).
+  oracle_db_home: /d01/19c/dbhome              # ORACLE_HOME of the database.
+  backup_location: /backup/prod               # Directory for the backup pieces (created if missing).
+  backup_type: full                           # full | incremental_0 | incremental_1 | archivelog | cold
+                                              # cold = shut down + MOUNT + backup + reopen. NOT for production use.
+  enable_archivelog: false                    # true = if NOARCHIVELOG, enable it first for a hot backup (restarts the database).
+  validate_backup: false                      # true = run RESTORE ... VALIDATE after the backup (re-reads all backup pieces).
+  channels: 4                                 # Number of parallel disk channels.
+  compressed: true                            # true = compressed backup sets.
+  include_archivelog: true                    # true = PLUS ARCHIVELOG.
+  delete_input_archivelog: false              # true = delete archived logs once backed up.
+  retention_days: 7                           # Optional. Deletes backups outside this recovery window after the backup.
+  tag: PROD_FULL                              # Optional. Default is ANSIBLE_<BACKUP_TYPE>.

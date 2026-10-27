@@ -1,0 +1,25 @@
+---
+# Cold backups and enabling ARCHIVELOG restart the instance. That is only handled for single-instance databases.
+
+- name: "Get the cluster_database setting"
+  ansible.builtin.command:
+    argv:
+      - "{{ dbbackup_home }}/bin/sqlplus"
+      - -S
+      - "/ as sysdba"
+    stdin: |
+      set heading off feedback off pagesize 0
+      select value from v$parameter where name = 'cluster_database';
+      exit
+  environment: "{{ dbbackup_env }}"
+  register: dbbackup_cluster
+  changed_when: false
+  failed_when: "'ORA-' in dbbackup_cluster.stdout or 'SP2-' in dbbackup_cluster.stdout"
+  when: dbbackup_status_before != ''
+
+- name: "Refuse to restart a RAC database"
+  ansible.builtin.assert:
+    that: (dbbackup_cluster.stdout | trim | upper) != 'TRUE'
+    fail_msg: "{{ dbbackup_sid }} is a RAC database (cluster_database=TRUE). This operation supports single-instance databases only."
+    quiet: true
+  when: dbbackup_status_before != ''

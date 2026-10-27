@@ -1,0 +1,61 @@
+---
+- name: "Validate backup parameters"
+  ansible.builtin.assert:
+    that:
+      - dbbackup_type in ['full', 'incremental_0', 'incremental_1', 'archivelog', 'cold']
+      - dbbackup_channels | int > 0
+      - dbbackup_retention_days == '' or dbbackup_retention_days | int > 0
+    fail_msg: >
+      Invalid backup parameters for {{ dbbackup_sid }}: backup_type must be one of
+      full, incremental_0, incremental_1, archivelog, cold (got '{{ dbbackup_type }}'),
+      channels must be > 0 and retention_days (if set) must be > 0.
+    quiet: true
+
+- name: "Create backup and script directories"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ dbbackup_location }}", mode: '0750' }
+    - { path: "{{ rman_log_dir }}", mode: '0700' }
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: "Get the instance status"
+  ansible.builtin.command:
+    argv:
+      - "{{ dbbackup_home }}/bin/sqlplus"
+      - -S
+      - "/ as sysdba"
+    stdin: |
+      set heading off feedback off pagesize 0
+      select status from v$instance;
+      exit
+  environment: "{{ dbbackup_env }}"
+  register: dbbackup_status_out
+  changed_when: false
+  failed_when: >-
+    ('ORA-' in dbbackup_status_out.stdout or 'SP2-' in dbbackup_status_out.stdout)
+    and 'ORA-01034' not in dbbackup_status_out.stdout
+
+- name: "Set the instance status fact ('' = instance is down)"
+  ansible.builtin.set_fact:
+    dbbackup_status_before: "{{ '' if 'ORA-01034' in dbbackup_status_out.stdout else dbbackup_status_out.stdout | trim }}"
+
+- name: "Check archivelog mode (hot backups)"
+  ansible.builtin.include_tasks: archivelog_check.yml
+  when: dbbackup_type != 'cold'
+
+- name: "Take the backup"
+  block:
+    - name: "Prepare the cold backup (shut down and mount the database)"
+      ansible.builtin.include_tasks: cold_prepare.yml
+      when: dbbackup_type == 'cold'
+
+    - name: "Run the RMAN backup"
+      ansible.builtin.include_tasks: run_rman.yml
+  always:
+    - name: "Return the database to its original state (cold backup)"
+      ansible.builtin.include_tasks: restore_state.yml
+      when: dbbackup_type == 'cold'

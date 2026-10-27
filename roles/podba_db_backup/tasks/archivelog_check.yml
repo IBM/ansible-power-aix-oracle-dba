@@ -1,0 +1,38 @@
+---
+# Hot (online) backups need an OPEN database in ARCHIVELOG mode.
+
+- name: "Assert the instance is OPEN"
+  ansible.builtin.assert:
+    that: dbbackup_status_before == 'OPEN'
+    fail_msg: >-
+      A hot backup needs an OPEN instance, but {{ dbbackup_sid }} is
+      '{{ dbbackup_status_before | default('', true) | ternary(dbbackup_status_before, 'down') }}'.
+      Open the database, or use backup_type: cold.
+    quiet: true
+
+- name: "Get the log mode"
+  ansible.builtin.command:
+    argv:
+      - "{{ dbbackup_home }}/bin/sqlplus"
+      - -S
+      - "/ as sysdba"
+    stdin: |
+      set heading off feedback off pagesize 0
+      select log_mode from v$database;
+      exit
+  environment: "{{ dbbackup_env }}"
+  register: dbbackup_logmode
+  changed_when: false
+  failed_when: "'ORA-' in dbbackup_logmode.stdout or 'SP2-' in dbbackup_logmode.stdout"
+
+- name: "Fail if the database is in NOARCHIVELOG mode and enable_archivelog is not set"
+  ansible.builtin.assert:
+    that: (dbbackup_logmode.stdout | trim) == 'ARCHIVELOG' or dbbackup_enable_archivelog
+    fail_msg: >-
+      Database {{ dbbackup_sid }} is in {{ dbbackup_logmode.stdout | trim }} mode and a hot backup needs ARCHIVELOG.
+      Set enable_archivelog: true (restarts the database, causes downtime), or use backup_type: cold.
+    quiet: true
+
+- name: "Enable ARCHIVELOG mode"
+  ansible.builtin.include_tasks: enable_archivelog.yml
+  when: (dbbackup_logmode.stdout | trim) != 'ARCHIVELOG'

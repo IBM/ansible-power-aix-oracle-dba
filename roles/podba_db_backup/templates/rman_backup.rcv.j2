@@ -1,0 +1,29 @@
+{% set piece_format = dbbackup_location ~ '/%d_%T_%U.bkp' %}
+{% set backupset = 'AS COMPRESSED BACKUPSET' if dbbackup_compressed else 'AS BACKUPSET' %}
+{% set delete_input = ' DELETE INPUT' if dbbackup_delete_input else '' %}
+RUN {
+{% for i in range(1, dbbackup_channels | int + 1) %}
+  ALLOCATE CHANNEL ch{{ i }} DEVICE TYPE DISK FORMAT '{{ piece_format }}';
+{% endfor %}
+{% if dbbackup_type == 'archivelog' %}
+  BACKUP {{ backupset }} ARCHIVELOG ALL{{ delete_input }} TAG '{{ dbbackup_tag }}';
+{% elif dbbackup_type == 'cold' %}
+  # Consistent backup of the MOUNTED database. No archived logs are needed to restore it.
+  BACKUP {{ backupset }} DATABASE TAG '{{ dbbackup_tag }}';
+
+  BACKUP CURRENT CONTROLFILE TAG '{{ dbbackup_tag }}' FORMAT '{{ dbbackup_location }}/controlfile_%d_%T_%s_%p.bkp';
+  BACKUP SPFILE TAG '{{ dbbackup_tag }}';
+{% else %}
+  BACKUP {{ backupset }}{% if dbbackup_type == 'incremental_0' %} INCREMENTAL LEVEL 0{% elif dbbackup_type == 'incremental_1' %} INCREMENTAL LEVEL 1{% endif %} DATABASE TAG '{{ dbbackup_tag }}'{% if dbbackup_include_archivelog %} PLUS ARCHIVELOG{{ delete_input }}{% endif %};
+
+  BACKUP CURRENT CONTROLFILE TAG '{{ dbbackup_tag }}' FORMAT '{{ dbbackup_location }}/controlfile_%d_%T_%s_%p.bkp';
+  BACKUP SPFILE TAG '{{ dbbackup_tag }}';
+{% endif %}
+{% for i in range(1, dbbackup_channels | int + 1) %}
+  RELEASE CHANNEL ch{{ i }};
+{% endfor %}
+}
+{% if dbbackup_retention_days != '' %}
+DELETE NOPROMPT OBSOLETE RECOVERY WINDOW OF {{ dbbackup_retention_days }} DAYS;
+{% endif %}
+EXIT;

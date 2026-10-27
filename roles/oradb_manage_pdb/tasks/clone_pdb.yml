@@ -1,0 +1,21 @@
+---
+- name: Clone PDB from an existing PDB
+  oracle_pdb:
+    name: "{{ item.pdb_name }}"
+    sourcedb: "{{ item.cdb }}"
+    source_pdb: "{{ item.source_pdb }}"
+    datafile_dest: "{{ item.datafile_dest | default(omit) }}"
+    file_name_convert: "{{ item.file_name_convert | default(omit) }}"
+    save_state: "{{ item.save_state | default(omit) }}"
+    host: "{{ hostname }}"
+    username: "{{ db_user | default('sys') }}"
+    password: "{{ db_password_cdb }}"
+    mode: "{{ db_mode }}"
+    service_name: "{{ oracle_db_name }}"
+    port: "{{ listener_port }}"
+    state: "{{ item.state | default('present') }}"
+  environment: "{{ oracle_env }}"
+  loop: "{{ clone_oracle_pdbs | default([]) }}"
+  loop_control:
+    label: "{{ item.source_pdb }} -> {{ item.pdb_name }}"
+  when: item.state | default('present') == 'present'

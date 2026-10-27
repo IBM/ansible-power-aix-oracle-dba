@@ -1,0 +1,61 @@
+---
+# Restarts the database into MOUNT, enables ARCHIVELOG and opens it again. Causes downtime.
+# Only reached when the instance is OPEN (checked in archivelog_check.yml).
+
+- name: "Refuse to restart a RAC database"
+  ansible.builtin.include_tasks: check_not_rac.yml
+
+- name: "Enable ARCHIVELOG mode (this restarts the database)"
+  block:
+    - name: "Shut down the database"
+      ansible.builtin.command:
+        argv:
+          - "{{ dbbackup_home }}/bin/sqlplus"
+          - -S
+          - "/ as sysdba"
+        stdin: |
+          shutdown immediate
+          exit
+      environment: "{{ dbbackup_env }}"
+      register: dbbackup_shutdown
+      changed_when: true
+      failed_when: "'ORA-' in dbbackup_shutdown.stdout or 'SP2-' in dbbackup_shutdown.stdout"
+
+    - name: "Start the database in MOUNT and switch on ARCHIVELOG"
+      ansible.builtin.command:
+        argv:
+          - "{{ dbbackup_home }}/bin/sqlplus"
+          - -S
+          - "/ as sysdba"
+        stdin: |
+          whenever sqlerror exit failure
+          startup mount
+          alter database archivelog;
+          exit
+      environment: "{{ dbbackup_env }}"
+      register: dbbackup_archivelog_on
+      changed_when: true
+      failed_when: "'ORA-' in dbbackup_archivelog_on.stdout or 'SP2-' in dbbackup_archivelog_on.stdout"
+  always:
+    - name: "Open the database again"
+      ansible.builtin.include_tasks: restore_state.yml
+
+- name: "Verify ARCHIVELOG mode and show the archive destination"
+  ansible.builtin.command:
+    argv:
+      - "{{ dbbackup_home }}/bin/sqlplus"
+      - -S
+      - "/ as sysdba"
+    stdin: |
+      set heading off feedback off pagesize 0
+      select log_mode from v$database;
+      archive log list
+      exit
+  environment: "{{ dbbackup_env }}"
+  register: dbbackup_archivelog_verify
+  changed_when: false
+  failed_when: "'ARCHIVELOG' not in dbbackup_archivelog_verify.stdout_lines[0]"
+
+- name: "Show the archive log settings"
+  ansible.builtin.debug:
+    msg: "{{ dbbackup_archivelog_verify.stdout_lines }}"

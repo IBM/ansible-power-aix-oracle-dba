@@ -1,0 +1,35 @@
+---
+# Puts the instance back in the state it had before the role touched it.
+#   OPEN before  -> open the database (CDB only: PDB states are the user's responsibility)
+#   down before  -> shut it down again
+#   other        -> leave it (MOUNTED)
+
+- name: "Open the database"
+  ansible.builtin.command:
+    argv:
+      - "{{ dbbackup_home }}/bin/sqlplus"
+      - -S
+      - "/ as sysdba"
+    stdin: |
+      alter database open;
+      exit
+  environment: "{{ dbbackup_env }}"
+  register: dbbackup_open
+  changed_when: "'ORA-01531' not in dbbackup_open.stdout"
+  failed_when: "('ORA-' in dbbackup_open.stdout or 'SP2-' in dbbackup_open.stdout) and 'ORA-01531' not in dbbackup_open.stdout"
+  when: dbbackup_status_before == 'OPEN'
+
+- name: "Shut the database down again (it was down before)"
+  ansible.builtin.command:
+    argv:
+      - "{{ dbbackup_home }}/bin/sqlplus"
+      - -S
+      - "/ as sysdba"
+    stdin: |
+      shutdown immediate
+      exit
+  environment: "{{ dbbackup_env }}"
+  register: dbbackup_down
+  changed_when: true
+  failed_when: "'ORA-' in dbbackup_down.stdout or 'SP2-' in dbbackup_down.stdout"
+  when: dbbackup_status_before == ''

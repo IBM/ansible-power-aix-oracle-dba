@@ -1,0 +1,14 @@
+---
+# Defaults for podba_db_backup. Every value can be overridden per database in rman_backups.
+# Intended for development and test databases - NOT for production use.
+
+rman_backup_type: full                    # full | incremental_0 | incremental_1 | archivelog | cold
+rman_backup_channels: 4                   # Number of parallel disk channels.
+rman_backup_compressed: true              # true = AS COMPRESSED BACKUPSET.
+rman_backup_include_archivelog: true      # true = PLUS ARCHIVELOG (full / incremental backups).
+rman_backup_delete_input_archivelog: false  # true = DELETE INPUT after archived logs are backed up.
+rman_backup_enable_archivelog: false      # true = switch a NOARCHIVELOG database to ARCHIVELOG before a hot backup.
+                                          # This RESTARTS the database (downtime). Single-instance only.
+                                          # Only the CDB is reopened - PDB open state is the user's responsibility.
+rman_backup_validate: false               # true = RESTORE ... VALIDATE after the backup (re-reads all backup pieces; slow).
+rman_log_dir: /tmp/ansible_rman           # Directory on the target host where the RMAN command file is written.

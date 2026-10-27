@@ -1,0 +1,42 @@
+---
+# Cold (offline, consistent) backup. NOT FOR PRODUCTION USE: the database is shut down for the whole backup.
+
+- name: "WARNING - cold backup shuts the database down"
+  ansible.builtin.debug:
+    msg: >-
+      WARNING: backup_type 'cold' shuts down {{ dbbackup_sid }} for the duration of the backup.
+      It is meant for test/development databases and is NOT for production use.
+
+- name: "Refuse to cold-back-up a RAC database"
+  ansible.builtin.include_tasks: check_not_rac.yml
+
+- name: "Shut down the database"
+  ansible.builtin.command:
+    argv:
+      - "{{ dbbackup_home }}/bin/sqlplus"
+      - -S
+      - "/ as sysdba"
+    stdin: |
+      shutdown immediate
+      exit
+  environment: "{{ dbbackup_env }}"
+  register: dbbackup_shutdown
+  changed_when: true
+  failed_when: "'ORA-' in dbbackup_shutdown.stdout or 'SP2-' in dbbackup_shutdown.stdout"
+  when: dbbackup_status_before != ''
+
+- name: "Start the database in MOUNT"
+  ansible.builtin.command:
+    argv:
+      - "{{ dbbackup_home }}/bin/sqlplus"
+      - -S
+      - "/ as sysdba"
+    stdin: |
+      whenever sqlerror exit failure
+      startup mount
+      select status from v$instance;
+      exit
+  environment: "{{ dbbackup_env }}"
+  register: dbbackup_mount
+  changed_when: true
+  failed_when: "'ORA-' in dbbackup_mount.stdout or 'SP2-' in dbbackup_mount.stdout or 'MOUNTED' not in dbbackup_mount.stdout"

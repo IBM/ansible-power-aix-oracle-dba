@@ -1,0 +1,57 @@
+---
+- name: "Write RMAN backup script"
+  ansible.builtin.template:
+    src: rman_backup.rcv.j2
+    dest: "{{ rman_log_dir }}/rman_backup_{{ dbbackup_sid }}.rcv"
+    mode: '0600'
+
+- name: "Run RMAN backup"
+  ansible.builtin.command:
+    cmd: "{{ dbbackup_home }}/bin/rman target / cmdfile={{ rman_log_dir }}/rman_backup_{{ dbbackup_sid }}.rcv"
+  environment: "{{ dbbackup_env }}"
+  register: dbbackup_result
+  changed_when: true
+
+- name: "Show RMAN backup output (last 25 lines)"
+  ansible.builtin.debug:
+    msg: "{{ dbbackup_result.stdout_lines[-25:] }}"
+
+- name: "Validate that the backup can be restored"
+  when: dbbackup_validate
+  block:
+    - name: "Write RMAN validate script"
+      ansible.builtin.template:
+        src: rman_validate.rcv.j2
+        dest: "{{ rman_log_dir }}/rman_validate_{{ dbbackup_sid }}.rcv"
+        mode: '0600'
+
+    - name: "Run RMAN RESTORE ... VALIDATE (reads the backup pieces, restores nothing)"
+      ansible.builtin.command:
+        cmd: "{{ dbbackup_home }}/bin/rman target / cmdfile={{ rman_log_dir }}/rman_validate_{{ dbbackup_sid }}.rcv"
+      environment: "{{ dbbackup_env }}"
+      register: dbbackup_validate_result
+      changed_when: false
+      failed_when: >-
+        dbbackup_validate_result.rc != 0 or
+        'RMAN-' in dbbackup_validate_result.stdout or 'ORA-' in dbbackup_validate_result.stdout
+
+    - name: "Show RMAN validate output (last 12 lines)"
+      ansible.builtin.debug:
+        msg: "{{ dbbackup_validate_result.stdout_lines[-12:] }}"
+
+- name: "List backups"
+  ansible.builtin.command:
+    argv:
+      - "{{ dbbackup_home }}/bin/rman"
+      - target
+      - /
+    stdin: |
+      LIST BACKUP SUMMARY;
+      exit;
+  environment: "{{ dbbackup_env }}"
+  register: dbbackup_list
+  changed_when: false
+
+- name: "Show backup summary (last 15 lines)"
+  ansible.builtin.debug:
+    msg: "{{ dbbackup_list.stdout_lines[-15:] }}"

@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: podba_db_clone
+  author: IBM
+  description: Ansible role to clone Oracle databases with RMAN DUPLICATE (active or backup-based)
+  company: IBM
+
+  license: Apache-2.0
+
+  min_ansible_version: "2.9"
+
+  platforms:
+    - name: AIX
+      versions:
+        - all
+
+  galaxy_tags: [aix]
+dependencies: []

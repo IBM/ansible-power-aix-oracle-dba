@@ -1,0 +1,16 @@
+---
+# Defaults for podba_db_clone. Every value can be overridden per clone in db_clones.
+
+db_clone_method: active                 # active = DUPLICATE ... FROM ACTIVE DATABASE | backup = DUPLICATE ... BACKUP LOCATION
+db_clone_work_dir: /tmp/ansible_rman    # Directory on the target host for the temporary RMAN command file and TNS_ADMIN.
+db_clone_sys_user: sys
+db_clone_sys_password: "{{ default_dbpass }}"
+db_clone_aux_listener_port: 1521        # Listener port on the clone host (active duplicate: auxiliary connection).
+db_clone_source_port: 1521              # Listener port of the source database (active duplicate).
+db_clone_channels: 4                    # Number of parallel disk channels.
+db_clone_use_backupset: false           # Active duplicate only: true = USING BACKUPSET instead of image copies.
+db_clone_compressed: false              # Active duplicate with USING BACKUPSET only: USING COMPRESSED BACKUPSET.
+db_clone_nofilenamecheck: false         # true = NOFILENAMECHECK (only when the clone is on a different host or paths differ).
+db_clone_noopen: false                  # true = leave the clone MOUNTED instead of OPEN RESETLOGS.
+db_clone_pfile_params: {}               # Extra init parameters for the temporary auxiliary pfile, e.g. { sga_target: 2G }.
+db_clone_spfile_set: {}                 # Extra parameters for the SPFILE ... SET clause, e.g. { db_recovery_file_dest_size: 10G }.
