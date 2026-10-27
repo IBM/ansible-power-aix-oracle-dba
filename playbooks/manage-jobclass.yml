@@ -1,9 +1,9 @@
-# Playbook to manage DBMS Jon class.
-# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+# Playbook to manage DBMS_SCHEDULER job classes.
+# Before executing this playbook, please refer the documentation inside the docs/ directory.
 #
-- hosts: localhost
+- name: Manage DBMS Scheduler Job Class
+  hosts: localhost
   gather_facts: false
-  connection: local
   vars_files:
    - vars/vault.yml
    - vars/manage-job-class-vars.yml

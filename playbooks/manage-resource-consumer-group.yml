@@ -1,9 +1,9 @@
 # Playbook to manage database resource consumer groups.
-# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+# Before executing this playbook, please refer the documentation inside the docs/ directory.
 #
-- hosts: localhost
+- name: Manage Resource Consumer Group
+  hosts: localhost
   gather_facts: false
-  connection: local
   vars_files:
    - vars/vault.yml
    - vars/manage-resource-group-vars.yml

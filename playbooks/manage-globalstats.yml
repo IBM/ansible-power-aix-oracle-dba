@@ -1,8 +1,9 @@
-# Playbook to gather Global Statistics for a database.
-# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+# Playbook to manage DBMS_STATS global preferences for a database.
+# Before executing this playbook, please refer the documentation inside the docs/ directory.
 #
-- hosts: localhost
-  connection: local
+- name: Manage Global Statistics Preferences
+  hosts: localhost
+  gather_facts: false
   vars_files:
    - vars/vault.yml
    - vars/manage-globalstats-vars.yml

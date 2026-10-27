@@ -1,6 +1,8 @@
-hostname: ansible_db                           # AIX hostname where the Database is running.
-service_name: devdb                            # Database service name.
-listener_port: 1521                            # Database port number.
-interval: 45                                   # Snapshot interval (in minutes). '0' disables.
-retention: 25                                  # Snapshot Retention period (in days)
-# oracle_db_home not needed - oracle_awr module uses Thin mode (pure Python, no Oracle client required)
+# Manage AWR Snapshot Settings - Variables section
+hostname: ansible-db                        # AIX LPAR hostname where the database is running (TCP endpoint).
+listener_port: 1521                         # Database listener port.
+service_name: prod                          # Database service name to connect to as SYSDBA.
+# oracle_db_home not needed — oracle_awr module uses Thin mode (pure Python, no Oracle client required)
+
+interval: 45                                # Snapshot interval (in minutes). Minimum 10. '0' disables snapshots.
+retention: 25                               # Snapshot retention period (in days).

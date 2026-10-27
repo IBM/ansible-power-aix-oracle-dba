@@ -1,8 +1,9 @@
-# Playbook to execute adhoc SQL queries on a database. 
-# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+# Playbook to execute adhoc SQL queries on a database.
+# Before executing this playbook, please refer the documentation inside the docs/ directory.
 #
-- hosts: localhost
-  connection: local
+- name: Run Arbitrary SQL Queries
+  hosts: localhost
+  gather_facts: false
   vars_files:
    - vars/vault.yml
    - vars/manage-arbitrarysqlquery-vars.yml

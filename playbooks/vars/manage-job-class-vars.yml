@@ -1,10 +1,11 @@
-hostname: ansible_db                           # AIX hostname where the Database is running.
-service_name: devpdb                            # Database service name.
-listener_port: 1521                            # Database port number.
-# oracle_db_home not needed - oracle_jobclass module uses Thin mode (pure Python, no Oracle client required)
-state: present
-resource_group: ansigroup1
-class_name: ansiclass
-logging: failed runs
-history: 14
+# Manage DBMS Scheduler Job Class - Variables section
+hostname: ansible-db                        # AIX LPAR hostname where the database is running (TCP endpoint).
+listener_port: 1521                         # Database listener port.
+service_name: prodpdb                       # Database service name to connect to as SYSDBA.
+# oracle_db_home not needed — oracle_jobclass module uses Thin mode (pure Python, no Oracle client required)
 
+state: present                              # present = create/modify the job class | absent = drop it
+class_name: ansiclass                       # Job class name (stored uppercase, owned by SYS).
+resource_group: ansigroup1                  # Resource consumer group the class is associated with. Must already exist.
+logging: failed runs                        # off | runs | failed runs | full
+history: 14                                 # Number of days the logs for this job class are retained.

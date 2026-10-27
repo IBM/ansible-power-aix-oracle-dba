@@ -1,8 +1,9 @@
-hostname: ansible_db                  # AIX Lpar hostname where the Database is running.
-service_name: devpdb   # Database service name.
-listener_port: 1521                   # Database port number.
-# oracle_db_home not needed - oracle_sql module uses Thin mode (pure Python, no Oracle client required)
+# Run Arbitrary SQL Queries - Variables section
+hostname: ansible-db                        # AIX LPAR hostname where the database is running (TCP endpoint).
+listener_port: 1521                         # Database listener port.
+service_name: prodpdb                       # Database service name to connect to as SYSDBA.
+# oracle_db_home not needed — oracle_sql module uses Thin mode (pure Python, no Oracle client required)
 
-sql_query:
-   - { query: 'select name,open_mode from v$database' }   # SQL Query 1.
-   - { query: 'select instance_name from v$instance' }    # SQL Query 2.
+sql_query:                                  # Queries are run in the order listed.
+- { query: 'select name,open_mode from v$database' }   # SQL Query 1.
+- { query: 'select instance_name from v$instance' }    # SQL Query 2.
