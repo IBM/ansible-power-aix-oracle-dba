@@ -3,6 +3,7 @@
 #
 - name: Create DB User
   hosts: localhost
+  connection: local
   remote_user: oracle           # Oracle Database Username
   gather_facts: false
   vars_files:

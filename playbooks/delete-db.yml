@@ -2,7 +2,7 @@
 # Before executing this playbook, please refer the documentation inside the docs/ directory.
 #
 - name: Drop a Database
-  hosts: pilotdb                    # Target LPAR hostname defined in the inventory
+  hosts: all                    # Target LPAR hostname defined in the inventory
   remote_user: oracle           # Oracle OS user that owns the Oracle installation
   gather_facts: false
   vars_files:

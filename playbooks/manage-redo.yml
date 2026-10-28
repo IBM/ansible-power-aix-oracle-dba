@@ -3,6 +3,7 @@
 #
 - name: Manage DB Redo Logs
   hosts: localhost
+  connection: local
   gather_facts: false
   vars_files:
     - vars/vault.yml

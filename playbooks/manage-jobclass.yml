@@ -3,6 +3,7 @@
 #
 - name: Manage DBMS Scheduler Job Class
   hosts: localhost
+  connection: local
   gather_facts: false
   vars_files:
    - vars/vault.yml
