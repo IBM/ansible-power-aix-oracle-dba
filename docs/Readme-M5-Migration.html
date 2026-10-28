@@ -1,0 +1,1495 @@
+<title>M5 Migration — PowerODBA</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg:#F5F7FA; --surface:#FFFFFF; --surface-2:#EDF1F5; --surface-3:#E3E9EF;
+    --border:#D7DEE6; --border-soft:#E6EBF1;
+    --text:#1B222C; --text-muted:#57626F; --text-faint:#7C8896;
+    --accent:#0E8F8A; --accent-ink:#FFFFFF; --accent-soft:#E3F4F2;
+    --source:#2E6FB0; --source-soft:#E7F0FA;
+    --destination:#B0621A; --destination-soft:#FBEEDF;
+    --controller:#6B5FA8; --controller-soft:#EFEBFA;
+    --good:#1F9D55; --good-soft:#E4F6EC;
+    --warn:#B4820A; --warn-soft:#FBF2DC;
+    --bad:#C0392B; --bad-soft:#FBEAE8;
+    --code-bg:#EEF1F5; --code-text:#33404D;
+    --shadow:0 1px 2px rgba(20,30,45,.06), 0 6px 20px rgba(20,30,45,.06);
+    --font-display:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+    --font-body:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,'SF Mono',Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0C1117; --surface:#141A21; --surface-2:#1A212A; --surface-3:#212A34;
+      --border:#2A343F; --border-soft:#20282F;
+      --text:#E7ECF2; --text-muted:#9AA7B5; --text-faint:#6E7A88;
+      --accent:#35D6C6; --accent-ink:#06201D; --accent-soft:#132A28;
+      --source:#7BB0EA; --source-soft:#152435;
+      --destination:#EAA85C; --destination-soft:#2A2013;
+      --controller:#B7A9F0; --controller-soft:#211D33;
+      --good:#57D98C; --good-soft:#122A1D;
+      --warn:#F0C453; --warn-soft:#2B2412;
+      --bad:#F17F72; --bad-soft:#2B1614;
+      --code-bg:#1A212A; --code-text:#C9D3DC;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0C1117; --surface:#141A21; --surface-2:#1A212A; --surface-3:#212A34;
+    --border:#2A343F; --border-soft:#20282F;
+    --text:#E7ECF2; --text-muted:#9AA7B5; --text-faint:#6E7A88;
+    --accent:#35D6C6; --accent-ink:#06201D; --accent-soft:#132A28;
+    --source:#7BB0EA; --source-soft:#152435;
+    --destination:#EAA85C; --destination-soft:#2A2013;
+    --controller:#B7A9F0; --controller-soft:#211D33;
+    --good:#57D98C; --good-soft:#122A1D;
+    --warn:#F0C453; --warn-soft:#2B2412;
+    --bad:#F17F72; --bad-soft:#2B1614;
+    --code-bg:#1A212A; --code-text:#C9D3DC;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--font-body); font-size:15.5px; line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{font-family:var(--font-display); text-wrap:balance; font-weight:600; color:var(--text); margin:0;}
+  p{margin:0 0 .9em; max-width:70ch;}
+  a{color:var(--accent);}
+  code, .mono{font-family:var(--font-mono); font-size:.92em;}
+  code{background:var(--code-bg); color:var(--code-text); padding:.12em .42em; border-radius:4px;}
+  pre{font-family:var(--font-mono); background:var(--code-bg); color:var(--code-text); border:1px solid var(--border-soft); border-radius:8px; padding:14px 16px; overflow-x:auto; font-size:.86em; line-height:1.55; margin:0 0 1em;}
+  pre code{background:none; padding:0;}
+  ul,ol{padding-left:1.3em; margin:0 0 .9em;}
+  li{margin-bottom:.35em;}
+  table{border-collapse:collapse; width:100%;}
+
+  /* ---- Shell layout ---- */
+  .shell{display:grid; grid-template-columns:270px 1fr; max-width:1320px; margin:0 auto;}
+  .side{position:sticky; top:0; align-self:start; height:100dvh; overflow-y:auto; padding:28px 18px 40px 24px; border-right:1px solid var(--border-soft);}
+  .side::-webkit-scrollbar{width:8px;} .side::-webkit-scrollbar-thumb{background:var(--border); border-radius:4px;}
+  .brand{display:flex; align-items:baseline; gap:8px; margin-bottom:4px;}
+  .brand .mark{width:10px;height:10px;border-radius:2px;background:var(--accent);display:inline-block;}
+  .brand-name{font-family:var(--font-display); font-weight:700; font-size:1.05rem; letter-spacing:.01em;}
+  .brand-sub{font-size:.74rem; color:var(--text-faint); margin:0 0 22px; letter-spacing:.02em;}
+  nav.toc{font-size:.86rem;}
+  nav.toc .grp{margin-bottom:4px;}
+  nav.toc .grp-title{font-size:.68rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text-faint); font-weight:600; margin:18px 0 6px;}
+  nav.toc a{display:block; color:var(--text-muted); text-decoration:none; padding:5px 10px; border-radius:6px; margin:1px 0;}
+  nav.toc a:hover{background:var(--surface-2); color:var(--text);}
+  nav.toc a.l2{padding-left:22px; font-size:.94em;}
+
+  main{padding:40px clamp(20px,4vw,56px) 100px; min-width:0;}
+  section{margin-bottom:64px; scroll-margin-top:20px;}
+  .kicker{font-size:.72rem; text-transform:uppercase; letter-spacing:.1em; color:var(--accent); font-weight:600; margin-bottom:8px;}
+  section > h2{font-size:1.55rem; margin-bottom:6px;}
+  .section-intro{color:var(--text-muted); max-width:72ch; margin-top:10px;}
+  h3{font-size:1.12rem; margin:28px 0 10px;}
+  h4{font-size:.98rem; margin:18px 0 8px; color:var(--text);}
+
+  /* header/hero */
+  .hero{padding:46px clamp(20px,4vw,56px) 30px; border-bottom:1px solid var(--border-soft);}
+  .hero h1{font-size:clamp(1.7rem,3vw,2.3rem); margin-bottom:10px;}
+  .hero p.lead{font-size:1.05rem; color:var(--text-muted); max-width:74ch;}
+  .badge-row{display:flex; gap:8px; flex-wrap:wrap; margin-top:16px;}
+  .badge{font-size:.74rem; font-family:var(--font-mono); background:var(--surface-2); border:1px solid var(--border-soft); color:var(--text-muted); padding:4px 10px; border-radius:999px;}
+
+  /* host color chips — encode WHERE each step runs, used everywhere */
+  .chip{display:inline-flex; align-items:center; gap:5px; font-size:.72rem; font-weight:600; letter-spacing:.02em; padding:3px 9px; border-radius:999px; white-space:nowrap;}
+  .chip::before{content:""; width:6px;height:6px;border-radius:50%;}
+  .chip.src{background:var(--source-soft); color:var(--source);} .chip.src::before{background:var(--source);}
+  .chip.dst{background:var(--destination-soft); color:var(--destination);} .chip.dst::before{background:var(--destination);}
+  .chip.ctl{background:var(--controller-soft); color:var(--controller);} .chip.ctl::before{background:var(--controller);}
+  .chip.both{background:linear-gradient(90deg,var(--source-soft) 50%,var(--destination-soft) 50%); color:var(--text);}
+  .legend{display:flex; gap:16px; flex-wrap:wrap; margin:14px 0 22px; font-size:.86rem; color:var(--text-muted); align-items:center;}
+  .legend .chip{font-size:.78rem;}
+
+  /* cards */
+  .card{background:var(--surface); border:1px solid var(--border-soft); border-radius:10px; padding:18px 20px; box-shadow:var(--shadow);}
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  @media (max-width:820px){.grid-2,.grid-3{grid-template-columns:1fr;}}
+
+  /* prereq checklist */
+  .prereq-card h4{display:flex; align-items:center; gap:8px; margin-top:0;}
+  .prereq-card ul{list-style:none; padding:0; margin:10px 0 0;}
+  .prereq-card li{position:relative; padding-left:22px; font-size:.93rem; color:var(--text);}
+  .prereq-card li::before{content:"✓"; position:absolute; left:0; top:1px; color:var(--good); font-weight:700; font-size:.85em;}
+  .prereq-card li .mono{color:var(--text-muted);}
+
+  /* stage timeline */
+  .stage{display:grid; grid-template-columns:34px 1fr; gap:14px; margin-bottom:0;}
+  .stage-marker{grid-column:1; display:flex; flex-direction:column; align-items:center;}
+  .stage-marker .num{flex:none; width:34px;height:34px;border-radius:50%;background:var(--surface-2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-weight:600; font-size:.86rem; color:var(--text-muted);}
+  .stage-marker .line{flex:1; width:1px; background:var(--border); margin:4px 0; min-height:16px;}
+  .stage-body{grid-column:2; padding-bottom:26px; min-width:0;}
+  .stage-body h4{margin:2px 0 4px;}
+  .stage-body .meta{display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap;}
+
+  /* critical-phase highlight — the cutover steps that actually matter most */
+  .stage-critical .stage-marker .num{background:var(--bad); border-color:var(--bad); color:#fff;}
+  .stage-critical .stage-body{background:var(--bad-soft); border:1px solid color-mix(in srgb, var(--bad) 35%, transparent); border-radius:10px; padding:14px 16px 18px; margin-bottom:12px;}
+  .stage-critical .stage-body h4{color:var(--bad);}
+  .critical-badge{display:inline-block; font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; font-weight:700; color:#fff; background:var(--bad); padding:2px 8px; border-radius:999px; margin-bottom:6px;}
+
+  /* command block */
+  .cmdblock{position:relative;}
+  .cmdblock .tag{position:absolute; top:8px; right:10px; font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-faint);}
+
+  /* detailed execution sub-steps */
+  .substeps{list-style:none; padding:0; margin:12px 0 0; border-top:1px solid var(--border-soft);}
+  .substeps li{display:flex; gap:10px; align-items:baseline; padding:6px 2px; font-size:.86rem; border-bottom:1px dashed var(--border-soft);}
+  .substeps li:last-child{border-bottom:none;}
+  .substeps .step-n{font-family:var(--font-mono); color:var(--text-faint); width:1.6em; flex:none; font-size:.82em;}
+  .substeps .step-chip{flex:none;}
+  .substeps .step-text{color:var(--text-muted);}
+  .substeps .step-text code{white-space:normal;}
+  .play-label{font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-faint); font-weight:600; margin:16px 0 2px;}
+  .play-label:first-of-type{margin-top:12px;}
+
+  /* task table */
+  .task-table{width:100%; font-size:.87rem;}
+  .task-table th{text-align:left; font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-faint); font-weight:600; padding:8px 12px; border-bottom:1px solid var(--border);}
+  .task-table td{padding:9px 12px; border-bottom:1px solid var(--border-soft); vertical-align:top;}
+  .task-table tr:last-child td{border-bottom:none;}
+  .task-table td.file{font-family:var(--font-mono); font-size:.86em; color:var(--text); white-space:nowrap;}
+  .task-table td.desc{color:var(--text-muted);}
+  .role-block{border:1px solid var(--border-soft); border-radius:10px; overflow:hidden; margin-bottom:18px; background:var(--surface);}
+  .role-head{padding:16px 20px; background:var(--surface-2); border-bottom:1px solid var(--border-soft);}
+  .role-head .path{font-family:var(--font-mono); font-size:.82rem; color:var(--text-muted);}
+  .role-head h4{margin:2px 0 4px; font-size:1.02rem;}
+  .role-body{padding:4px 20px 14px;}
+  .table-scroll{overflow-x:auto;}
+  .task-table td.when{color:var(--text-muted); font-size:.92em;}
+
+  details.file-toggle{border-top:1px solid var(--border-soft);}
+  details.file-toggle summary{cursor:pointer; padding:12px 20px; font-size:.9rem; font-weight:600; color:var(--text); list-style:none; display:flex; align-items:center; justify-content:space-between;}
+  details.file-toggle summary::-webkit-details-marker{display:none;}
+  details.file-toggle summary::after{content:"+"; font-size:1.1rem; color:var(--text-faint); font-weight:400;}
+  details.file-toggle[open] summary::after{content:"–";}
+  details.file-toggle .task-table{padding:0 0 12px;}
+
+  /* variable table */
+  .var-table{font-size:.85rem;}
+  .var-table td.name{font-family:var(--font-mono); font-size:.85em; white-space:nowrap; color:var(--accent);}
+  .var-section-row td{background:var(--surface-2); font-weight:600; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-faint); padding-top:14px;}
+
+  /* high-level phase band — a left-to-right sequence of stage cards, not a flowchart */
+  .phase-band{display:flex; align-items:stretch; gap:0; margin:16px 0 22px; flex-wrap:wrap;}
+  .phase{flex:1 1 168px; min-width:150px; background:var(--surface); border:1px solid var(--border-soft); border-radius:12px; padding:16px 15px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:7px;}
+  .phase-num{width:26px; height:26px; border-radius:50%; background:var(--accent); color:var(--accent-ink); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-weight:700; font-size:.78rem; flex:none;}
+  .phase-downtime .phase-num{background:var(--destination);}
+  .phase h4{font-size:.9rem; margin:0; line-height:1.3;}
+  .phase p{margin:0; font-size:.81rem; color:var(--text-muted); line-height:1.5;}
+  .phase-flag{font-size:.66rem; text-transform:uppercase; letter-spacing:.05em; font-weight:700; color:var(--destination);}
+  .phase-arrow{display:flex; align-items:center; justify-content:center; color:var(--text-faint); font-size:1.3rem; padding:0 4px; flex:0 0 20px;}
+  @media (max-width:760px){
+    .phase-band{flex-direction:column;}
+    .phase{flex:none;}
+    .phase-arrow{flex:none; transform:rotate(90deg); padding:2px 0; align-self:center;}
+  }
+
+  /* mermaid container */
+  .diagram{background:var(--surface); border:1px solid var(--border-soft); border-radius:10px; padding:18px; margin:16px 0 22px; overflow-x:auto; box-shadow:var(--shadow);}
+  .diagram-caption{font-size:.82rem; color:var(--text-muted); margin-top:-6px; margin-bottom:20px;}
+
+  /* callouts */
+  .callout{border-radius:10px; padding:14px 18px; margin:14px 0; font-size:.92rem; border:1px solid transparent;}
+  .callout.warn{background:var(--warn-soft); border-color:color-mix(in srgb, var(--warn) 30%, transparent); color:var(--text);}
+  .callout.info{background:var(--accent-soft); border-color:color-mix(in srgb, var(--accent) 30%, transparent); color:var(--text);}
+  .callout .callout-title{font-weight:700; font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; display:block;}
+  .callout.warn .callout-title{color:var(--warn);}
+  .callout.info .callout-title{color:var(--accent);}
+
+  /* gotcha cards */
+  .gotcha{border:1px solid var(--border-soft); border-left:3px solid var(--bad); border-radius:8px; padding:14px 18px; margin-bottom:12px; background:var(--surface);}
+  .gotcha h4{margin:0 0 6px; font-size:.95rem;}
+  .gotcha p{margin:0; font-size:.88rem; color:var(--text-muted);}
+  .gotcha.tip{border-left-color:var(--accent);}
+
+  /* troubleshooting: symptom / cause / fix */
+  .ts-item{border:1px solid var(--border-soft); border-radius:10px; padding:16px 18px; margin-bottom:14px; background:var(--surface); box-shadow:var(--shadow);}
+  .ts-item h4{margin:0 0 10px; font-size:.95rem;}
+  .ts-row{display:grid; grid-template-columns:74px 1fr; gap:12px; font-size:.87rem; margin-bottom:7px; align-items:baseline;}
+  .ts-row:last-child{margin-bottom:0;}
+  .ts-label{font-size:.66rem; text-transform:uppercase; letter-spacing:.05em; font-weight:700; color:var(--text-faint);}
+  .ts-row.symptom .ts-label{color:var(--bad);}
+  .ts-row.cause .ts-label{color:var(--warn);}
+  .ts-row.fix .ts-label{color:var(--good);}
+  .ts-row p{margin:0; color:var(--text-muted);}
+  .ts-row code{white-space:normal;}
+  @media (max-width:600px){.ts-row{grid-template-columns:1fr; gap:2px;}}
+
+  footer{padding:30px clamp(20px,4vw,56px) 60px; color:var(--text-faint); font-size:.8rem; border-top:1px solid var(--border-soft);}
+
+  @media (max-width:900px){
+    .shell{grid-template-columns:1fr;}
+    .side{position:static; height:auto; border-right:none; border-bottom:1px solid var(--border-soft); padding:16px 20px;}
+    nav.toc{display:none;}
+    .side details{cursor:pointer;}
+    .side summary{font-weight:600; font-size:.86rem; color:var(--text-muted); padding:6px 0;}
+    .side[open] nav.toc, details.mobile-toc[open] nav.toc{display:block;}
+  }
+</style>
+
+<div class="hero">
+  <div class="kicker">PowerODBA · ibm.power_aix_oracle_dba</div>
+  <h1>Oracle 19c Cross-Endian Migration (M5)</h1>
+  <p class="lead">Complete reference for the PowerODBA playbook and roles that automate Oracle 19c cross-endian database migration — x86 Linux to IBM AIX Power — using Oracle's M5 method (RMAN cross-platform incremental backups + Full Transportable Data Pump, orchestrated by Oracle's DBMIG 5.1 driver tool).</p>
+  <div class="badge-row">
+    <span class="badge">MOS Doc 2999157.1</span>
+    <span class="badge">DBMIG 5.1</span>
+    <span class="badge">Oracle 19c EE ≥ 19.18</span>
+    <span class="badge">1 playbook · 3 roles · 34 task files</span>
+    <span class="badge">3 topologies supported</span>
+  </div>
+</div>
+
+<div class="shell">
+  <aside class="side">
+    <details class="mobile-toc" open>
+    <summary>Contents</summary>
+    <div class="brand" style="display:none"></div>
+    <nav class="toc">
+      <div class="grp"><a href="#overview">Overview</a>
+        <a class="l2" href="#walkthrough">Detailed walkthrough</a>
+      </div>
+      <div class="grp"><a href="#prerequisites">Prerequisites</a>
+        <a class="l2" href="#prereq-controller">Ansible controller</a>
+        <a class="l2" href="#prereq-source">Source host</a>
+        <a class="l2" href="#prereq-dest">Destination host</a>
+      </div>
+      <div class="grp"><a href="#installation">Download &amp; install</a></div>
+      <div class="grp"><a href="#execution">Running it</a></div>
+      <div class="grp-title">Architecture</div>
+      <div class="grp"><a href="#architecture">Collection architecture</a></div>
+      <div class="grp"><a href="#variables">Variables file</a></div>
+      <div class="grp"><a href="#roles">Roles &amp; tasks</a>
+        <a class="l2" href="#role-prechecks">mig_prechecks</a>
+        <a class="l2" href="#role-l0l1">mig_rman_L0_L1</a>
+        <a class="l2" href="#role-l1f">mig_rman_L1F</a>
+      </div>
+      <div class="grp-title">Topology flows</div>
+      <div class="grp"><a href="#topo-noncdb-noncdb">Non-CDB → Non-CDB</a></div>
+      <div class="grp"><a href="#topo-noncdb-pdb">Non-CDB → PDB</a></div>
+      <div class="grp"><a href="#topo-pdb-pdb">PDB → PDB</a></div>
+      <div class="grp-title">Reference</div>
+      <div class="grp"><a href="#gotchas">Operational notes</a></div>
+      <div class="grp"><a href="#troubleshooting">Troubleshooting</a></div>
+      <div class="grp"><a href="#files">Complete file index</a></div>
+    </nav>
+    </details>
+  </aside>
+
+  <main>
+
+    <!-- ============================================================ -->
+    <section id="overview">
+      <div class="kicker">01 · Overview</div>
+      <h2>What the migration is for</h2>
+      <p class="section-intro">The M5 migration in the PowerODBA collection (<code>ibm.power_aix_oracle_dba</code>) is one playbook, <code>m5_migration.yml</code>, and three roles that automate a complete Oracle 19c database migration from x86 Linux to IBM AIX Power — end to end, as repeatable playbook runs instead of a manual, multi-day DBA runbook. It exists because that particular move crosses an endian boundary (x86 is Little-Endian, AIX Power is Big-Endian), which rules out the two normally-simplest migration paths — physical standby isn't supported across different endian platforms at all, and a plain export/import would work but is too slow for a real database. Oracle's supported answer to that specific problem is a documented procedure called <strong>M5</strong> (MOS Doc 2999157.1); this playbook <em>is</em> that procedure, automated.</p>
+
+      <p class="section-intro" style="margin-top:14px">Concretely, it:</p>
+      <ul style="max-width:72ch; color:var(--text-muted); font-size:.94rem;">
+        <li>Validates both hosts and both databases against every M5 prerequisite before touching anything, and fails loudly with a specific remediation step rather than guessing</li>
+        <li>Deploys and drives Oracle's own DBMIG 5.1 driver tool for the repeatable RMAN backup/restore cycles that pre-stage the data</li>
+        <li>Runs the Data Pump Full Transportable cutover and verifies source-vs-destination table counts before it will let downtime end</li>
+        <li>Supports three topologies out of the box — Non-CDB → Non-CDB, Non-CDB → PDB, and PDB → PDB — selected by four variables, with no separate code path to maintain per topology</li>
+        <li>Is idempotent throughout: prechecks and the L0 baseline are safe to re-run, L1 is designed to run daily, and the irreversible go-live step is a deliberate, separate, opt-in command</li>
+      </ul>
+
+      <div class="grid-3" style="margin-top:22px;">
+        <div class="card">
+          <h4 style="margin-top:0">Why incremental backups first</h4>
+          <p style="margin:0; font-size:.9rem; color:var(--text-muted)">L0 (full baseline) and repeatable L1 (incremental) backups move nearly all of the data <em>before</em> the maintenance window opens. Only the L1F pass — the last, smallest incremental — happens during actual downtime.</p>
+        </div>
+        <div class="card">
+          <h4 style="margin-top:0">Why Full Transportable</h4>
+          <p style="margin:0; font-size:.9rem; color:var(--text-muted)">Data Pump Full Transportable Export/Import moves the schema/metadata across endianness in one pass, while the actual datafiles arrive via the RMAN restores that already ran — avoiding a slow row-by-row export of the whole database during downtime.</p>
+        </div>
+        <div class="card">
+          <h4 style="margin-top:0">What DBMIG 5.1 does</h4>
+          <p style="margin:0; font-size:.9rem; color:var(--text-muted)">Oracle's own driver script (<code>dbmig_driver_m5.sh</code>) generates the RMAN backup/restore commands and manages the transport-tablespace READ ONLY/READ WRITE flip. This collection deploys it, configures it, and drives it — it does not replace it.</p>
+        </div>
+      </div>
+
+      <div class="callout info" style="margin-top:20px;">
+        <span class="callout-title">Three supported topologies</span>
+        <strong>Non-CDB → Non-CDB</strong>, <strong>Non-CDB → PDB</strong> (source is a standalone database, destination is a pluggable database inside a container database), and <strong>PDB → PDB</strong> (both ends are pluggable databases) — selected entirely by four variables (<code>mig_pdb</code>, <code>pdb_name</code>, <code>dest_cdb_sid</code>, <code>dest_pdb_name</code>). See <a href="#topo-noncdb-noncdb">Topology flows</a> below for the exact mechanics of each.
+      </div>
+
+      <h3 id="walkthrough">Detailed walkthrough</h3>
+      <p class="section-intro" style="margin-top:0">The same seven-phase shape as any RMAN cross-platform incremental migration — but the specifics below are this collection's actual behavior, not the general method. A few things a generic XTTS writeup gets right in principle work differently here, called out inline.</p>
+
+      <div class="stage">
+        <div class="stage-marker"><div class="num">1</div><div class="line"></div></div>
+        <div class="stage-body">
+          <h4>Pre-migration checks</h4>
+          <ul style="margin:6px 0 0; font-size:.9rem; color:var(--text-muted);">
+            <li>Source version, edition, and endian format confirmed (Oracle ≥19.18.0.0.0, Enterprise Edition, Little-Endian source / Big-Endian destination)</li>
+            <li>The tablespace list to transport is identified — everything except SYSTEM, SYSAUX, UNDO, and TEMP, which are never transportable</li>
+            <li><code>DBMS_TTS.TRANSPORT_SET_CHECK</code> runs against that list and must report zero violations — this is a <strong>hard gate before the baseline backup is even allowed to start</strong>, not something deferred to be patched up during import</li>
+            <li>Character set, NCHAR character set, and timezone file version are asserted to match source and destination <em>exactly</em> — no automated fix exists for a mismatch here</li>
+            <li>Source and destination do <strong>not</strong> need identical patch levels — only the same minimum version plus specific mandatory patches (the DataPump Bundle Patch on both sides, the RMAN cross-platform restore bugfix on the destination)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="stage-marker"><div class="num">2</div><div class="line"></div></div>
+        <div class="stage-body">
+          <h4>Database preparation</h4>
+          <ul style="margin:6px 0 0; font-size:.9rem; color:var(--text-muted);">
+            <li>Tablespaces stay READ WRITE through this entire phase — the source keeps running normally; READ ONLY is only needed for the last few minutes at final cutover</li>
+            <li>Oracle's own DBMIG 5.1 driver and an identical working-directory tree are deployed to both hosts</li>
+            <li>How backup pieces move from source to destination is set once, up front: either SCP, or an existing shared filesystem mount (<code>shared_filesystem: YES</code>) — this collection doesn't support <code>DBMS_FILE_TRANSFER</code> or rsync as alternatives</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="stage-marker"><div class="num">3</div><div class="line"></div></div>
+        <div class="stage-body">
+          <h4>Baseline backup and restore (L0)</h4>
+          <ul style="margin:6px 0 0; font-size:.9rem; color:var(--text-muted);">
+            <li>Full RMAN backup of the transportable tablespaces on source, while still READ WRITE</li>
+            <li>Backup pieces transferred to the destination</li>
+            <li>Restored there — cross-platform datafile conversion happens automatically as part of the restore command itself (<code>RESTORE ... FOREIGN DATAFILES ... FROM BACKUPSET</code>), confirmed directly from a real generated cmdfile; there's no separate manual <code>CONVERT DATAFILE</code> step in this flow</li>
+            <li>This restored copy becomes the baseline everything else builds on</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="stage-marker"><div class="num">4</div><div class="line"></div></div>
+        <div class="stage-body">
+          <h4>Incremental sync (L1, repeated)</h4>
+          <ul style="margin:6px 0 0; font-size:.9rem; color:var(--text-muted);">
+            <li>Source keeps running and drifting ahead of the baseline</li>
+            <li>One or more incremental backups capture only what changed since L0 (or the last L1)</li>
+            <li>Each is restored, rolling the destination copy incrementally forward — run this daily, or on whatever cadence matches the real change rate, right up until the planned cutover</li>
+            <li>Each cycle shrinks how much data the final cutover pass has to move</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stage stage-critical">
+        <div class="stage-marker"><div class="num">5</div><div class="line"></div></div>
+        <div class="stage-body">
+          <span class="critical-badge">⚠ Critical — downtime window</span>
+          <h4>Final backup and restore (L1F) — the actual cutover step</h4>
+          <ul style="margin:6px 0 0; font-size:.9rem; color:var(--text-muted);">
+            <li>Transportable tablespaces set READ ONLY on source — <strong>downtime starts here</strong></li>
+            <li>The last incremental backup is taken and restored — the destination copy is now fully caught up</li>
+            <li>Because nearly everything already moved in phases 3–4, this pass is small and fast</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stage stage-critical">
+        <div class="stage-marker"><div class="num">6</div><div class="line"></div></div>
+        <div class="stage-body">
+          <span class="critical-badge">⚠ Critical — the real pass/fail gate</span>
+          <h4>Metadata import</h4>
+          <ul style="margin:6px 0 0; font-size:.9rem; color:var(--text-muted);">
+            <li>Data Pump Full Transportable Import (<code>impdp</code> with <code>TRANSPORT_DATAFILES</code>) moves only the schema and metadata — the actual data is already on disk from the restores above</li>
+            <li>This plugs the transported tablespaces into the destination database's data dictionary</li>
+            <li>The real pass/fail gate here is a <strong>source-vs-destination row-count comparison</strong> — not a checksum comparison, and not <code>DBMS_TTS.TRANSPORT_SET_CHECK</code> again (that already ran, and only matters, before phase 3)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="stage-marker"><div class="num">7</div></div>
+        <div class="stage-body">
+          <h4>Post-migration and go-live</h4>
+          <ul style="margin:6px 0 0; font-size:.9rem; color:var(--text-muted);">
+            <li>Transported tablespaces set back to READ WRITE on the destination — <strong>downtime ends here</strong></li>
+            <li>Invalid objects recompiled, optimizer statistics refreshed</li>
+            <li>Once verified and accepted as production, the guaranteed flashback restore point Data Pump created is dropped — a separate, explicit, opt-in step, since it's irreversible</li>
+          </ul>
+          <div class="callout warn" style="margin-top:10px;">
+            <span class="callout-title">Outside this collection's scope</span>
+            Updating application connection strings/TNS entries, DNS or listener cutover, checksum-based data validation, and post-go-live monitoring are all real parts of a production migration — none of them are automated here. This collection stops at a verified, READ WRITE destination database with matching row counts; the application-facing cutover and ongoing monitoring are on you.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="prerequisites">
+      <div class="kicker">02 · Before you start</div>
+      <h2>Prerequisites</h2>
+      <p class="section-intro">Three environments are involved, each with its own requirements. Nothing here is automated by the collection except where noted — these are conditions the collection <em>checks</em> (and fails loudly on) rather than fixes for you.</p>
+
+      <h3 id="prereq-controller"><span class="chip ctl">controller</span>&nbsp; Ansible controller</h3>
+      <div class="grid-2">
+        <div class="card prereq-card">
+          <h4>Software</h4>
+          <ul>
+            <li>Ansible &gt;= 2.14, Python &gt;= 3.9</li>
+            <li><span class="mono">ansible.posix</span> collection &gt;= 1.4.0 (SSH key push)</li>
+            <li>SSH client access to both the source and destination hosts</li>
+            <li><span class="mono">ansible-vault</span> password file (<span class="mono">~/.vault_pass</span>) — PowerODBA's <span class="mono">ansible.cfg</span> doesn't set one, so every command passes it</li>
+          </ul>
+        </div>
+        <div class="card prereq-card">
+          <h4>Files you stage yourself</h4>
+          <ul>
+            <li>Oracle's <span class="mono">DBMIG_5.1.zip</span> is Oracle-proprietary and <strong>not</strong> distributed with PowerODBA. Download it from My Oracle Support (Doc 2999157.1) and place it at <span class="mono">roles/mig_prechecks/files/</span> — <span class="mono">deploy_dbmig.yml</span> copies it from there to both hosts. The repository's <span class="mono">.gitignore</span> keeps it out of git.</li>
+            <li>Real passwords still need to be filled into <span class="mono">playbooks/vars/m5_migration/mig_vault.yml</span> before encrypting it — see <a href="#installation">Download &amp; install</a>.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout warn" style="margin-top:6px">
+        <span class="callout-title">The DataPump Bundle Patch is not staged or installed by this collection</span>
+        Patch 38170982 is <strong>not</strong> a file anyone downloads or stages here, and this collection never runs <span class="mono">opatch apply</span> for it. It must already be <strong>applied</strong> — manually, by hand, on both the source and destination — before prechecks run. <span class="mono">patch_apply_source.yml</span> / <span class="mono">patch_apply_dest.yml</span> only run <span class="mono">opatch lsinventory</span> and assert the patch ID is found; if it isn't, prechecks fails with the exact ID to apply and stops there.
+      </div>
+
+      <h3 id="prereq-source"><span class="chip src">source</span>&nbsp; Source database host (x86 Linux)</h3>
+      <div class="card prereq-card">
+        <ul>
+          <li>Oracle 19c <strong>Enterprise Edition</strong> + Grid Infrastructure already installed and running, version &gt;= 19.18.0.0.0</li>
+          <li>Platform confirmed <strong>Little Endian</strong></li>
+          <li>Database in <strong>ARCHIVELOG</strong> mode</li>
+          <li>RMAN <span class="mono">ENCRYPTION FOR DATABASE</span> must be <strong>OFF</strong> (not supported by this procedure)</li>
+          <li><span class="mono">oracle</span> OS user with SSH equivalence to the destination host (bidirectional)</li>
+          <li>DataPump Bundle Patch 38170982 already <strong>applied</strong> (checked via <span class="mono">opatch lsinventory</span> — the collection does not download or install it)</li>
+          <li>Sufficient free space under the working directory for RMAN backup pieces and the export dump file</li>
+          <li>If TDE is in use: keystore keys exported and imported into the destination manually beforehand, and a completion marker touched on the <strong>source host</strong> at <span class="mono">done_dir/tde_keys_transferred.done</span> (the collection only verifies this happened — it does not perform the key transfer)</li>
+        </ul>
+      </div>
+
+      <h3 id="prereq-dest"><span class="chip dst">destination</span>&nbsp; Destination database host (IBM AIX Power)</h3>
+      <div class="card prereq-card">
+        <ul>
+          <li>Oracle 19c <strong>Enterprise Edition</strong> + Grid Infrastructure already installed and running, version &gt;= 19.18.0.0.0, confirmed <strong>Big Endian</strong></li>
+          <li>Destination database already created and <strong>OPEN</strong> (non-CDB or CDB, per your topology) — this collection does not create the database itself</li>
+          <li>Database in <strong>ARCHIVELOG</strong> mode</li>
+          <li><span class="mono">compatible</span> &gt;= the source database's <span class="mono">compatible</span> value</li>
+          <li><span class="mono">NLS_CHARACTERSET</span>, <span class="mono">NLS_NCHAR_CHARACTERSET</span>, and the <span class="mono">V$TIMEZONE_FILE</span> version must <strong>exactly match</strong> the source — there is no automated fix for a mismatch here; it requires a database rebuild</li>
+          <li><span class="mono">db_create_file_dest</span> set to exactly one location (an ASM diskgroup or a filesystem path)</li>
+          <li><span class="mono">/bin/bash</span> present — the vendor's <span class="mono">impdp.sh</span> uses bash-only array syntax; AIX's default <span class="mono">/bin/sh</span> is a real POSIX/Korn shell and will not run it correctly</li>
+          <li>DataPump Bundle Patch 38170982 already <strong>applied</strong> (checked, not installed, by the collection)</li>
+          <li>Bugfix 35564253 (RMAN cross-platform restore fix) applied as a standalone patch — unless the installed Release Update is &gt;= 19.27.0.0.0, which already bundles it</li>
+          <li>If the source uses TDE: bugfix 30817822 applied (or RU &gt;= 19.20 which bundles it)</li>
+          <li>If migrating from a physical standby: bugfix 35675516 applied</li>
+          <li><span class="mono">oracle</span> OS user with SSH equivalence to the source host (bidirectional)</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="installation">
+      <div class="kicker">03 · Setup</div>
+      <h2>Download and install</h2>
+      <p class="section-intro">The migration ships inside the PowerODBA collection, <code>ibm.power_aix_oracle_dba</code> on Ansible Galaxy — install it like any other collection, then supply the one piece Oracle doesn't let anyone redistribute.</p>
+
+      <div class="stage">
+        <div class="stage-marker"><div class="num">1</div><div class="line"></div></div>
+        <div class="stage-body">
+          <h4>Install from Galaxy</h4>
+          <p>Install the PowerODBA collection the normal way:</p>
+          <pre><code>ansible-galaxy collection install ibm.power_aix_oracle_dba</code></pre>
+          <p style="margin-top:6px">Or work from a clone of <a href="https://github.com/IBM/ansible-power-aix-oracle-dba">github.com/IBM/ansible-power-aix-oracle-dba</a>. Either way, the migration lives in <code>playbooks/m5_migration.yml</code> and <code>roles/mig_*</code>.</p>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="stage-marker"><div class="num">2</div><div class="line"></div></div>
+        <div class="stage-body">
+          <h4>Install collection dependencies</h4>
+          <p>From the collection's <code>playbooks/</code> directory:</p>
+          <pre><code>ansible-galaxy collection install -r ../collections/requirements.yml</code></pre>
+          <p style="margin-top:6px">Installs <code>ansible.posix</code>, which the migration needs for SSH key setup. All DBA/RMAN/Data Pump work runs via plain <code>ansible.builtin.shell</code> against <code>sqlplus</code>/<code>rman</code>/<code>impdp.sh</code> — no custom Python modules to build or ship.</p>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="stage-marker"><div class="num">3</div><div class="line"></div></div>
+        <div class="stage-body">
+          <h4>Stage DBMIG</h4>
+          <p>Download <code>DBMIG_5.1.zip</code> from My Oracle Support (Doc 2999157.1) and place it at <code>roles/mig_prechecks/files/DBMIG_5.1.zip</code>. <code>deploy_dbmig.yml</code> copies it from there to both hosts and unzips it. It isn't distributed with PowerODBA, and <code>.gitignore</code> keeps it out of the repository.</p>
+          <div class="callout warn" style="margin:10px 0 0">
+            <span class="callout-title">Not staged here: the DataPump Bundle Patch</span>
+            Patch 38170982 is a different thing entirely — it's not a file in <code>files/</code> and this collection never applies it. It must already be applied by hand on both hosts before prechecks run; see <a href="#prerequisites">Prerequisites</a>.
+          </div>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="stage-marker"><div class="num">4</div><div class="line"></div></div>
+        <div class="stage-body">
+          <h4>Set up the vault</h4>
+          <p>The migration has its own vault file, separate from PowerODBA's <code>vars/vault.yml</code>. From <code>playbooks/</code>, fill in the real passwords (SYS, SYSTEM) and encrypt it:</p>
+          <pre><code># edit vars/m5_migration/mig_vault.yml — set vault_sys_password and
+# vault_system_password to real values
+
+ansible-vault encrypt vars/m5_migration/mig_vault.yml</code></pre>
+          <p style="margin-top:6px">Then create the password file the runbook commands expect:</p>
+          <pre><code>echo '&lt;vault-password&gt;' &gt; ~/.vault_pass
+chmod 600 ~/.vault_pass</code></pre>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="stage-marker"><div class="num">5</div></div>
+        <div class="stage-body">
+          <h4>Describe your environment</h4>
+          <p><code>playbooks/inventory.yml</code> is shared with the other PowerODBA playbooks, so the migration hosts sit in their own groups. Replace only the two host lines (<code>&lt;server hostname&gt; ansible_host=&lt;IP or DNS name&gt;</code>), keeping exactly one host in each group:</p>
+          <pre><code>[mig_source]
+source-linux-host ansible_host=333.33.33.333
+
+[mig_destination]
+dest-aix-host ansible_host=444.44.44.444
+
+[mig:children]
+mig_source
+mig_destination
+
+[mig:vars]
+ansible_user=oracle
+ansible_python_interpreter=/usr/bin/python3</code></pre>
+          <p style="margin-top:6px"><code>[mig:children]</code> lists group names, not hosts — leave it as is. <code>[mig:vars]</code> applies only to the two migration hosts: <code>ansible_user</code> is the account Ansible logs in as <em>on those hosts</em>. Host addresses come only from the inventory; the vars file derives them from each host's <code>ansible_host</code>.</p>
+          <p style="margin-top:6px"><code>playbooks/vars/m5_migration/mig_vars.yml</code> — every migration parameter: SIDs, working directories, topology, tablespace list, credentials references, timeouts. See <a href="#variables">Variables file</a> for the full list.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="execution">
+      <div class="kicker">04 · Running it</div>
+      <h2>How it's executed</h2>
+      <p class="section-intro">Everything runs through one playbook, <code>playbooks/m5_migration.yml</code>, filtered by Ansible tags — one tag per stage. It calls each role directly; there's no <code>import_playbook</code> layer. Each stage is meant to be run as its own <code>nohup</code>'d background command <strong>from the <code>playbooks/</code> directory</strong>, like the other PowerODBA playbooks, logging to its own file, so a multi-hour RMAN backup or Data Pump import survives an SSH disconnect. Every command passes <code>-i inventory.yml</code> (PowerODBA's <code>ansible.cfg</code> doesn't name an inventory) and <code>--vault-password-file ~/.vault_pass</code> (it doesn't set a vault password file; <code>--ask-vault-pass</code> can't prompt under <code>nohup</code>).</p>
+      <div class="callout info" style="margin-top:14px">
+        <span class="callout-title">Inventory check</span>
+        The playbook's first play runs on the controller and checks that the inventory has exactly one host in <code>[mig_source]</code> and one in <code>[mig_destination]</code>. If <code>-i inventory.yml</code> was left out or the groups are missing, it stops straight away with <em>"The inventory doesn't define the migration hosts. Run from the playbooks/ directory with -i inventory.yml…"</em>.
+      </div>
+
+      <div class="stage">
+        <div class="stage-marker"><div class="num">1</div><div class="line"></div></div>
+        <div class="stage-body">
+          <div class="meta"><span class="chip both">source + destination</span><span class="badge">tag: prechecks</span><span class="badge">run once</span></div>
+          <h4>Prechecks</h4>
+          <p>OS/DB validation, patch verification, SSH equivalence setup, source and destination DB preparation, DBMIG 5.1 deployment. Everything in this stage is a check-then-fix-manually or a one-time setup step — see <a href="#role-prechecks">mig_prechecks</a>. It runs as <strong>one play across <code>mig_source:mig_destination</code></strong> — every included task file carries its own host-group <code>when:</code>, so each host runs only its half — followed by a small play that marks the stage done. The idempotency gate is evaluated per host, against the same done-file on the source.</p>
+          <pre class="cmdblock"><span class="tag">controller, from playbooks/</span><code>nohup ansible-playbook m5_migration.yml -i inventory.yml --tags prechecks \
+      --vault-password-file ~/.vault_pass &gt; /tmp/m5_01_prechecks.out 2&gt;&amp;1 &amp;</code></pre>
+
+          <div class="play-label">Play 1 — hosts: mig_source:mig_destination</div>
+          <ol class="substeps">
+            <li><span class="step-n">1</span><span class="chip both">both</span><span class="step-text">Create <code>done_dir</code> on the source and <code>precheck_report_dir</code> on the controller, then check for <code>done_dir/prechecks.done</code> on the source — if it exists, the whole stage is skipped with a message</span></li>
+            <li><span class="step-n">2</span><span class="chip src">source</span><span class="step-text"><code>os_checks_source.yml</code> — endian, Oracle version, charset/timezone/compatible facts, edition, ARCHIVELOG, RMAN encryption off, TDE detection, network reachability, disk/memory</span></li>
+            <li><span class="step-n">3</span><span class="chip dst">destination</span><span class="step-text"><code>os_checks_dest.yml</code> — Oracle home, GI home (skipped when <code>dest_oracle_home_gi</code> is blank), DB open, version, ARCHIVELOG, compatible ≥ source, charset/NCHAR/timezone <strong>exact match</strong> against the source facts (read via <code>hostvars</code> — the source checks have already run), M5 working directories created, disk/memory, reverse ping to source</span></li>
+            <li><span class="step-n">4</span><span class="chip src">source</span><span class="step-text"><code>patch_apply_source.yml</code> — assert DataPump BP 38170982 is present</span></li>
+            <li><span class="step-n">5</span><span class="chip dst">destination</span><span class="step-text"><code>patch_apply_dest.yml</code> — DataPump BP 38170982, bugfix 35564253 (skipped if RU ≥19.27), TDE/standby bugfixes (conditional)</span></li>
+            <li><span class="step-n">6</span><span class="chip both">both</span><span class="step-text"><code>ssh_equivalence.yml</code> — the source runs the source→destination half, the destination runs the destination→source half: test, auto-push key if needed, re-test, assert</span></li>
+            <li><span class="step-n">7</span><span class="chip src">source</span><span class="step-text"><code>db_prepare_source.yml</code> — streams_pool_size, Block Change Tracking (file path built from <code>ORACLE_BASE</code>, queried live with <code>orabase</code>), USERS tablespace report, DBMS_TTS self-containment check, M5DIR/DATA_PUMP_DIR, RMAN configuration</span></li>
+            <li><span class="step-n">8</span><span class="chip dst">destination</span><span class="step-text"><code>db_prepare_dest.yml</code> — db_create_file_dest, USERS → USERS_DEF replacement, streams_pool_size, M5DIR/DATA_PUMP_DIR, SYS/SYSTEM dictionary stats</span></li>
+            <li><span class="step-n">9</span><span class="chip both">both</span><span class="step-text"><code>deploy_dbmig.yml</code> — included for the source only, delegating its destination half: M5 directory tree on both hosts, copies + unzips DBMIG_5.1.zip, templates <code>dbmig_driver.properties</code>, writes the tablespace list</span></li>
+            <li><span class="step-n">10</span><span class="chip ctl">controller</span><span class="step-text"><code>generate_report.yml</code> — writes <code>precheck_&lt;source-host&gt;.txt</code> to <code>precheck_report_dir</code></span></li>
+          </ol>
+
+          <div class="play-label">Play 2 — hosts: localhost</div>
+          <ol class="substeps">
+            <li><span class="step-n">1</span><span class="chip src">source</span><span class="step-text">Touch <code>done_dir/prechecks.done</code> on the source host (delegated) — only after the play above finished</span></li>
+          </ol>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="stage-marker"><div class="num">2</div><div class="line"></div></div>
+        <div class="stage-body">
+          <div class="meta"><span class="chip both">source + destination</span><span class="badge">tag: rman_l0</span><span class="badge">run once</span></div>
+          <h4>L0 — full baseline backup + restore</h4>
+          <p>The first full RMAN backup on source, restored on destination. No downtime. Unlike prechecks, this is <strong>one single play</strong> targeting <code>mig_source:mig_destination</code> together — every task below is guarded by its own host-group <code>when:</code>, so it still executes cleanly split by host even though it's one play.</p>
+          <pre class="cmdblock"><span class="tag">controller, from playbooks/</span><code>nohup ansible-playbook m5_migration.yml -i inventory.yml --tags rman_l0 \
+      --vault-password-file ~/.vault_pass &gt; /tmp/m5_02_rman_l0.out 2&gt;&amp;1 &amp;</code></pre>
+
+          <ol class="substeps">
+            <li><span class="step-n">1</span><span class="chip src">source</span><span class="step-text">Idempotency gate: check for <code>done_dir/rman_l0.done</code> on the source host — if present, the whole cycle is skipped with a message</span></li>
+            <li><span class="step-n">2</span><span class="chip src">source</span><span class="step-text"><code>check_lockfile.yml</code> — fail fast if DBMIG's own lock file exists</span></li>
+            <li><span class="step-n">3</span><span class="chip src">source</span><span class="step-text"><code>run_backup.yml</code> — <code>dbmig_driver_m5.sh L0</code> via async/poll, output teed to a timestamped log, exit code asserted</span></li>
+            <li><span class="step-n">4</span><span class="chip src">source</span><span class="step-text"><code>verify_backup_log.yml</code> — scan that run's log for ORA-/RMAN- patterns</span></li>
+            <li><span class="step-n">5</span><span class="chip src">source</span><span class="step-text"><code>get_restore_cmdfile.yml</code> — locate the RMAN restore cmdfile DBMIG generated, store as a fact for the destination side</span></li>
+            <li><span class="step-n">6</span><span class="chip src">source</span><span class="step-text"><code>sync_backup_pieces.yml</code> — parse this run's exact piece paths from the cmdfile, SCP them to destination (skipped entirely if <code>shared_filesystem: YES</code>)</span></li>
+            <li><span class="step-n">7</span><span class="chip dst">destination</span><span class="step-text"><code>run_restore.yml</code> — <code>rman target /</code> (non-CDB/PDB) or <code>rman target sys@...</code> (PDB→PDB) via async/poll, exit code asserted</span></li>
+            <li><span class="step-n">8</span><span class="chip dst">destination</span><span class="step-text"><code>verify_restore_log.yml</code> — same ORA-/RMAN- scan against the restore log</span></li>
+            <li><span class="step-n">9</span><span class="chip src">source</span><span class="step-text">Touch <code>done_dir/rman_l0.done</code> on the source host (delegated — written once, keyed off the destination host having finished its restore)</span></li>
+          </ol>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="stage-marker"><div class="num">3</div><div class="line"></div></div>
+        <div class="stage-body">
+          <div class="meta"><span class="chip both">source + destination</span><span class="badge">tag: rman_l1</span><span class="badge">repeat until cutover</span></div>
+          <h4>L1 — incremental backup + restore</h4>
+          <p>Backs up only the blocks changed since the last L0/L1, restores them. No downtime. Run daily (or on whatever cadence fits the change rate) right up until the cutover window — each run shrinks the amount of data the final L1F pass has to move.</p>
+          <pre class="cmdblock"><span class="tag">controller, from playbooks/</span><code>nohup ansible-playbook m5_migration.yml -i inventory.yml --tags rman_l1 \
+      --vault-password-file ~/.vault_pass &gt; /tmp/m5_02_rman_l1_$(date +%Y%m%d).out 2&gt;&amp;1 &amp;</code></pre>
+
+          <p style="margin-top:10px; font-size:.87rem">Identical task sequence to L0 above (steps 2–8 in that list — the same <code>mig_rman_L0_L1</code> role, just invoked with <code>rman_level: L1</code>), with two differences: <strong>no idempotency gate</strong> at the start (L1 is meant to run repeatedly), and <strong>no done-file</strong> written at the end. Each run's restore cmdfile and logs get their own timestamp, so multiple L1 runs leave multiple <code>restore_L1_*.log</code> files behind — <code>run_impdp.yml</code> later reads <em>all</em> of them, not just the latest.</p>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="stage-marker"><div class="num">4</div><div class="line"></div></div>
+        <div class="stage-body">
+          <div class="meta"><span class="chip both">source + destination</span><span class="badge">tag: rman_l1f</span><span class="badge">⚠ downtime window</span></div>
+          <h4>L1F — cutover</h4>
+          <p>The final incremental backup (this is what sets the transportable tablespaces READ ONLY on source — <strong>downtime starts here</strong>), restore on destination, Data Pump Full Transportable import, table-count verification against source, tablespaces flipped back to READ WRITE on destination (<strong>downtime ends here</strong>), recompile, stats, validation report. Unlike prechecks and L0/L1, this runs as <strong>separate plays</strong> — source, then destination, then a small completion-marker play — and the destination play itself is internally divided into 4 numbered stages, each with its own start/complete banner in the log.</p>
+          <pre class="cmdblock"><span class="tag">controller, from playbooks/</span><code>nohup ansible-playbook m5_migration.yml -i inventory.yml --tags rman_l1f \
+      --vault-password-file ~/.vault_pass &gt; /tmp/m5_03_cutover.out 2&gt;&amp;1 &amp;</code></pre>
+
+          <div class="play-label">Play 1 — hosts: mig_source</div>
+          <ol class="substeps">
+            <li><span class="step-n">1</span><span class="chip src">source</span><span class="step-text">Interactive pause: <em>"⚠ Confirm DOWNTIME WINDOW"</em> — requires pressing Enter before anything runs. Under <code>nohup</code> there's no terminal, so Ansible logs <em>"Not waiting for response to prompt as stdin is not interactive"</em> and carries on — make sure every user is disconnected <strong>before</strong> launching the cutover</span></li>
+            <li><span class="step-n">2</span><span class="chip src">source</span><span class="step-text"><strong>▶ STAGE 1/4 START</strong> — "sets transport TSs READ ONLY, DOWNTIME STARTS"</span></li>
+            <li><span class="step-n">3</span><span class="chip src">source</span><span class="step-text"><code>check_lockfile.yml</code></span></li>
+            <li><span class="step-n">4</span><span class="chip src">source</span><span class="step-text"><code>run_backup.yml</code> — <code>dbmig_driver_m5.sh L1F</code>; this is the exact command that flips the transport tablespaces to READ ONLY on source</span></li>
+            <li><span class="step-n">5</span><span class="chip src">source</span><span class="step-text"><code>verify_backup_log.yml</code></span></li>
+            <li><span class="step-n">6</span><span class="chip src">source</span><span class="step-text"><code>get_restore_cmdfile.yml</code></span></li>
+            <li><span class="step-n">7</span><span class="chip src">source</span><span class="step-text"><code>sync_backup_pieces.yml</code> — copies this run's RMAN pieces to destination</span></li>
+            <li><span class="step-n">8</span><span class="chip src">source</span><span class="step-text"><code>capture_expdp_file.yml</code> — finds the Data Pump export dump file DBMIG generated, copies it to destination's dump directory</span></li>
+            <li><span class="step-n">9</span><span class="chip src">source</span><span class="step-text"><strong>✓ STAGE 1/4 COMPLETE</strong></span></li>
+          </ol>
+
+          <div class="play-label">Play 2 — hosts: mig_destination</div>
+          <ol class="substeps">
+            <li><span class="step-n">1</span><span class="chip dst">destination</span><span class="step-text"><strong>▶ STAGE 2/4 START</strong> — "L1F Restore"</span></li>
+            <li><span class="step-n">2</span><span class="chip dst">destination</span><span class="step-text"><code>run_restore.yml</code> — restores the foreign datafiles from the synced pieces</span></li>
+            <li><span class="step-n">3</span><span class="chip dst">destination</span><span class="step-text"><code>verify_restore_log.yml</code></span></li>
+            <li><span class="step-n">4</span><span class="chip dst">destination</span><span class="step-text"><strong>✓ STAGE 2/4 COMPLETE</strong></span></li>
+            <li><span class="step-n">5</span><span class="chip dst">destination</span><span class="step-text"><strong>▶ STAGE 3/4 START</strong> — "DataPump Full Transportable Import"</span></li>
+            <li><span class="step-n">6</span><span class="chip dst">destination</span><span class="step-text"><code>pre_import_checks.yml</code> — asserts restore logs and the dump filename are ready, confirms <code>impdp.sh</code> is present</span></li>
+            <li><span class="step-n">7</span><span class="chip dst">destination</span><span class="step-text"><code>run_impdp.yml</code> — patches <code>impdp.sh</code> in place, writes the <code>M5IMPDP</code> TNS alias, runs it in test mode then real run mode via <code>bash</code></span></li>
+            <li><span class="step-n">8</span><span class="chip dst">destination</span><span class="step-text"><code>verify_import.yml</code> — informational impdp log scan only</span></li>
+            <li><span class="step-n">9</span><span class="chip dst">destination</span><span class="step-text"><code>verify_migration_correctness.yml</code> — <strong>the real pass/fail gate</strong>: source-vs-destination table counts, hard fail on mismatch, before anything below runs</span></li>
+            <li><span class="step-n">10</span><span class="chip dst">destination</span><span class="step-text"><strong>✓ STAGE 3/4 COMPLETE</strong></span></li>
+            <li><span class="step-n">11</span><span class="chip dst">destination</span><span class="step-text"><strong>▶ STAGE 4/4 START</strong> — "Postchecks (read-write cutback, recompile, stats, validate)"</span></li>
+            <li><span class="step-n">12</span><span class="chip dst">destination</span><span class="step-text"><code>set_tablespaces_readwrite.yml</code> — <strong>downtime ends here</strong></span></li>
+            <li><span class="step-n">13</span><span class="chip src">source</span><span class="step-text"><code>restore_source_tablespaces.yml</code> — runs from the destination play via <code>delegate_to</code>, sets source tablespaces back to READ WRITE (best-effort)</span></li>
+            <li><span class="step-n">14</span><span class="chip dst">destination</span><span class="step-text"><code>recompile_objects.yml</code> — <code>utlrp.sql</code></span></li>
+            <li><span class="step-n">15</span><span class="chip dst">destination</span><span class="step-text"><code>gather_stats.yml</code></span></li>
+            <li><span class="step-n">16</span><span class="chip dst">destination</span><span class="step-text"><code>validate_migration.yml</code> — writes the final report on the controller</span></li>
+            <li><span class="step-n">17</span><span class="chip dst">destination</span><span class="step-text"><strong>✓ STAGE 4/4 COMPLETE</strong>, then a run-once <em>"CUTOVER COMPLETE"</em> message pointing at the go-live command</span></li>
+            <li><span class="step-n">18</span><span class="chip dst">destination</span><span class="step-text">Go-live include is reached but skipped — it only executes when <code>--tags golive_drop_restore_point</code> was itself the tag passed on the command line</span></li>
+          </ol>
+
+          <div class="play-label">Play 3 — hosts: localhost</div>
+          <ol class="substeps">
+            <li><span class="step-n">1</span><span class="chip src">source</span><span class="step-text">Touch <code>done_dir/rman_l1f.done</code> on the source host (delegated)</span></li>
+          </ol>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="stage-marker"><div class="num">5</div></div>
+        <div class="stage-body">
+          <div class="meta"><span class="chip dst">destination</span><span class="badge">tag: golive_drop_restore_point</span><span class="badge">manual, opt-in, irreversible</span></div>
+          <h4>Go live</h4>
+          <p>Once the migration is verified and accepted as the new production database, this separate, explicit run finds the guaranteed flashback restore point <code>impdp.sh</code> created during import, shows you its name/SCN/creation time, pauses for a typed confirmation, then drops it. This step is <strong>never</strong> bundled into the cutover run above — see <a href="#gotchas">Operational notes</a> for why that matters.</p>
+          <pre class="cmdblock"><span class="tag">controller, from playbooks/</span><code>ansible-playbook m5_migration.yml -i inventory.yml --tags golive_drop_restore_point --ask-vault-pass</code></pre>
+
+          <ol class="substeps">
+            <li><span class="step-n">1</span><span class="chip dst">destination</span><span class="step-text">Query <code>V$RESTORE_POINT</code> for every <code>before_imp_%</code> restore point with <code>guarantee_flashback_database = 'YES'</code>, ordered newest first</span></li>
+            <li><span class="step-n">2</span><span class="chip dst">destination</span><span class="step-text">Assert exactly one was found — if zero or more than one, the run stops here and lists every one it found by name, SCN, and creation time rather than guessing</span></li>
+            <li><span class="step-n">3</span><span class="chip dst">destination</span><span class="step-text">Interactive pause — explicit warning that this permanently removes the flashback safety net, requires pressing Enter</span></li>
+            <li><span class="step-n">4</span><span class="chip dst">destination</span><span class="step-text"><code>DROP RESTORE POINT &lt;name&gt;;</code></span></li>
+            <li><span class="step-n">5</span><span class="chip dst">destination</span><span class="step-text">Re-query and assert it's actually gone</span></li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="callout info">
+        <span class="callout-title">Idempotency</span>
+        Prechecks and L0 each write a done-file under <code>done_dir</code> — <code>{{ m5_workdir }}/done</code> on the <strong>source host</strong>, not the controller — once they succeed; re-running the same tag afterwards prints an "already completed" message and does nothing. Delete the relevant done-file on the source to force a re-run. L1 has no done-file gate — it's designed to run repeatedly. L1F writes <code>rman_l1f.done</code> when it finishes, but nothing checks for it before a run.
+      </div>
+      <div class="callout info">
+        <span class="callout-title">One shot, all stages</span>
+        <code>ansible-playbook m5_migration.yml -i inventory.yml</code> with no <code>--tags</code> at all runs every stage in sequence in a single invocation — useful for a fully unattended test run, less useful for production where L1 needs to repeat over days and L1F needs a deliberately chosen maintenance window.
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="architecture">
+      <div class="kicker">05 · Architecture</div>
+      <h2>Collection architecture</h2>
+      <p class="section-intro">One playbook, three roles, one variables file, inside the PowerODBA collection. <code>m5_migration.yml</code> calls each role directly. Each role is tag-selected and host-scoped: prechecks and L0/L1 each run as a single play across <code>mig_source:mig_destination</code>, while L1F runs as one play per host group. Either way, tasks are guarded internally by <code>when: inventory_hostname in groups[...]</code>.</p>
+
+      <div class="diagram">
+<pre class="mermaid">
+flowchart TD
+    VARS["vars/m5_migration/<br/>mig_vars.yml + mig_vault.yml"] -.loaded by every play.-> SITE
+    SITE["playbooks/m5_migration.yml"] -->|tag: prechecks| R1["role: mig_prechecks"]
+    SITE -->|tag: rman_l0 / rman_l1| R2["role: mig_rman_L0_L1"]
+    SITE -->|tag: rman_l1f| R3["role: mig_rman_L1F"]
+
+    subgraph SRC["source host · [mig_source]"]
+      R1s["OS/DB checks, patch check, SSH,<br/>DB prep, DBMIG deploy"]
+      R2s["RMAN L0/L1 backup"]
+      R3s["RMAN L1F backup<br/>(TS → READ ONLY)"]
+    end
+    subgraph DEST["destination host · [mig_destination]"]
+      R1d["OS/DB checks, patch check,<br/>DB prep, DBMIG deploy"]
+      R2d["RMAN L0/L1 restore"]
+      R3d["RMAN L1F restore →<br/>Data Pump import →<br/>TS → READ WRITE →<br/>recompile, stats, validate"]
+    end
+
+    R1 --> R1s
+    R1 --> R1d
+    R2 --> R2s
+    R2 --> R2d
+    R3 --> R3s
+    R3 --> R3d
+    R3s -. backup pieces + export dump<br/>(SCP or shared storage) .-> R3d
+    R2s -. backup pieces .-> R2d
+</pre>
+      </div>
+      <p class="diagram-caption">Every task file inside a role guards itself with a host-group check, so the same role definition serves both the source-side and destination-side halves of each stage.</p>
+
+      <h3>Where it lives in PowerODBA</h3>
+      <div class="diagram" style="padding:0;">
+<pre style="border:none; border-radius:10px; margin:0;"><code>ansible-power-aix-oracle-dba/
+├── .gitignore                      keeps roles/mig_prechecks/files/*.zip out of git
+├── galaxy.yml                      collection metadata; depends on ansible.posix
+├── collections/requirements.yml    ansible.posix
+├── docs/
+│   ├── Readme-M5-Migration.md      migration guide
+│   └── Readme-M5-Migration.html    this reference
+├── playbooks/
+│   ├── ansible.cfg                 shared PowerODBA settings (unchanged by the migration)
+│   ├── inventory.yml               shared inventory; migration hosts in the [mig] group
+│   ├── m5_migration.yml            the migration playbook — one tag per stage
+│   ├── roles -> ../roles           symlink PowerODBA playbooks use to find roles
+│   └── vars/
+│       └── m5_migration/
+│           ├── mig_vars.yml        all migration settings
+│           └── mig_vault.yml       encrypted: SYS / SYSTEM passwords
+└── roles/
+    ├── mig_prechecks/              OS checks, patch checks, SSH, DB prep, DBMIG deploy
+    ├── mig_rman_L0_L1/             L0 baseline + L1 incremental (shared role, tag-selected)
+    └── mig_rman_L1F/               L1F + import + postchecks + validation (cutover)</code></pre>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="variables">
+      <div class="kicker">06 · Configuration</div>
+      <h2>Variables file — <code>vars/m5_migration/mig_vars.yml</code></h2>
+      <p class="section-intro">Every migration parameter lives in this one file — 55 variables, in the order below. Within each section mandatory variables come first and optional ones are marked <em>Optional</em>; derived values sit together in a final <em>Computed Values</em> block. Credentials reference <code>vars/m5_migration/mig_vault.yml</code> rather than holding plaintext. Fixed values that operators shouldn't change live in the roles' <code>defaults/main.yml</code> instead — see the second table.</p>
+
+      <table class="task-table var-table">
+        <tr><th>Variable</th><th>Purpose</th></tr>
+        <tr class="var-section-row"><td colspan="2">Database Identity</td></tr>
+        <tr><td class="name">source_oracle_sid</td><td class="desc">Source database SID (renamed from <code>oracle_sid</code>)</td></tr>
+        <tr><td class="name">dest_oracle_sid</td><td class="desc">Destination SID for non-CDB topology, or CDB root SID fallback</td></tr>
+        <tr><td class="name">listener_port</td><td class="desc">Oracle listener port, both hosts — embedded in the destination and source connect strings</td></tr>
+        <tr><td class="name">source_oracle_home / dest_oracle_home</td><td class="desc">$ORACLE_HOME on each host. The source $ORACLE_BASE is no longer configured — <code>db_prepare_source.yml</code> queries it with <code>orabase</code> when it builds the Block Change Tracking file path</td></tr>
+        <tr><td class="name">db_create_file_dest</td><td class="desc">OMF destination for new datafiles (ASM diskgroup or path)</td></tr>
+        <tr><td class="name">dest_oracle_home_gi</td><td class="desc"><em>Optional</em> — Grid Infrastructure home, verified via <code>crsctl</code>. Leave blank for a filesystem (JFS) destination with no ASM; the GI-home check is then skipped</td></tr>
+        <tr class="var-section-row"><td colspan="2">Host Identity</td></tr>
+        <tr><td class="name">dest_user / source_user</td><td class="desc">OS user for SSH/SCP on each host (the oracle account). Host addresses are not set here — they come from the <code>[mig_source]</code> / <code>[mig_destination]</code> groups in <code>inventory.yml</code>; see <code>dest_host_effective</code></td></tr>
+        <tr class="var-section-row"><td colspan="2">File Transfer</td></tr>
+        <tr><td class="name">shared_filesystem</td><td class="desc">YES if source/destination share the same mounted working directory (no copy needed) — NO (default) copies backup pieces and the dump file via SCP</td></tr>
+        <tr><td class="name">scp_transfer_timeout</td><td class="desc"><em>Optional</em> — ceiling (seconds) for the async backup-piece/dump-file transfer; only used when shared_filesystem is NO</td></tr>
+        <tr class="var-section-row"><td colspan="2">Migration Working Directories</td></tr>
+        <tr><td class="name">done_dir</td><td class="desc"><code>{{ m5_workdir }}/done</code> on the <strong>source host</strong> — idempotency markers; delete a file here to force that stage to re-run</td></tr>
+        <tr><td class="name">precheck_report_dir</td><td class="desc">Controller path for the <code>precheck_&lt;host&gt;.txt</code> reports</td></tr>
+        <tr><td class="name">m5_workdir / m5_dumpdir / m5_backupdir</td><td class="desc">DBMIG working, Data Pump dump and RMAN backup directories — must be the identical absolute paths on both hosts</td></tr>
+        <tr><td class="name">dest_workdir / dest_dpdmp</td><td class="desc">Same values as m5_workdir/m5_dumpdir, under DBMIG's own property names</td></tr>
+        <tr><td class="name">validation_report_dir</td><td class="desc">Controller path for the final validation report — <code>/home/ansible/m5_migration/reports</code> by default, next to the precheck reports</td></tr>
+        <tr class="var-section-row"><td colspan="2">Topology (defines migration type — see Topology flows below)</td></tr>
+        <tr><td class="name">mig_pdb</td><td class="desc">1 = source is a PDB (PDB→PDB), 0 = source is non-CDB</td></tr>
+        <tr><td class="name">pdb_name</td><td class="desc">Source PDB name (mig_pdb=1 only)</td></tr>
+        <tr><td class="name">dest_cdb_sid</td><td class="desc">Destination CDB root SID (Non-CDB→PDB and PDB→PDB only)</td></tr>
+        <tr><td class="name">dest_pdb_name</td><td class="desc">Destination PDB name (Non-CDB→PDB and PDB→PDB only)</td></tr>
+        <tr class="var-section-row"><td colspan="2">Tablespaces to Migrate</td></tr>
+        <tr><td class="name">m5_tablespace_list_items</td><td class="desc">List of source tablespace names to transport (all except SYSTEM/SYSAUX/UNDO/TEMP)</td></tr>
+        <tr class="var-section-row"><td colspan="2">RMAN / DBMIG Parameters</td></tr>
+        <tr><td class="name">rman_channels</td><td class="desc">Parallel RMAN channels DBMIG opens per backup/restore</td></tr>
+        <tr><td class="name">rman_section_size</td><td class="desc">RMAN SECTION SIZE — splits large datafiles across channels</td></tr>
+        <tr><td class="name">rman_timeout_l0 / l1 / l1f</td><td class="desc">Async ceiling (seconds) per backup/restore level</td></tr>
+        <tr><td class="name">rman_poll</td><td class="desc">Check-in interval (seconds) for async RMAN jobs</td></tr>
+        <tr><td class="name">lock_file</td><td class="desc">DBMIG's own concurrency lock path — a stale one blocks the next run until removed</td></tr>
+        <tr><td class="name">bkp_dest_type</td><td class="desc">DISK or SBT_TAPE</td></tr>
+        <tr><td class="name">bkp_dest_parm</td><td class="desc">Backup destination path (DISK mode)</td></tr>
+        <tr><td class="name">rman_log_benign_patterns</td><td class="desc"><em>Optional</em> — short allow-list of informational <code>ORA-</code> codes (ships with ORA-28002, password-expiry warning) that must not fail the backup/restore log scan</td></tr>
+        <tr class="var-section-row"><td colspan="2">DataPump Parameters</td></tr>
+        <tr><td class="name">impdp_timeout / impdp_poll</td><td class="desc">Async ceiling / check-in interval for the import job</td></tr>
+        <tr><td class="name">source_dpdmp</td><td class="desc">Dump file location on source</td></tr>
+        <tr><td class="name">dp_parallel</td><td class="desc">Data Pump parallel workers — must stay 1 below Oracle 21c (Full Transportable Tablespace jobs reject PARALLEL &gt; 1 on 19c/20c)</td></tr>
+        <tr><td class="name">dp_enc_prompt</td><td class="desc"><em>Optional</em> — Y/N, prompt for an encryption password</td></tr>
+        <tr><td class="name">dp_trace</td><td class="desc"><em>Optional</em> — Data Pump trace level</td></tr>
+        <tr class="var-section-row"><td colspan="2">Credentials (reference vars/m5_migration/mig_vault.yml)</td></tr>
+        <tr><td class="name">sys_password</td><td class="desc">SYS password — used only for the PDB→PDB RMAN restore connection</td></tr>
+        <tr><td class="name">system_password</td><td class="desc">SYSTEM password — piped into both dbmig_driver_m5.sh and impdp.sh; the credential that actually matters for backup and import (the account name itself, <code>system_usr</code>, is a role default)</td></tr>
+        <tr class="var-section-row"><td colspan="2">DBMIG misc</td></tr>
+        <tr><td class="name">remove_ts_quote</td><td class="desc">1 = remove double-quotes around tablespace names in DBMIG's list</td></tr>
+        <tr><td class="name">bkp_from_stdby</td><td class="desc">1 = source is a physical standby</td></tr>
+        <tr><td class="name">rman_debug</td><td class="desc">Y/N — RMAN debug trace</td></tr>
+        <tr><td class="name">rman_scan</td><td class="desc"><em>Optional</em> — destination SCAN Easy Connect (RAC only); leave blank for single-instance</td></tr>
+        <tr><td class="name">cat_cred</td><td class="desc"><em>Optional</em> — RMAN catalog connect string (SBT_TAPE only)</td></tr>
+        <tr class="var-section-row"><td colspan="2">DBMIG Utility</td></tr>
+        <tr><td class="name">dbmig_zip</td><td class="desc">Filename of the staged DBMIG_5.1.zip</td></tr>
+        <tr class="var-section-row"><td colspan="2">DataPump Bundle Patch (DPBP)</td></tr>
+        <tr><td class="name">datapump_patch_id</td><td class="desc">38170982 — checked (never applied) on both hosts; version-specific to your Release Update (MOS KB107134)</td></tr>
+        <tr class="var-section-row"><td colspan="2">Application Schema</td></tr>
+        <tr><td class="name">app_schema</td><td class="desc">Application schema name used for stats gathering and the table-count correctness check</td></tr>
+        <tr class="var-section-row"><td colspan="2">Computed Values — do not edit</td></tr>
+        <tr><td class="name">dest_host_effective</td><td class="desc">Destination address, taken from its <code>ansible_host</code> in inventory — used for Oracle Net connect strings, SSH/SCP and reachability checks. Replaces the old <code>dest_hostname</code> / <code>dest_ssh_host</code> pair (and <code>source_hostname</code> is gone too — the source is addressed the same way)</td></tr>
+        <tr><td class="name">dest_oracle_sid_effective</td><td class="desc">CDB root SID when the destination is a CDB, else dest_oracle_sid</td></tr>
+        <tr><td class="name">dest_connect_string_effective</td><td class="desc"><code>dest_host_effective:listener_port/&lt;service&gt;</code> — used for every "@connect_string" against the destination</td></tr>
+        <tr><td class="name">src_scan</td><td class="desc">Source Easy Connect string DBMIG uses for the L1F read-only + export step — points at the PDB when mig_pdb=1</td></tr>
+        <tr><td class="name">m5_tablespace_list</td><td class="desc">Comma-separated form of m5_tablespace_list_items, for DBMS_TTS</td></tr>
+      </table>
+
+      <h3>Role defaults — fixed values, not in mig_vars.yml</h3>
+      <table class="task-table var-table">
+        <tr><th>Variable</th><th>Purpose</th></tr>
+        <tr class="var-section-row"><td colspan="2">roles/mig_prechecks/defaults/main.yml</td></tr>
+        <tr><td class="name">bugfix_patch_id</td><td class="desc">35564253 — RMAN cross-platform restore fix, destination only (skipped when RU ≥ 19.27)</td></tr>
+        <tr><td class="name">tde_bugfix_patch_id / tde_bundled_min_version</td><td class="desc">30817822 / 19.20.0.0.0 — checked only when the source uses TDE</td></tr>
+        <tr><td class="name">stdby_bugfix_patch_id</td><td class="desc">35675516 — checked only when bkp_from_stdby is 1</td></tr>
+        <tr><td class="name">min_compatible_version</td><td class="desc">Lowest acceptable <code>compatible</code> setting</td></tr>
+        <tr><td class="name">min_disk_gb_source / min_disk_gb_dest / min_memory_gb</td><td class="desc">Disk and memory thresholds the OS checks assert</td></tr>
+        <tr><td class="name">tde_keys_marker</td><td class="desc"><code>{{ done_dir }}/tde_keys_transferred.done</code> — the marker you touch on the source after transferring TDE keys</td></tr>
+        <tr><td class="name">system_usr</td><td class="desc">SYSTEM — the account DBMIG and impdp connect as</td></tr>
+        <tr class="var-section-row"><td colspan="2">roles/mig_rman_L1F/defaults/main.yml</td></tr>
+        <tr><td class="name">impdp_run_mode</td><td class="desc"><code>run</code> — test | test-readonly | run | run-readonly; controls whether the import actually executes and whether tablespaces end READ WRITE</td></tr>
+        <tr><td class="name">expdp_dumpfile / restore_cmdfile</td><td class="desc"><em>runtime-populated</em> — the export dump filename and the restore cmdfile path</td></tr>
+        <tr><td class="name">rman_level</td><td class="desc">L1F</td></tr>
+        <tr class="var-section-row"><td colspan="2">roles/mig_rman_L0_L1/defaults/main.yml</td></tr>
+        <tr><td class="name">rman_level / restore_cmdfile</td><td class="desc">L0 by default (each play sets L0 or L1) / runtime-populated cmdfile path</td></tr>
+      </table>
+
+      <div class="callout warn" style="margin-top:16px">
+        <span class="callout-title">Computed, not editable</span>
+        <code>dest_host_effective</code>, <code>dest_oracle_sid_effective</code>, <code>dest_connect_string_effective</code> and <code>src_scan</code> are derived from inventory and the topology variables — every task in the collection that needs to reach the destination database uses one of these, never the raw <code>dest_oracle_sid</code>/<code>dest_pdb_name</code> directly. This is the single mechanism that makes the same task files work across all three topologies.
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="roles">
+      <div class="kicker">07 · Roles &amp; tasks</div>
+      <h2>Roles &amp; tasks reference</h2>
+      <p class="section-intro">Three roles, 34 task files between them. Each role's <code>main.yml</code> is the sequencing spine — every other file is <code>include_tasks</code>'d from it in a fixed order, host-guarded internally.</p>
+
+      <!-- ROLE 1 -->
+      <div class="role-block" id="role-prechecks">
+        <div class="role-head">
+          <span class="path">roles/mig_prechecks/</span>
+          <h4>mig_prechecks <span class="badge" style="margin-left:6px">tag: prechecks</span></h4>
+          <p style="margin:0; font-size:.88rem; color:var(--text-muted)">Runs once, gated by a done-file. Validates both hosts, verifies the mandatory patches are applied, sets up SSH equivalence, prepares both databases, and deploys DBMIG 5.1.</p>
+        </div>
+        <details class="file-toggle" open>
+          <summary>9 task files (+ 1 template)</summary>
+          <div class="table-scroll">
+          <table class="task-table">
+            <tr><th style="width:20%">File</th><th style="width:9%">Runs on</th><th style="width:26%">Runs / skipped when</th><th>Purpose</th></tr>
+            <tr><td class="file">os_checks_source.yml</td><td><span class="chip src">source</span></td><td class="when">Whole role is skipped if <code>done_dir/prechecks.done</code> already exists. No internal skips otherwise — every check here is a hard assert.</td><td class="desc">Endian format, Oracle version ≥19.18, character set/timezone/compatible facts, Enterprise Edition check, ARCHIVELOG, RMAN encryption OFF, TDE detection (+ keystore-transfer marker gate), network reachability to destination, disk/memory space.</td></tr>
+            <tr><td class="file">os_checks_dest.yml</td><td><span class="chip dst">destination</span></td><td class="when">Same done-file gate, evaluated per host in the one combined play. The GI-home stat and assert are skipped when <code>dest_oracle_home_gi</code> is blank.</td><td class="desc">Oracle home + GI home presence, database OPEN, version ≥19.18, ARCHIVELOG, compatible ≥ source, character set / NCHAR / timezone exact-match asserts against source facts, M5 working directories created, disk/memory space, reverse connectivity to source.</td></tr>
+            <tr><td class="file">patch_apply_source.yml</td><td><span class="chip src">source</span></td><td class="when">Same done-file gate. No other conditions — the assert always runs.</td><td class="desc">Check-only: asserts DataPump Bundle Patch 38170982 is present via <code>opatch lsinventory</code>. No installation performed.</td></tr>
+            <tr><td class="file">patch_apply_dest.yml</td><td><span class="chip dst">destination</span></td><td class="when">DataPump BP check always runs. Bugfix 35564253's <em>standalone-patch</em> assert is skipped when the installed RU is ≥19.27 (a debug message explains why instead); the TDE bugfix assert only runs if <code>tde_in_use</code> was detected on source; the standby bugfix assert only runs if <code>bkp_from_stdby: 1</code>.</td><td class="desc">Check-only: DataPump BP 38170982 (mandatory), bugfix 35564253 (version-gated), TDE bugfix 30817822 (conditional on source TDE use), standby bugfix 35675516 (conditional on <code>bkp_from_stdby</code>).</td></tr>
+            <tr><td class="file">ssh_equivalence.yml</td><td><span class="chip both">source + destination</span></td><td class="when">Runs on both hosts — the source executes only the source→destination half, the destination only the destination→source half. Within each half, the key-push remediation step is skipped entirely if the initial passwordless-SSH test already succeeded.</td><td class="desc">Tests, auto-remediates (pushes public key) only if needed, re-tests, and asserts passwordless SSH for the oracle user in both directions.</td></tr>
+            <tr><td class="file">db_prepare_source.yml</td><td><span class="chip src">source</span></td><td class="when">Same done-file gate. The Block Change Tracking <code>ALTER DATABASE ENABLE...</code> step — and the <code>orabase</code> lookup that builds its file path — is skipped if BCT is already enabled.</td><td class="desc">Sets streams_pool_size, disables audit_trail, enables Block Change Tracking if off, reports USERS tablespace contents, runs <code>DBMS_TTS.TRANSPORT_SET_CHECK</code> and asserts zero violations, creates the M5DIR/DATA_PUMP_DIR directory objects, configures RMAN (compressed backupset, parallelism, channel format).</td></tr>
+            <tr><td class="file">db_prepare_dest.yml</td><td><span class="chip dst">destination</span></td><td class="when">Same done-file gate. The entire USERS → USERS_DEF replacement block (steps 1–5) only runs if a USERS tablespace actually exists on the destination — otherwise a single "nothing to replace" message prints instead.</td><td class="desc">Sets/verifies db_create_file_dest is a single location, safely replaces the destination's USERS tablespace with a USERS_DEF substitute (moves tables + rebuilds indexes out, flips the default tablespace, drops USERS) so the transported USERS from source can land cleanly, sets streams_pool_size, creates M5DIR/DATA_PUMP_DIR, gathers SYS/SYSTEM dictionary stats.</td></tr>
+            <tr><td class="file">deploy_dbmig.yml</td><td><span class="chip both">source + destination</span></td><td class="when">Only <em>included</em> for the source host (<code>when: inventory_hostname in groups['mig_source']</code>) — the destination host skips the include. It still reaches the destination host itself, though: every directory/copy task inside it runs a second time with <code>delegate_to: groups['mig_destination'][0]</code>.</td><td class="desc">Creates the identical M5 directory tree on both hosts, copies and unzips DBMIG_5.1.zip, templates <code>dbmig_driver.properties</code>, writes the tablespace list file.</td></tr>
+            <tr><td class="file">generate_report.yml</td><td><span class="chip src">source</span></td><td class="when">Source host only, as the last step inside the done-file gate.</td><td class="desc">Writes <code>precheck_&lt;source-host&gt;.txt</code> to <code>precheck_report_dir</code> on the controller (version, charset, endian, patch status).</td></tr>
+            <tr><td class="file">templates/dbmig_driver.properties.j2</td><td><span class="chip ctl">template</span></td><td class="when">Rendered once, by <code>deploy_dbmig.yml</code>, on the source host's pass through that file.</td><td class="desc">Renders DBMIG's own properties file — SID, PDB, connect strings, RMAN channels/section size, backup destination, DEST_SERVER (conditional on shared_filesystem).</td></tr>
+          </table>
+          </div>
+        </details>
+      </div>
+
+      <!-- ROLE 2 -->
+      <div class="role-block" id="role-l0l1">
+        <div class="role-head">
+          <span class="path">roles/mig_rman_L0_L1/</span>
+          <h4>mig_rman_L0_L1 <span class="badge" style="margin-left:6px">tags: rman_l0 · rman_l1</span></h4>
+          <p style="margin:0; font-size:.88rem; color:var(--text-muted)">One shared role for both baseline (L0) and incremental (L1) cycles — identical task flow, selected by the <code>rman_level</code> play variable. No downtime.</p>
+        </div>
+        <details class="file-toggle" open>
+          <summary>7 task files</summary>
+          <div class="callout info" style="margin:6px 0 14px">
+            <span class="callout-title">Shared skip condition</span>
+            Every task below sits inside one of two blocks — the source-side backup block or the destination-side restore block — and both blocks are skipped entirely, in one shot, when <code>rman_level == 'L0'</code> <em>and</em> <code>done_dir/rman_l0.done</code> already exists. Running with <code>rman_level: L1</code> never hits this gate at all — L1 always executes.
+          </div>
+          <div class="table-scroll">
+          <table class="task-table">
+            <tr><th style="width:20%">File</th><th style="width:9%">Runs on</th><th style="width:26%">Runs / skipped when</th><th>Purpose</th></tr>
+            <tr><td class="file">check_lockfile.yml</td><td><span class="chip src">source</span></td><td class="when">Backup block only (see above). Fails the whole play immediately if the lock file is present — nothing after it runs.</td><td class="desc">Fails fast if DBMIG's own lock file exists (a previous run may still be active or died mid-run).</td></tr>
+            <tr><td class="file">run_backup.yml</td><td><span class="chip src">source</span></td><td class="when">Backup block only.</td><td class="desc">Executes <code>dbmig_driver_m5.sh [L0|L1]</code> via async/poll, tees output to a timestamped log, asserts a clean exit code.</td></tr>
+            <tr><td class="file">verify_backup_log.yml</td><td><span class="chip src">source</span></td><td class="when">Backup block only. The critical-error assert itself is skipped (not even evaluated) when the scan finds zero matching lines — a clean log short-circuits straight to the "log is clean" message.</td><td class="desc">Scans that run's own log (not the cumulative DBMIG log) for ORA-/RMAN- patterns; asserts none found.</td></tr>
+            <tr><td class="file">get_restore_cmdfile.yml</td><td><span class="chip src">source</span></td><td class="when">Backup block only.</td><td class="desc">Locates the RMAN restore cmdfile DBMIG generated for this run (latest by mtime), stores it as a fact for the destination play to read via <code>hostvars</code>.</td></tr>
+            <tr><td class="file">sync_backup_pieces.yml</td><td><span class="chip src">source</span></td><td class="when">Backup block. Internally, every copy/verify step here has its <em>own</em> second-level skip: all of them are bypassed (replaced by one "shared storage assumed" debug message) whenever <code>shared_filesystem: YES</code>.</td><td class="desc">Parses this run's exact backup piece paths out of the restore cmdfile (not a directory glob — avoids re-copying every historical piece), SCPs them to the destination with async/poll, verifies arrival.</td></tr>
+            <tr><td class="file">run_restore.yml</td><td><span class="chip dst">destination</span></td><td class="when">Restore block only. Which RMAN connect string gets used is decided by <code>mig_pdb</code> at template-render time, not a separate skip — both branches are mutually exclusive halves of one Jinja <code>{% if %}</code>.</td><td class="desc">Derives the destination-side cmdfile path DBMIG's own SCP delivered, runs <code>rman target /</code> (non-CDB/PDB via ORACLE_SID) or <code>rman target sys@...</code> (PDB→PDB) with async/poll, asserts a clean exit code.</td></tr>
+            <tr><td class="file">verify_restore_log.yml</td><td><span class="chip dst">destination</span></td><td class="when">Restore block only. Same "skip the assert on a clean scan" behavior as the backup-log check.</td><td class="desc">Same ORA-/RMAN- scan pattern as the backup-log check, against the restore log.</td></tr>
+          </table>
+          </div>
+        </details>
+      </div>
+
+      <!-- ROLE 3 -->
+      <div class="role-block" id="role-l1f">
+        <div class="role-head">
+          <span class="path">roles/mig_rman_L1F/</span>
+          <h4>mig_rman_L1F <span class="badge" style="margin-left:6px">tag: rman_l1f</span></h4>
+          <p style="margin:0; font-size:.88rem; color:var(--text-muted)">The cutover role — combines final backup, restore, Data Pump import, and all post-migration DBA tasks into one downtime-window sequence, plus a separate opt-in go-live step.</p>
+        </div>
+        <details class="file-toggle" open>
+          <summary>18 task files</summary>
+          <div class="callout info" style="margin:6px 0 14px">
+            <span class="callout-title">No overall idempotency gate</span>
+            Unlike prechecks and L0, this role has <strong>no done-file check</strong> at the top — it's designed to be run once per real cutover, but nothing stops it from running again. What <em>does</em> gate individual tasks is a mix of host, play, and the conditions listed per row below.
+          </div>
+          <div class="table-scroll">
+          <table class="task-table">
+            <tr><th style="width:20%">File</th><th style="width:9%">Runs on</th><th style="width:26%">Runs / skipped when</th><th>Purpose</th></tr>
+            <tr><td class="file">check_lockfile.yml</td><td><span class="chip src">source</span></td><td class="when">Play 1 (source) only. Fails the whole play immediately if DBMIG's lock file is present.</td><td class="desc">Same stale-lock guard as the L0/L1 role.</td></tr>
+            <tr><td class="file">run_backup.yml</td><td><span class="chip src">source</span></td><td class="when">Play 1 only, always. <strong>Downtime starts here.</strong></td><td class="desc">Runs <code>dbmig_driver_m5.sh L1F</code>, which sets the transportable tablespaces READ ONLY on source before backing them up.</td></tr>
+            <tr><td class="file">verify_backup_log.yml</td><td><span class="chip src">source</span></td><td class="when">Play 1 only. Critical-error assert skipped when the scan is already clean.</td><td class="desc">ORA-/RMAN- scan of the L1F backup log.</td></tr>
+            <tr><td class="file">get_restore_cmdfile.yml</td><td><span class="chip src">source</span></td><td class="when">Play 1 only, always.</td><td class="desc">Locates the L1F restore cmdfile.</td></tr>
+            <tr><td class="file">sync_backup_pieces.yml</td><td><span class="chip src">source</span></td><td class="when">Play 1 only. Every copy/verify step inside is bypassed when <code>shared_filesystem: YES</code>.</td><td class="desc">Copies this run's backup pieces to destination.</td></tr>
+            <tr><td class="file">capture_expdp_file.yml</td><td><span class="chip src">source</span></td><td class="when">Play 1 only. Its dump-file <em>copy</em> step (not the find/fact steps) is skipped when <code>shared_filesystem: YES</code>.</td><td class="desc">Finds the Data Pump export dump file DBMIG generated, records its name/path/size as facts, copies it to the destination's dump directory.</td></tr>
+            <tr><td class="file">run_restore.yml</td><td><span class="chip dst">destination</span></td><td class="when">Play 2 (destination) only. Connect method (target / vs target sys@...) branches on <code>mig_pdb</code> at render time.</td><td class="desc">RMAN restore of the L1F pieces — same branch as L0/L1, using the topology-resolved connect variables.</td></tr>
+            <tr><td class="file">verify_restore_log.yml</td><td><span class="chip dst">destination</span></td><td class="when">Play 2 only. Assert skipped on a clean scan.</td><td class="desc">ORA-/RMAN- scan of the L1F restore log.</td></tr>
+            <tr><td class="file">pre_import_checks.yml</td><td><span class="chip dst">destination</span></td><td class="when">Play 2 only, always — this is a pure gate, no internal skips.</td><td class="desc">Asserts at least the L0 + L1F restore logs exist, resolves the dump filename from source facts, confirms impdp.sh is present.</td></tr>
+            <tr><td class="file">run_impdp.yml</td><td><span class="chip dst">destination</span></td><td class="when">Play 2 only. The script-patching and TNS-alias steps always run; the <em>test-mode</em> and <em>real-run</em> invocations of impdp.sh itself only fire when <code>impdp_run_mode</code> is <code>run</code> or <code>run-readonly</code> — with <code>test</code>/<code>test-readonly</code>, only the par file gets generated and nothing is actually imported.</td><td class="desc">Patches impdp.sh in place (ORACLE_HOME, ORACLE_SID, parallel/trace level, DATA_PUMP_DIR → M5DIR), writes a managed <code>M5IMPDP</code> TNS alias and points ORACLE_CONNECT_STRING at it, runs impdp.sh in test mode then in real run mode via <code>bash</code> (not <code>sh</code>) with the SYSTEM password piped to stdin. See <a href="#topo-noncdb-noncdb">Topology flows</a> for exactly how the connect string differs per topology.</td></tr>
+            <tr><td class="file">verify_import.yml</td><td><span class="chip dst">destination</span></td><td class="when">Play 2 only, always runs — but it never fails the play regardless of what it finds (no hard assert here at all).</td><td class="desc">Informational only — scans the impdp log for ORA-/KUP-/IMP- lines (Full Transportable Import routinely logs benign noise) and looks up the guaranteed flashback restore point Data Pump created, for visibility.</td></tr>
+            <tr><td class="file">verify_migration_correctness.yml</td><td><span class="chip dst">destination</span></td><td class="when">Play 2 only, always runs. This is the one task in the whole cutover with a hard fail-on-mismatch assert — everything after it (READ WRITE, recompile, stats) never executes if it fails.</td><td class="desc"><strong>The real pass/fail gate.</strong> Compares application-schema table counts on source vs destination — before tablespaces go READ WRITE and before downtime is allowed to end.</td></tr>
+            <tr><td class="file">set_tablespaces_readwrite.yml</td><td><span class="chip dst">destination</span></td><td class="when">Play 2 only, reached only if the gate above passed. <strong>Downtime ends here.</strong> The <code>ALTER TABLESPACE ... READ WRITE</code> statement is issued only for tablespaces currently READ ONLY — anything already READ WRITE is left untouched (the statement isn't idempotent, so re-running it would error).</td><td class="desc">Checks current status first, flips only what needs flipping, then asserts every migrated tablespace is present and ONLINE.</td></tr>
+            <tr><td class="file">restore_source_tablespaces.yml</td><td><span class="chip src">source</span></td><td class="when">Included from Play 2, but its SQL runs on the <em>source</em> host via <code>delegate_to</code>. Marked <code>ignore_errors: true</code> — a failed or unreachable source here does not fail the cutover, since the source may be intentionally shut down at this point per the runbook.</td><td class="desc">Sets the source's own tablespaces back to READ WRITE (best-effort).</td></tr>
+            <tr><td class="file">recompile_objects.yml</td><td><span class="chip dst">destination</span></td><td class="when">Play 2 only, always, once tablespaces are READ WRITE.</td><td class="desc">Runs <code>utlrp.sql</code>, reports invalid-object count before and after.</td></tr>
+            <tr><td class="file">gather_stats.yml</td><td><span class="chip dst">destination</span></td><td class="when">Play 2 only, always.</td><td class="desc">Gathers optimizer statistics for the application schema.</td></tr>
+            <tr><td class="file">validate_migration.yml</td><td><span class="chip dst">destination</span></td><td class="when">Play 2 only, always — the last task before the stage-complete banners.</td><td class="desc">Table counts, tablespace status, invalid-object count, allocated DB size (source vs destination), restore point name — all written to a final validation report on the controller.</td></tr>
+            <tr><td class="file">drop_restore_point.yml</td><td><span class="chip dst">destination</span></td><td class="when"><strong>Only</strong> when <code>golive_drop_restore_point</code> was itself the tag typed on the command line — checked against the <code>ansible_run_tags</code> magic variable, not just tag inheritance, specifically because this role is included with <code>tags: [rman_l1f]</code> and that alone would otherwise let it slip through during a normal cutover (confirmed live; fixed for exactly that reason). Never runs during an ordinary <code>--tags rman_l1f</code> run.</td><td class="desc"><strong>Separate, opt-in only.</strong> Finds the guaranteed restore point, asserts exactly one exists (lists full details and refuses to guess if there's more than one), pauses for a typed confirmation, drops it, verifies it's gone.</td></tr>
+          </table>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="topo-noncdb-noncdb">
+      <div class="kicker">08 · Topology flow</div>
+      <h2>Non-CDB → Non-CDB</h2>
+      <p class="section-intro">Both source and destination are plain, standalone (non-container) databases. This is the simplest case — every connection is local or a straightforward Easy Connect to a database SID, no container-switching involved.</p>
+
+      <div class="legend">
+        <span class="chip src">source</span> source host
+        <span class="chip dst">destination</span> destination host
+        <span class="chip ctl">controller</span> runs on the Ansible controller
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <h4 style="margin-top:0">Topology variables</h4>
+        <pre><code>mig_pdb:       0
+pdb_name:      ""
+dest_cdb_sid:  ""
+dest_pdb_name: ""</code></pre>
+        <p style="margin:0; font-size:.88rem">Both computed variables fall all the way back to the plain SID: <code>dest_oracle_sid_effective</code> = <code>dest_oracle_sid</code>, and <code>dest_connect_string_effective</code> = <code>dest_host_effective:listener_port/dest_oracle_sid</code>, where <code>dest_host_effective</code> is the destination's <code>ansible_host</code> from inventory.</p>
+      </div>
+
+      <div class="diagram" style="padding:14px;">
+<svg viewBox="0 0 940 470" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;font-family:'IBM Plex Sans',sans-serif;">
+  <rect x="0" y="0" width="940" height="470" fill="#fbfbf9"/>
+  <text x="470" y="28" text-anchor="middle" font-size="18" font-weight="700" fill="#1a1a1a">High-Level Phases of Migration Using Oracle M5 — Non-CDB → Non-CDB</text>
+  <rect x="18" y="40" width="884" height="22" fill="#fdf06a" stroke="none"/>
+  <text x="460" y="55.5" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1a1a1a" font-family="IBM Plex Sans, sans-serif">PHASE 1 &#8211; Prechecks &amp; Preparation (both source and destination)</text>
+  <line x1="278" y1="66" x2="278" y2="410" stroke="#8a3a2a" stroke-width="3"/>
+  <rect x="18" y="90" width="242" height="260" fill="none" stroke="#1a1a1a" stroke-width="2"/>
+  <rect x="300" y="65" width="622" height="330" fill="none" stroke="#1a1a1a" stroke-width="2"/>
+<path d="M 74.0 201 L 74.0 319 A 65.0 11 0 0 0 204.0 319 L 204.0 201" fill="#9fb3c2" stroke="#3a4a55" stroke-width="2"/>
+    <ellipse cx="139" cy="319" rx="65.0" ry="11" fill="#9fb3c2" stroke="#3a4a55" stroke-width="2"/>
+    <ellipse cx="139" cy="201" rx="65.0" ry="11" fill="#9fb3c2" stroke="#3a4a55" stroke-width="2"/>
+    <text x="139" y="248.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#12202b" font-family="IBM Plex Sans, sans-serif">Source Oracle</text>
+<text x="139" y="264.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#12202b" font-family="IBM Plex Sans, sans-serif">(Non-CDB)</text>
+<text x="139" y="345" text-anchor="middle" font-size="11.5" fill="#3a4450" font-family="IBM Plex Sans, sans-serif">x86 · Little-Endian</text>
+    <path d="M 725.0 161 L 725.0 289 A 75.0 11 0 0 0 875.0 289 L 875.0 161" fill="#9fb3c2" stroke="#3a4a55" stroke-width="2"/>
+    <ellipse cx="800" cy="289" rx="75.0" ry="11" fill="#9fb3c2" stroke="#3a4a55" stroke-width="2"/>
+    <ellipse cx="800" cy="161" rx="75.0" ry="11" fill="#9fb3c2" stroke="#3a4a55" stroke-width="2"/>
+    <text x="800" y="213.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#12202b" font-family="IBM Plex Sans, sans-serif">Destination Oracle</text>
+<text x="800" y="229.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#12202b" font-family="IBM Plex Sans, sans-serif">(Non-CDB)</text>
+<text x="800" y="315" text-anchor="middle" font-size="11.5" fill="#3a4450" font-family="IBM Plex Sans, sans-serif">AIX Power · Big-Endian</text>
+    <defs><marker id="arr1" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8a3a2a"/></marker></defs>
+    <line x1="262" y1="195" x2="720" y2="175" stroke="#8a3a2a" stroke-width="5" marker-end="url(#arr1)"/>
+    
+    <rect x="330" y="108" width="330" height="22" fill="#fdf06a" stroke="none"/>
+    <text x="495.0" y="123.5" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1a1a1a" font-family="IBM Plex Sans, sans-serif">PHASE 2 – Pre-Stage the Data</text>
+    <text x="495" y="152" text-anchor="middle" font-size="11.5" fill="#3a4450" font-family="IBM Plex Sans, sans-serif">RMAN L0 baseline + repeated L1 incrementals — no downtime</text>
+    <defs><marker id="arr2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8a3a2a"/></marker></defs>
+    <line x1="262" y1="240" x2="720" y2="255" stroke="#8a3a2a" stroke-width="5" marker-end="url(#arr2)"/>
+    
+    <rect x="330" y="262" width="330" height="22" fill="#fdf06a" stroke="none"/>
+    <text x="495.0" y="277.5" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1a1a1a" font-family="IBM Plex Sans, sans-serif">PHASE 3 – Final Cutover</text>
+    <text x="495" y="306" text-anchor="middle" font-size="11.5" fill="#3a4450" font-family="IBM Plex Sans, sans-serif">RMAN L1F backup + restore + Data Pump import</text>
+    <rect x="330" y="355" width="560" height="22" fill="#fdf06a" stroke="none"/>
+    <text x="610.0" y="370.5" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1a1a1a" font-family="IBM Plex Sans, sans-serif">PHASE 4 – Verify Row Counts, then Switchover to READ WRITE</text>
+    <line x1="800" y1="338" x2="800" y2="355" stroke="#8a3a2a" stroke-width="3" stroke-dasharray="5,4"/>
+</svg>
+</div>
+      <p class="diagram-caption">One plain database on each side — restore and import both connect straight to it, no intermediate container to reach through.</p>
+
+      <table class="task-table">
+        <tr><th style="width:22%">Stage</th><th style="width:20%">RMAN restore connects as</th><th>Data Pump connects as</th></tr>
+        <tr><td class="desc">Restore (L0/L1/L1F)</td><td class="file">target /<br/>(ORACLE_SID=dest_oracle_sid)</td><td class="desc">—</td></tr>
+        <tr><td class="desc">Import</td><td class="desc">—</td><td class="file">system@M5IMPDP<br/>alias → dest_host_effective:port/dest_oracle_sid</td></tr>
+      </table>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="topo-noncdb-pdb">
+      <div class="kicker">08 · Topology flow</div>
+      <h2>Non-CDB → PDB</h2>
+      <p class="section-intro">Source is a standalone database; the destination is a pluggable database inside a container database. RMAN restore still connects locally to the CDB root by SID — it's Data Pump and every SQL*Plus task touching PDB-level objects that switch container.</p>
+
+      <div class="card" style="margin-bottom:18px;">
+        <h4 style="margin-top:0">Topology variables</h4>
+        <pre><code>mig_pdb:       0             # source is non-CDB → MIG_PDB=0 in DBMIG's properties
+pdb_name:      ""             # no source PDB name
+dest_cdb_sid:  "&lt;CDB_SID&gt;"    # destination CDB root SID
+dest_pdb_name: "&lt;PDB_NAME&gt;"   # destination PDB name</code></pre>
+        <p style="margin:0; font-size:.88rem"><code>dest_oracle_sid_effective</code> = <code>dest_cdb_sid</code> (the root). <code>dest_connect_string_effective</code> = <code>dest_host_effective:listener_port/dest_pdb_name</code> (the PDB's own service).</p>
+      </div>
+
+      <div class="diagram" style="padding:14px;">
+<svg viewBox="0 0 940 470" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;font-family:'IBM Plex Sans',sans-serif;">
+  <rect x="0" y="0" width="940" height="470" fill="#fbfbf9"/>
+  <text x="470" y="28" text-anchor="middle" font-size="18" font-weight="700" fill="#1a1a1a">High-Level Phases of Migration Using Oracle M5 — Non-CDB → PDB</text>
+  <rect x="18" y="40" width="884" height="22" fill="#fdf06a" stroke="none"/>
+  <text x="460" y="55.5" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1a1a1a" font-family="IBM Plex Sans, sans-serif">PHASE 1 &#8211; Prechecks &amp; Preparation (both source and destination)</text>
+  <line x1="278" y1="66" x2="278" y2="410" stroke="#8a3a2a" stroke-width="3"/>
+  <rect x="18" y="90" width="242" height="260" fill="none" stroke="#1a1a1a" stroke-width="2"/>
+  <rect x="300" y="65" width="622" height="330" fill="none" stroke="#1a1a1a" stroke-width="2"/>
+<path d="M 74.0 201 L 74.0 319 A 65.0 11 0 0 0 204.0 319 L 204.0 201" fill="#9fb3c2" stroke="#3a4a55" stroke-width="2"/>
+    <ellipse cx="139" cy="319" rx="65.0" ry="11" fill="#9fb3c2" stroke="#3a4a55" stroke-width="2"/>
+    <ellipse cx="139" cy="201" rx="65.0" ry="11" fill="#9fb3c2" stroke="#3a4a55" stroke-width="2"/>
+    <text x="139" y="248.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#12202b" font-family="IBM Plex Sans, sans-serif">Source Oracle</text>
+<text x="139" y="264.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#12202b" font-family="IBM Plex Sans, sans-serif">(Non-CDB)</text>
+<text x="139" y="345" text-anchor="middle" font-size="11.5" fill="#3a4450" font-family="IBM Plex Sans, sans-serif">x86 · Little-Endian</text><rect x="700" y="110" width="200" height="220" rx="8" fill="#eef2f5" stroke="#5a6a75" stroke-width="2"/><text x="800" y="128" text-anchor="middle" font-size="12.5" fill="#3a4450" font-family="IBM Plex Sans, sans-serif">Destination CDB Root</text>
+    <path d="M 740.0 176 L 740.0 284 A 60.0 11 0 0 0 860.0 284 L 860.0 176" fill="#9fb3c2" stroke="#3a4a55" stroke-width="2"/>
+    <ellipse cx="800" cy="284" rx="60.0" ry="11" fill="#9fb3c2" stroke="#3a4a55" stroke-width="2"/>
+    <ellipse cx="800" cy="176" rx="60.0" ry="11" fill="#9fb3c2" stroke="#3a4a55" stroke-width="2"/>
+    <text x="800" y="226.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#12202b" font-family="IBM Plex Sans, sans-serif">Target PDB</text>
+
+    <defs><marker id="arr1b" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8a3a2a"/></marker></defs>
+    <line x1="262" y1="195" x2="695" y2="175" stroke="#8a3a2a" stroke-width="5" marker-end="url(#arr1b)"/>
+    
+    <rect x="330" y="108" width="330" height="22" fill="#fdf06a" stroke="none"/>
+    <text x="495.0" y="123.5" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1a1a1a" font-family="IBM Plex Sans, sans-serif">PHASE 2 – Pre-Stage the Data</text>
+    <text x="495" y="152" text-anchor="middle" font-size="11.5" fill="#3a4450" font-family="IBM Plex Sans, sans-serif">RMAN L0 baseline + repeated L1 incrementals — no downtime</text>
+    <defs><marker id="arr2b" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8a3a2a"/></marker></defs>
+    <line x1="262" y1="240" x2="695" y2="255" stroke="#8a3a2a" stroke-width="5" marker-end="url(#arr2b)"/>
+    
+    <rect x="330" y="262" width="330" height="22" fill="#fdf06a" stroke="none"/>
+    <text x="495.0" y="277.5" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1a1a1a" font-family="IBM Plex Sans, sans-serif">PHASE 3 – Final Cutover</text>
+    <text x="495" y="306" text-anchor="middle" font-size="11.5" fill="#3a4450" font-family="IBM Plex Sans, sans-serif">Restore lands at the CDB root, then Data Pump imports into the PDB</text>
+    <rect x="330" y="355" width="560" height="22" fill="#fdf06a" stroke="none"/>
+    <text x="610.0" y="370.5" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1a1a1a" font-family="IBM Plex Sans, sans-serif">PHASE 4 – Verify Row Counts in the PDB, then Switchover to READ WRITE</text>
+    <line x1="800" y1="338" x2="800" y2="355" stroke="#8a3a2a" stroke-width="3" stroke-dasharray="5,4"/>
+</svg>
+</div>
+      <p class="diagram-caption">The destination is one database instance (a container database) with the real target — a pluggable database — living inside it. Restore lands the physical data at the container level; everything from import onward reaches into the pluggable database specifically.</p>
+
+      <table class="task-table">
+        <tr><th style="width:22%">Stage</th><th style="width:26%">RMAN restore connects as</th><th>Data Pump / PDB-level SQL connects as</th></tr>
+        <tr><td class="desc">Restore (L0/L1/L1F)</td><td class="file">target /<br/>(ORACLE_SID=dest_cdb_sid)</td><td class="desc">—</td></tr>
+        <tr><td class="desc">Import &amp; postchecks</td><td class="desc">—</td><td class="file">system@M5IMPDP alias →<br/>dest_host_effective:port/dest_pdb_name</td></tr>
+      </table>
+
+      <div class="callout warn">
+        <span class="callout-title">Only difference from Non-CDB → Non-CDB</span>
+        The RMAN restore side is <em>identical</em> to the non-CDB case (still a local <code>target /</code> at CDB root) — only the SID it uses (root, not a plain SID) and everything downstream of the restore (Data Pump, container-scoped SQL) differ.
+      </div>
+      <div class="callout info">
+        <span class="callout-title">A detail that turns out not to matter</span>
+        <code>run_impdp.yml</code> also exports <code>ORACLE_PDB_SID=&lt;dest_pdb_name&gt;</code> in the shell environment right before invoking <code>impdp.sh</code>, whenever <code>dest_pdb_name</code> is set. Reading the deployed script directly shows it never actually references that variable anywhere — the real PDB targeting is entirely carried by <code>ORACLE_CONNECT_STRING</code> (the M5IMPDP alias). The export is harmless and kept for parity with the KA documentation, but it isn't load-bearing.
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="topo-pdb-pdb">
+      <div class="kicker">08 · Topology flow</div>
+      <h2>PDB → PDB</h2>
+      <p class="section-intro">Both source and destination are pluggable databases. This is the only topology where the RMAN restore itself needs a real network connection with credentials, rather than a local bequeath connection — because the PDB being restored into isn't reachable via a bare local SID.</p>
+
+      <div class="card" style="margin-bottom:18px;">
+        <h4 style="margin-top:0">Topology variables</h4>
+        <pre><code>mig_pdb:       1
+pdb_name:      "&lt;SOURCE_PDB&gt;"   # source PDB name — goes into DBMIG's PDB_NAME property
+dest_cdb_sid:  "&lt;CDB_SID&gt;"       # destination CDB root SID
+dest_pdb_name: "&lt;DEST_PDB&gt;"      # destination PDB name</code></pre>
+        <p style="margin:0; font-size:.88rem">Same computed values as Non-CDB → PDB (<code>dest_oracle_sid_effective</code> = <code>dest_cdb_sid</code>, <code>dest_connect_string_effective</code> = the PDB's connect string) — but <code>mig_pdb=1</code> now changes how RMAN itself connects.</p>
+      </div>
+
+      <div class="diagram" style="padding:14px;">
+<svg viewBox="0 0 940 470" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;font-family:'IBM Plex Sans',sans-serif;">
+  <rect x="0" y="0" width="940" height="470" fill="#fbfbf9"/>
+  <text x="470" y="28" text-anchor="middle" font-size="18" font-weight="700" fill="#1a1a1a">High-Level Phases of Migration Using Oracle M5 — PDB → PDB</text>
+  <rect x="18" y="40" width="884" height="22" fill="#fdf06a" stroke="none"/>
+  <text x="460" y="55.5" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1a1a1a" font-family="IBM Plex Sans, sans-serif">PHASE 1 &#8211; Prechecks &amp; Preparation (both source and destination)</text>
+  <line x1="278" y1="66" x2="278" y2="410" stroke="#8a3a2a" stroke-width="3"/>
+  <rect x="18" y="90" width="242" height="260" fill="none" stroke="#1a1a1a" stroke-width="2"/>
+  <rect x="300" y="65" width="622" height="330" fill="none" stroke="#1a1a1a" stroke-width="2"/>
+<rect x="55" y="105" width="170" height="225" rx="8" fill="#eef2f5" stroke="#5a6a75" stroke-width="2"/><text x="140" y="122" text-anchor="middle" font-size="12" fill="#3a4450" font-family="IBM Plex Sans, sans-serif">Source CDB</text>
+    <path d="M 85.0 169 L 85.0 277 A 55.0 11 0 0 0 195.0 277 L 195.0 169" fill="#9fb3c2" stroke="#3a4a55" stroke-width="2"/>
+    <ellipse cx="140" cy="277" rx="55.0" ry="11" fill="#9fb3c2" stroke="#3a4a55" stroke-width="2"/>
+    <ellipse cx="140" cy="169" rx="55.0" ry="11" fill="#9fb3c2" stroke="#3a4a55" stroke-width="2"/>
+    <text x="140" y="219.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#12202b" font-family="IBM Plex Sans, sans-serif">Source PDB</text>
+<text x="140" y="303" text-anchor="middle" font-size="11.5" fill="#3a4450" font-family="IBM Plex Sans, sans-serif">x86 · Little-Endian</text><rect x="700" y="110" width="200" height="220" rx="8" fill="#eef2f5" stroke="#5a6a75" stroke-width="2"/><text x="800" y="128" text-anchor="middle" font-size="12.5" fill="#3a4450" font-family="IBM Plex Sans, sans-serif">Destination CDB Root</text>
+    <path d="M 740.0 176 L 740.0 284 A 60.0 11 0 0 0 860.0 284 L 860.0 176" fill="#9fb3c2" stroke="#3a4a55" stroke-width="2"/>
+    <ellipse cx="800" cy="284" rx="60.0" ry="11" fill="#9fb3c2" stroke="#3a4a55" stroke-width="2"/>
+    <ellipse cx="800" cy="176" rx="60.0" ry="11" fill="#9fb3c2" stroke="#3a4a55" stroke-width="2"/>
+    <text x="800" y="226.0" text-anchor="middle" font-size="12.5" font-weight="700" fill="#12202b" font-family="IBM Plex Sans, sans-serif">Target PDB</text>
+
+    <defs><marker id="arr1c" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8a3a2a"/></marker></defs>
+    <line x1="232" y1="195" x2="695" y2="175" stroke="#8a3a2a" stroke-width="5" marker-end="url(#arr1c)"/>
+    
+    <rect x="330" y="108" width="330" height="22" fill="#fdf06a" stroke="none"/>
+    <text x="495.0" y="123.5" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1a1a1a" font-family="IBM Plex Sans, sans-serif">PHASE 2 – Pre-Stage the Data</text>
+    <text x="495" y="152" text-anchor="middle" font-size="11.5" fill="#3a4450" font-family="IBM Plex Sans, sans-serif">RMAN L0 baseline + repeated L1 incrementals — no downtime</text>
+    <defs><marker id="arr2c" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#8a3a2a"/></marker></defs>
+    <line x1="232" y1="250" x2="695" y2="255" stroke="#8a3a2a" stroke-width="5" marker-end="url(#arr2c)"/>
+    
+    <rect x="330" y="262" width="330" height="22" fill="#fdf06a" stroke="none"/>
+    <text x="495.0" y="277.5" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1a1a1a" font-family="IBM Plex Sans, sans-serif">PHASE 3 – Final Cutover</text>
+    <text x="495" y="306" text-anchor="middle" font-size="11.5" fill="#3a4450" font-family="IBM Plex Sans, sans-serif">Restore connects directly into the target PDB over the network</text>
+    <rect x="330" y="355" width="560" height="22" fill="#fdf06a" stroke="none"/>
+    <text x="610.0" y="370.5" text-anchor="middle" font-size="13.5" font-weight="700" fill="#1a1a1a" font-family="IBM Plex Sans, sans-serif">PHASE 4 – Verify Row Counts, then Switchover to READ WRITE</text>
+    <line x1="800" y1="338" x2="800" y2="355" stroke="#8a3a2a" stroke-width="3" stroke-dasharray="5,4"/>
+</svg>
+</div>
+      <p class="diagram-caption">The only real difference from Non-CDB → PDB above is phase 4: since the source is also a pluggable database rather than a plain one, there's no bare local shortcut to restore through — RMAN has to reach the target pluggable database over the network instead.</p>
+
+      <table class="task-table">
+        <tr><th style="width:22%">Stage</th><th style="width:30%">RMAN restore connects as</th><th>Data Pump connects as</th></tr>
+        <tr><td class="desc">Restore (L0/L1/L1F)</td><td class="file">target sys/&lt;sys_password&gt;@dest_connect_string_effective<br/>(PDB service — real network + credential connection)</td><td class="desc">—</td></tr>
+        <tr><td class="desc">Import</td><td class="desc">—</td><td class="file">system@M5IMPDP alias →<br/>same dest_pdb_name service</td></tr>
+      </table>
+
+      <div class="callout warn">
+        <span class="callout-title">Where the branch actually lives</span>
+        <code>run_restore.yml</code> (both the L0/L1 role and the L1F role) contains the only real conditional: <code>{% if mig_pdb | int == 1 %} rman target sys/&lt;password&gt;@... {% else %} rman target / {% endif %}</code>. Everything else — Data Pump's connect string, container-switching SQL, table-count verification — is already identical to Non-CDB → PDB, because both share the same PDB-shaped destination.
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="gotchas">
+      <div class="kicker">09 · Operational notes</div>
+      <h2>Things worth knowing before you run this for real</h2>
+      <p class="section-intro">Drawn directly from real test runs against all three topologies — not hypothetical edge cases.</p>
+
+      <div class="gotcha">
+        <h4>Restore points accumulate across retries</h4>
+        <p>Every successful <code>impdp.sh run</code> mode creates a new guaranteed flashback restore point named <code>before_imp_&lt;timestamp&gt;</code>. If a cutover attempt fails partway and you re-run L1F, each attempt leaves its own restore point behind. The go-live drop step deliberately refuses to guess which one to drop once there's more than one — it lists all of them (name, SCN, creation time) and asks you to clean up manually via SQL*Plus first.</p>
+      </div>
+      <div class="gotcha">
+        <h4>TNS alias name collisions</h4>
+        <p>The collection writes a managed <code>M5IMPDP</code> alias into <code>tnsnames.ora</code> to work around a Data Pump connect-string parsing limitation. If a <em>different</em>, unmanaged entry with the same alias name already exists elsewhere in that file (e.g. left over from earlier manual testing), Oracle's resolver can pick the wrong one — with no error, just a silent wrong-database connection. Check for duplicate alias names if imports seem to be hitting stale data.</p>
+      </div>
+      <div class="gotcha">
+        <h4>AIX's default shell is not bash</h4>
+        <p><code>impdp.sh</code> uses bash-only array syntax. AIX's <code>/bin/sh</code> is a genuine POSIX/Korn shell — running the script under it fails past the argument-parsing stage with no fatal error, silently imports nothing, and still reports success (rc=0). The collection always invokes it via <code>bash impdp.sh</code> explicitly.</p>
+      </div>
+      <div class="gotcha">
+        <h4>Full Transportable Import logs benign noise</h4>
+        <p>Errors like <code>ORA-39083</code> against the internal <code>GSMROOTUSER</code> account, or "object already exists" for tablespaces/directories, show up on essentially every run and are not failures. <code>verify_import.yml</code> only ever surfaces these for context — <code>verify_migration_correctness.yml</code>'s source-vs-destination table count comparison is the actual pass/fail signal.</p>
+      </div>
+      <div class="gotcha">
+        <h4>An L1 with zero source-side changes is a hard stop, not a silent no-op</h4>
+        <p>If nothing changed on source between the last backup and this L1 run, RMAN produces a genuinely empty incremental. Since there's nothing to copy or restore, the piece-sync step correctly finds zero pieces and fails loudly rather than pretending to succeed. This is expected on a quiet test database — make a real data change between L0/L1 runs to exercise the incremental path meaningfully.</p>
+      </div>
+      <div class="gotcha tip">
+        <h4>Character set, NCHAR, and timezone mismatches have no automated fix</h4>
+        <p>Unlike almost every other precheck, a mismatch here (<code>os_checks_dest.yml</code>) means a database rebuild on whichever side is wrong — there's no ALTER SYSTEM or patch that resolves it. Confirm these three match before investing time in the rest of the runbook.</p>
+      </div>
+      <div class="gotcha tip">
+        <h4>A genuine non-CDB destination is uncommon</h4>
+        <p>Most Oracle 19c installs default to the multitenant (CDB) architecture. If you point the automation at a CDB's root container while leaving the topology variables blank (Non-CDB → Non-CDB), Data Pump will reject creating ordinary local users at the root (<code>ORA-65096</code>, <code>ORA-65046</code>) — that combination only works when the destination instance was genuinely created without pluggable databases at all.</p>
+      </div>
+      <div class="gotcha tip">
+        <h4>shared_filesystem controls a lot more than it looks</h4>
+        <p>Beyond skipping the SCP steps, <code>shared_filesystem: YES</code> also blanks DBMIG's own <code>DEST_SERVER</code> property (so DBMIG doesn't redundantly SSH-copy files that are already visible on shared storage) — get this one setting right for the environment before the first L0 run, since it changes several tasks' behavior at once.</p>
+      </div>
+      <div class="gotcha tip">
+        <h4>Clock skew across hosts can mislead file-based debugging</h4>
+        <p>If the source, destination, and controller aren't NTP-synced, comparing file modification times across hosts to reconstruct "what ran when" can point at the wrong sequence of events. Database timestamps (SCN, restore point creation time) are the reliable source of truth when diagnosing a run after the fact.</p>
+      </div>
+      <div class="gotcha">
+        <h4>A failed restore's log can outlive the failure — and this collection doesn't currently guard against that</h4>
+        <p><code>run_impdp.yml</code> deliberately unions <em>every</em> <code>restore_L0_*.log</code> / <code>restore_L1_*.log</code> / <code>restore_L1F_*.log</code> file it finds on disk (not just the latest per level), because L1 is meant to run repeatedly. That design doesn't currently distinguish a failed attempt's log from a successful one — a restore that fails partway still leaves its log sitting on disk under its normal name, so a later, separate L1F run can pick it up alongside the successful retry's log. If that failed attempt recorded a datafile path that's no longer valid on the retry (for example, if the datafile copy it referenced was deleted and re-created at a new path during cleanup), both paths get fed to <code>impdp.sh</code>'s <code>TRANSPORT_DATAFILES</code> list — one of them stale. This is a real, currently-unaddressed gap, not a hypothetical: if an L0, L1, or L1F restore fails and you retry it, check <code>{{ m5_workdir }}/log/</code> on the destination for that failed attempt's log file before running L1F's import, and move or rename it out of the way if there's any doubt about whether its recorded paths are still valid.</p>
+      </div>
+
+      <div class="gotcha">
+        <h4>Run from <code>playbooks/</code>, with <code>-i inventory.yml</code> and the vault password</h4>
+        <p>PowerODBA's <code>ansible.cfg</code> is shared and is found from the <code>playbooks/</code> directory. It names no inventory and no vault password file, so every migration command passes <code>-i inventory.yml</code> and <code>--vault-password-file</code>. Leave out the inventory and the playbook's first play stops with a clear message; leave out the vault password and even <code>--syntax-check</code> fails with <em>"Attempting to decrypt but no vault secrets found"</em>.</p>
+      </div>
+      <div class="gotcha">
+        <h4>A full FRA quota stalls the database mid-run</h4>
+        <p>When <code>+FRA</code> reached 100% of <code>db_recovery_file_dest_size</code>, archiving stopped and sessions hung on <em>"log file switch (archiving needed)"</em> — visible first as prechecks freezing on "Set USERS_DEF as database default tablespace". The diskgroup had plenty of free space; the quota was the limit. Check <code>v$recovery_file_dest</code> on both databases before L0 and size the quota for the archive logs a long baseline generates.</p>
+      </div>
+      <div class="gotcha">
+        <h4>Done-files live on the source, and they're the only re-run switch</h4>
+        <p><code>done_dir</code> is <code>{{ m5_workdir }}/done</code> on the source host. If <code>prechecks.done</code> goes missing, the next <code>--tags prechecks</code> run re-runs every precheck for real — including the destination USERS → USERS_DEF replacement — instead of printing "already completed". Clearing <code>m5_workdir</code> during a reset also clears these markers, and the TDE key-transfer marker with them.</p>
+      </div>
+      <div class="gotcha">
+        <h4>PDB→PDB restore errors are hidden from Ansible's output</h4>
+        <p><code>run_restore.yml</code> sets <code>no_log</code> when <code>mig_pdb</code> is 1, because the RMAN connect string carries the SYS password. A failed restore therefore shows only as <em>"censored"</em>. The real error is in the restore log under <code>{{ m5_workdir }}/log</code> on the destination — that's where errors like <code>ORA-17502: ksfdcre:4 Failed to create file</code> appeared during testing.</p>
+      </div>
+      <div class="gotcha">
+        <h4>The shared <code>ansible.cfg</code> applies to the migration too</h4>
+        <p>The migration sets its own login user and Python interpreter in <code>[mig:vars]</code> and changes nothing in <code>ansible.cfg</code>. Keep <code>remote_tmp = ~/.ansible/tmp</code> there: a shared path such as <code>/tmp/.ansible</code> fails as soon as another user owns it on a host (see Troubleshooting). Output format, per-task timings and a separate Ansible log aren't set; add them for a single run with <code>ANSIBLE_STDOUT_CALLBACK=yaml</code>, <code>ANSIBLE_CALLBACKS_ENABLED=timer,profile_tasks</code> or <code>ANSIBLE_LOG_PATH=…</code>.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="troubleshooting">
+      <div class="kicker">10 · Troubleshooting</div>
+      <h2>When something goes wrong</h2>
+      <p class="section-intro">Real failures hit during testing of this collection, in Symptom → Cause → Fix form. A few are historical bugs already fixed in this collection — included anyway in case you're comparing against an older copy or hit something that looks similar.</p>
+
+      <h3>Recovering from a failed run — full clean, then restart from Phase 1</h3>
+      <p class="section-intro" style="margin-top:0">This collection doesn't attempt any partial recovery, and doesn't clean up after itself. The recommended policy is deliberately simple rather than clever: if <strong>L0, L1, or L1F fails for any reason</strong>, don't try to resume mid-way — clean up everything below and restart the whole migration from prechecks. A targeted, partial cleanup can look correct and still leave something subtly stale (a leftover RMAN datafile copy, an old restore log with a now-invalid path); a full reset avoids that risk entirely.</p>
+
+      <div class="card" style="margin-bottom:14px;">
+        <h4 style="margin-top:0"><span class="chip both">prechecks</span> — the one exception</h4>
+        <p style="margin:0; font-size:.88rem; color:var(--text-muted)">Every task here is a pure check or an idempotent setup step (<code>CREATE OR REPLACE</code>, <code>ALTER SYSTEM</code>) — nothing destructive happens. Fix whatever the assert reported and re-run <code>--tags prechecks</code> directly, no cleanup needed.</p>
+      </div>
+
+      <div class="card" style="margin-bottom:14px;">
+        <h4 style="margin-top:0">Any <strong>L0, L1, or L1F</strong> failure — full reset</h4>
+        <p style="margin:0 0 10px; font-size:.88rem; color:var(--text-muted)">Regardless of which of the three failed, or at which internal step:</p>
+        <ol class="substeps" style="border-top:none; margin-top:0;">
+          <li><span class="step-n">1</span><span class="chip dst">destination</span><span class="step-text">Clear the RMAN repository — a failed or partial restore can leave incomplete datafile copies behind:
+<pre style="margin:8px 0 0"><code>rman target /
+
+CROSSCHECK DATAFILECOPY ALL;
+LIST DATAFILECOPY ALL;
+-- review the list, then:
+DELETE DATAFILECOPY ALL;</code></pre></span></li>
+          <li><span class="step-n">2</span><span class="chip both">both hosts</span><span class="step-text">Remove everything under the M5 working directory (<code>{{ m5_workdir }}</code>, <code>/u01/m5</code> by default) — every backup piece, cmdfile, and log from every attempt lives here, and none of it is safe to assume is still valid after a failure:
+<pre style="margin:8px 0 0"><code>rm -rf {{ m5_workdir }}/*</code></pre>
+<span style="display:block; margin-top:6px;">Prechecks re-stages everything this needs (DBMIG_5.1.zip, the directory tree, the properties file) on its next run, so there's nothing to preserve here. This also deletes <code>done_dir</code>, which lives under <code>m5_workdir</code> on the source — clearing the <code>prechecks.done</code> and <code>rman_l0.done</code> gates, which is exactly what a reset needs. It clears the TDE key-transfer marker too, so re-touch that before prechecks if TDE is in use.</span></span></li>
+          <li><span class="step-n">3</span><span class="chip ctl">controller</span><span class="step-text">Clean up the controller side:
+<pre style="margin:8px 0 0"><code>rm -f /tmp/m5_*.out
+rm -f {{ precheck_report_dir }}/*
+rm -f {{ validation_report_dir }}/*</code></pre>
+<span style="display:block; margin-top:6px;">The done-files aren't here any more — step 2 already removed them with <code>m5_workdir</code>. This step is hygiene: clearing old logs and reports avoids confusing an old run's output with the new attempt.</span></span></li>
+          <li><span class="step-n">4</span><span class="chip both">restart</span><span class="step-text">Re-run from the top: <code>--tags prechecks</code>, then <code>rman_l0</code>, then <code>rman_l1</code> as needed, then <code>rman_l1f</code>.</span></li>
+        </ol>
+      </div>
+
+      <div class="card" style="margin-bottom:22px;">
+        <h4 style="margin-top:0"><span class="chip dst">go-live</span></h4>
+        <p style="margin:0; font-size:.88rem; color:var(--text-muted)">Different case — this only reads <code>V$RESTORE_POINT</code> and pauses for a typed confirmation before doing anything destructive, so it's always safe to retry without any cleanup. See the "finishes but drops nothing" and "Found 2 ... expected exactly 1" entries below for the two ways it can stop short.</p>
+      </div>
+
+      <h3>Specific failures seen in testing</h3>
+
+      <div class="ts-item">
+        <h4>Import reports success but nothing was actually imported</h4>
+        <div class="ts-row symptom"><span class="ts-label">Symptom</span><p><code>impdp.sh</code> exits with rc=0, but the destination ends up with 0 tables and no guaranteed restore point.</p></div>
+        <div class="ts-row cause"><span class="ts-label">Cause</span><p>The script was invoked as <code>sh impdp.sh</code>. AIX's <code>/bin/sh</code> is a real POSIX/Korn shell and can't parse the script's bash-only array syntax — it fails partway through silently and never populates the file list, but still exits 0.</p></div>
+        <div class="ts-row fix"><span class="ts-label">Fix</span><p>Always invoke it as <code>bash impdp.sh ...</code> — already this collection's default. If a custom change reintroduces <code>sh</code>, this is the first thing to check.</p></div>
+      </div>
+
+      <div class="ts-item">
+        <h4>Import fails with ORA-65096 or ORA-65046</h4>
+        <div class="ts-row symptom"><span class="ts-label">Symptom</span><p><code>ORA-65096: invalid common user or role name</code> or <code>ORA-65046: operation not allowed from outside a pluggable database</code> during import.</p></div>
+        <div class="ts-row cause"><span class="ts-label">Cause</span><p>The destination is actually a container database, but the topology variables were left blank as if it were Non-CDB → Non-CDB — Data Pump ended up connecting to the CDB root, which refuses to create ordinary local users.</p></div>
+        <div class="ts-row fix"><span class="ts-label">Fix</span><p>Set <code>dest_cdb_sid</code> and <code>dest_pdb_name</code> to target the real pluggable database (Non-CDB → PDB or PDB → PDB topology) instead.</p></div>
+      </div>
+
+      <div class="ts-item">
+        <h4>Import connects to the wrong database</h4>
+        <div class="ts-row symptom"><span class="ts-label">Symptom</span><p><code>tnsping M5IMPDP</code> resolves to a database you didn't expect, or the import silently touches old/unrelated data.</p></div>
+        <div class="ts-row cause"><span class="ts-label">Cause</span><p>A second, unmanaged <code>M5IMPDP</code> entry already existed in <code>tnsnames.ora</code> — from earlier manual testing — outside the collection's own managed block. Oracle's resolver picked that stale entry instead.</p></div>
+        <div class="ts-row fix"><span class="ts-label">Fix</span><p>Search <code>tnsnames.ora</code> for more than one <code>M5IMPDP =</code> entry and remove the one outside the <code>ANSIBLE MANAGED BLOCK</code> markers.</p></div>
+      </div>
+
+      <div class="ts-item">
+        <h4>L1 fails with "No backup piece paths found"</h4>
+        <div class="ts-row symptom"><span class="ts-label">Symptom</span><p>The L1 or L1F backup-piece sync step fails: <em>"No backup piece paths found in ... cmdfile parsing may need review."</em></p></div>
+        <div class="ts-row cause"><span class="ts-label">Cause</span><p>Usually not a parsing bug — nothing changed on the source between the last backup and this incremental, so RMAN genuinely produced a zero-byte backup with nothing to copy.</p></div>
+        <div class="ts-row fix"><span class="ts-label">Fix</span><p>Make a real data change on source (insert/update, then commit) before re-running L1. Rarely an issue in production, where there's normally ongoing activity between runs.</p></div>
+      </div>
+
+      <div class="ts-item">
+        <h4>Go-live command finishes but drops nothing (ok=1, no error)</h4>
+        <div class="ts-row symptom"><span class="ts-label">Symptom</span><p><code>--tags golive_drop_restore_point</code> completes cleanly with no failures, but the restore point is still there.</p></div>
+        <div class="ts-row cause"><span class="ts-label">Cause</span><p><em>(historical)</em> — Ansible doesn't propagate tags from a dynamic <code>include_tasks</code> statement into the included file's own tasks. The include fired correctly, but every task inside it was then filtered out as untagged.</p></div>
+        <div class="ts-row fix"><span class="ts-label">Fix</span><p>Already fixed in this collection — the tasks are wrapped in a block explicitly tagged <code>golive_drop_restore_point</code>. If you're on an older copy without that fix, add the block tag.</p></div>
+      </div>
+
+      <div class="ts-item">
+        <h4>Go-live command refuses to proceed: "Found 2 ... expected exactly 1"</h4>
+        <div class="ts-row symptom"><span class="ts-label">Symptom</span><p>The go-live step stops with a message listing two or more restore points instead of dropping one.</p></div>
+        <div class="ts-row cause"><span class="ts-label">Cause</span><p>Repeated or partially-failed L1F attempts each created their own guaranteed restore point, and none of the earlier ones were ever cleaned up.</p></div>
+        <div class="ts-row fix"><span class="ts-label">Fix</span><p>The error message itself lists every restore point (name, SCN, creation time) — drop the ones you don't want via SQL*Plus as <code>sys</code>, then re-run once only one remains.</p></div>
+      </div>
+
+      <div class="ts-item">
+        <h4>Guaranteed restore point exists but the collection reports "none captured"</h4>
+        <div class="ts-row symptom"><span class="ts-label">Symptom</span><p><code>SELECT * FROM V$RESTORE_POINT</code> clearly shows a <code>BEFORE_IMP_...</code> row, but <code>verify_import.yml</code> and the validation report say no restore point was found.</p></div>
+        <div class="ts-row cause"><span class="ts-label">Cause</span><p><em>(historical)</em> — the lookup query matched against a lowercase <code>'before_imp_%'</code> pattern, but Oracle stores unquoted restore point names in uppercase, and <code>LIKE</code> is case-sensitive.</p></div>
+        <div class="ts-row fix"><span class="ts-label">Fix</span><p>Already fixed — the query now uses <code>UPPER(name) LIKE 'BEFORE_IMP_%'</code>.</p></div>
+      </div>
+
+      <div class="ts-item">
+        <h4>Prechecks fails on character set, NCHAR, or timezone mismatch</h4>
+        <div class="ts-row symptom"><span class="ts-label">Symptom</span><p>Prechecks stops with a hard assert comparing source vs destination charset, NCHAR charset, or timezone file version.</p></div>
+        <div class="ts-row cause"><span class="ts-label">Cause</span><p>Source and destination were created with genuinely different settings — this isn't something Full Transportable Import can reconcile in flight.</p></div>
+        <div class="ts-row fix"><span class="ts-label">Fix</span><p>No <code>ALTER SYSTEM</code> fixes this. Timezone version can be upgraded via <code>DBMS_DST</code> on the lagging side; a character set mismatch requires a database rebuild. Confirm all three match before investing further time.</p></div>
+      </div>
+
+      <div class="ts-item">
+        <h4>Setting tablespaces READ WRITE fails with ORA-01646</h4>
+        <div class="ts-row symptom"><span class="ts-label">Symptom</span><p>The postcheck stage fails partway through with <code>ORA-01646</code>, and only some tablespaces end up READ WRITE.</p></div>
+        <div class="ts-row cause"><span class="ts-label">Cause</span><p><em>(historical)</em> — <code>ALTER TABLESPACE ... READ WRITE</code> isn't idempotent; the task used to issue it unconditionally, and it errors on a tablespace that's already READ WRITE (like a pre-existing USERS).</p></div>
+        <div class="ts-row fix"><span class="ts-label">Fix</span><p>Already fixed — the task checks each tablespace's current status first and only alters the ones actually READ ONLY.</p></div>
+      </div>
+
+      <div class="ts-item">
+        <h4>Import log shows GSMROOTUSER errors or "object already exists"</h4>
+        <div class="ts-row symptom"><span class="ts-label">Symptom</span><p><code>ORA-39083</code> against <code>GSMROOTUSER</code>, or "already exists" messages for tablespaces/directories, appear in the import log.</p></div>
+        <div class="ts-row cause"><span class="ts-label">Cause</span><p>Benign noise from Full Transportable Import — <code>GSMROOTUSER</code> is Oracle's own internal Global Data Services account, and "already exists" objects are expected on re-runs.</p></div>
+        <div class="ts-row fix"><span class="ts-label">Fix</span><p>Nothing to do — these show up on essentially every run. Check <code>verify_migration_correctness.yml</code>'s table-count result for the real pass/fail signal, not the raw log.</p></div>
+      </div>
+
+      <div class="ts-item">
+        <h4>"The inventory doesn't define the migration hosts"</h4>
+        <div class="ts-row symptom"><span class="ts-label">Symptom</span><p>The first play, <em>"M5 migration — check inventory"</em>, fails and nothing else runs.</p></div>
+        <div class="ts-row cause"><span class="ts-label">Cause</span><p>The playbook was run without <code>-i inventory.yml</code>, or <code>[mig_source]</code> / <code>[mig_destination]</code> are missing or don't hold exactly one host each.</p></div>
+        <div class="ts-row fix"><span class="ts-label">Fix</span><p><code>cd</code> to <code>playbooks/</code>, run <code>ansible-playbook m5_migration.yml -i inventory.yml …</code>, and keep exactly one host in each migration group.</p></div>
+      </div>
+
+      <div class="ts-item">
+        <h4>"Attempting to decrypt but no vault secrets found"</h4>
+        <div class="ts-row symptom"><span class="ts-label">Symptom</span><p>Any command — even <code>--syntax-check</code> — stops with this error.</p></div>
+        <div class="ts-row cause"><span class="ts-label">Cause</span><p><code>mig_vault.yml</code> is encrypted and PowerODBA's <code>ansible.cfg</code> doesn't name a vault password file.</p></div>
+        <div class="ts-row fix"><span class="ts-label">Fix</span><p>Add <code>--vault-password-file ~/.vault_pass</code>, or <code>--ask-vault-pass</code> when running interactively.</p></div>
+      </div>
+
+      <div class="ts-item">
+        <h4>"Failed to create temporary directory" — reported as UNREACHABLE</h4>
+        <div class="ts-row symptom"><span class="ts-label">Symptom</span><p>A host fails on its first task with <em>UNREACHABLE … Failed to create temporary directory</em>, although SSH works.</p></div>
+        <div class="ts-row cause"><span class="ts-label">Cause</span><p><code>remote_tmp</code> points at a directory the oracle user can't write to — typically a shared path such as <code>/tmp/.ansible</code> that another user (for example root, mode <code>drwx------</code>) created first.</p></div>
+        <div class="ts-row fix"><span class="ts-label">Fix</span><p>Keep <code>remote_tmp = ~/.ansible/tmp</code> in <code>ansible.cfg</code>, or give the migration hosts their own by adding <code>ansible_remote_tmp=~/.ansible/tmp</code> to <code>[mig:vars]</code> in <code>inventory.yml</code>.</p></div>
+      </div>
+
+      <div class="ts-item">
+        <h4>Prechecks hangs on "Set USERS_DEF as database default tablespace"</h4>
+        <div class="ts-row symptom"><span class="ts-label">Symptom</span><p>The task never returns; <code>v$session</code> shows sessions waiting on <em>"log file switch (archiving needed)"</em>.</p></div>
+        <div class="ts-row cause"><span class="ts-label">Cause</span><p>The FRA hit its <code>db_recovery_file_dest_size</code> quota (<code>v$recovery_file_dest</code> at 100% used, nothing reclaimable), so archiving stopped and anything needing a log switch waits.</p></div>
+        <div class="ts-row fix"><span class="ts-label">Fix</span><p>Raise <code>db_recovery_file_dest_size</code>, or back up and delete archived logs to free FRA space. The stuck session continues on its own once archiving resumes.</p></div>
+      </div>
+
+      <div class="ts-item">
+        <h4>RMAN restore fails and Ansible shows only "censored"</h4>
+        <div class="ts-row symptom"><span class="ts-label">Symptom</span><p><em>ASYNC FAILED</em> on the destination, followed by <em>censored: the output has been hidden due to the fact that 'no_log: true' was specified</em>.</p></div>
+        <div class="ts-row cause"><span class="ts-label">Cause</span><p>Expected for PDB→PDB — the restore runs with <code>no_log</code> because its connect string carries the SYS password. The underlying error is in the restore log, not the Ansible output.</p></div>
+        <div class="ts-row fix"><span class="ts-label">Fix</span><p>Read the newest <code>restore_&lt;level&gt;_*.log</code> in <code>{{ m5_workdir }}/log</code> on the destination. During testing it showed <code>ORA-17502: ksfdcre:4 Failed to create file</code>, on a different datafile each retry; the root cause wasn't confirmed. Check FRA and ASM space and the ASM alert log, then follow the full reset above before retrying.</p></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section id="files">
+      <div class="kicker">11 · Reference</div>
+      <h2>Complete file index</h2>
+      <p class="section-intro">Every file in the collection, for quick lookup.</p>
+
+      <h3>Playbook, vars and shared files</h3>
+      <table class="task-table">
+        <tr><th style="width:34%">Path</th><th>Purpose</th></tr>
+        <tr><td class="file">playbooks/m5_migration.yml</td><td class="desc">The migration playbook — inventory check, then one play per stage, one tag per stage, embedded runbook comments</td></tr>
+        <tr><td class="file">playbooks/vars/m5_migration/mig_vars.yml</td><td class="desc">Single migration variables file — see <a href="#variables">Variables file</a></td></tr>
+        <tr><td class="file">playbooks/vars/m5_migration/mig_vault.yml</td><td class="desc">ansible-vault encrypted — SYS/SYSTEM passwords</td></tr>
+        <tr><td class="file">playbooks/inventory.yml</td><td class="desc">Shared PowerODBA inventory — migration hosts in <code>[mig_source]</code>, <code>[mig_destination]</code>, <code>[mig:children]</code> and <code>[mig:vars]</code></td></tr>
+        <tr><td class="file">playbooks/ansible.cfg</td><td class="desc">Shared PowerODBA settings — unchanged by the migration</td></tr>
+        <tr><td class="file">collections/requirements.yml, galaxy.yml</td><td class="desc">List <code>ansible.posix</code>, needed for the SSH key setup in prechecks</td></tr>
+        <tr><td class="file">.gitignore</td><td class="desc">Keeps <code>roles/mig_prechecks/files/*.zip</code> (DBMIG, patch zips) out of git</td></tr>
+        <tr><td class="file">docs/Readme-M5-Migration.md</td><td class="desc">Migration guide — prerequisites, quick start, runbook, troubleshooting</td></tr>
+      </table>
+
+      <h3>roles/mig_prechecks/</h3>
+      <table class="task-table">
+        <tr><th style="width:34%">Path</th><th>Purpose</th></tr>
+        <tr><td class="file">README.md, meta/main.yml</td><td class="desc">Role summary and Galaxy metadata, in PowerODBA's role format</td></tr>
+        <tr><td class="file">defaults/main.yml</td><td class="desc">Disk/memory thresholds, standalone bugfix patch IDs (35564253, TDE, standby), min compatible version, TDE marker path, system_usr</td></tr>
+        <tr><td class="file">tasks/main.yml</td><td class="desc">Sequencing spine — idempotency gate, then 9 includes in order</td></tr>
+        <tr><td class="file">tasks/os_checks_source.yml</td><td class="desc">See <a href="#role-prechecks">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/os_checks_dest.yml</td><td class="desc">See <a href="#role-prechecks">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/patch_apply_source.yml</td><td class="desc">See <a href="#role-prechecks">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/patch_apply_dest.yml</td><td class="desc">See <a href="#role-prechecks">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/ssh_equivalence.yml</td><td class="desc">See <a href="#role-prechecks">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/db_prepare_source.yml</td><td class="desc">See <a href="#role-prechecks">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/db_prepare_dest.yml</td><td class="desc">See <a href="#role-prechecks">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/deploy_dbmig.yml</td><td class="desc">See <a href="#role-prechecks">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/generate_report.yml</td><td class="desc">See <a href="#role-prechecks">role reference</a> above</td></tr>
+        <tr><td class="file">templates/dbmig_driver.properties.j2</td><td class="desc">See <a href="#role-prechecks">role reference</a> above</td></tr>
+        <tr><td class="file">files/ (zips not tracked)</td><td class="desc">Manually staged: DBMIG_5.1.zip only — patch 38170982 is checked via opatch, never staged or applied by this collection</td></tr>
+      </table>
+
+      <h3>roles/mig_rman_L0_L1/</h3>
+      <table class="task-table">
+        <tr><th style="width:34%">Path</th><th>Purpose</th></tr>
+        <tr><td class="file">README.md, meta/main.yml</td><td class="desc">Role summary and Galaxy metadata, in PowerODBA's role format</td></tr>
+        <tr><td class="file">defaults/main.yml</td><td class="desc">rman_level (set per play) and restore_cmdfile (runtime)</td></tr>
+        <tr><td class="file">tasks/main.yml</td><td class="desc">Sequencing spine — timeout resolution, L0 idempotency gate, backup block (source), restore block (destination), done-file write, completion message</td></tr>
+        <tr><td class="file">tasks/check_lockfile.yml</td><td class="desc">See <a href="#role-l0l1">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/run_backup.yml</td><td class="desc">See <a href="#role-l0l1">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/verify_backup_log.yml</td><td class="desc">See <a href="#role-l0l1">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/get_restore_cmdfile.yml</td><td class="desc">See <a href="#role-l0l1">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/sync_backup_pieces.yml</td><td class="desc">See <a href="#role-l0l1">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/run_restore.yml</td><td class="desc">See <a href="#role-l0l1">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/verify_restore_log.yml</td><td class="desc">See <a href="#role-l0l1">role reference</a> above</td></tr>
+      </table>
+
+      <h3>roles/mig_rman_L1F/</h3>
+      <table class="task-table">
+        <tr><th style="width:34%">Path</th><th>Purpose</th></tr>
+        <tr><td class="file">README.md, meta/main.yml</td><td class="desc">Role summary and Galaxy metadata, in PowerODBA's role format</td></tr>
+        <tr><td class="file">defaults/main.yml</td><td class="desc">rman_level, impdp_run_mode, and runtime-populated expdp_dumpfile / restore_cmdfile</td></tr>
+        <tr><td class="file">tasks/main.yml</td><td class="desc">Sequencing spine — 4 stages (backup/restore/import/postchecks) with stage banners, plus the separate tag-gated go-live include</td></tr>
+        <tr><td class="file">tasks/check_lockfile.yml</td><td class="desc">See <a href="#role-l1f">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/run_backup.yml</td><td class="desc">See <a href="#role-l1f">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/verify_backup_log.yml</td><td class="desc">See <a href="#role-l1f">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/get_restore_cmdfile.yml</td><td class="desc">See <a href="#role-l1f">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/sync_backup_pieces.yml</td><td class="desc">See <a href="#role-l1f">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/capture_expdp_file.yml</td><td class="desc">See <a href="#role-l1f">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/run_restore.yml</td><td class="desc">See <a href="#role-l1f">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/verify_restore_log.yml</td><td class="desc">See <a href="#role-l1f">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/pre_import_checks.yml</td><td class="desc">See <a href="#role-l1f">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/run_impdp.yml</td><td class="desc">See <a href="#role-l1f">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/verify_import.yml</td><td class="desc">See <a href="#role-l1f">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/verify_migration_correctness.yml</td><td class="desc">See <a href="#role-l1f">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/set_tablespaces_readwrite.yml</td><td class="desc">See <a href="#role-l1f">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/restore_source_tablespaces.yml</td><td class="desc">See <a href="#role-l1f">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/recompile_objects.yml</td><td class="desc">See <a href="#role-l1f">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/gather_stats.yml</td><td class="desc">See <a href="#role-l1f">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/validate_migration.yml</td><td class="desc">See <a href="#role-l1f">role reference</a> above</td></tr>
+        <tr><td class="file">tasks/drop_restore_point.yml</td><td class="desc">See <a href="#role-l1f">role reference</a> above</td></tr>
+      </table>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  PowerODBA (ibm.power_aix_oracle_dba) — M5 migration reference, generated from the playbook and roles' source. Method per My Oracle Support Doc 2999157.1 ("M5" cross-endian migration using RMAN incremental backups and Full Transportable Data Pump).
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+<script>
+  (function(){
+    function isDark(){
+      var root = document.documentElement;
+      if (root.getAttribute('data-theme') === 'dark') return true;
+      if (root.getAttribute('data-theme') === 'light') return false;
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    mermaid.initialize({
+      startOnLoad:true,
+      theme: isDark() ? 'dark' : 'default',
+      themeVariables:{ fontFamily:'IBM Plex Mono, monospace', fontSize:'13px' },
+      securityLevel:'loose'
+    });
+  })();
+</script>
