@@ -1,71 +1,105 @@
-- name: set fact
+---
+- name: Set create_listener fact
   set_fact:
-      create_listener: "{{ create_listener }}"
-  with_items: "{{ oracle_databases }}"
+    create_listener: "{{ item.create_listener | default(create_listener) }}"
+  loop: "{{ oracle_databases }}"
   tags: set_fact
 
-- name: Create Stage directory for response file.
+- name: Create stage directory for response files
   ansible.builtin.file:
     path: "{{ oracle_rsp_stage }}"
     state: directory
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_group }}"
+    mode: '0755'
 
-- include: listener.yml
+- name: Configure listener
+  ansible.builtin.include_tasks: listener.yml
   when: create_listener
 
-- name: Check if database is already created
-  shell: grep {{ item.oracle_db_name }}:{{ oracle_home_db }} /etc/oratab |wc -l
-  with_items: "{{ oracle_databases }}"
+- name: Check if database already exists in /etc/oratab
+  ansible.builtin.shell: "grep -c '{{ item.oracle_db_name }}:{{ oracle_home_db }}' /etc/oratab || true"
+  loop: "{{ oracle_databases }}"
   when: item.oracle_db_name is defined
-  tags:
-  - checkifdbexists
+  changed_when: false
   register: checkdbexist
+  tags: checkifdbexists
 
-- name: Copy custom dbca Templates to ORACLE_HOME/assistants/dbca/templates
-  template: src={{ item.0.dbca_templatename }} dest={{ oracle_home_db }}/assistants/dbca/templates/{{ item.0.dbca_templatename }} owner={{ oracle_user }} group={{ oracle_group }} mode=640
+- name: Copy custom dbca templates to ORACLE_HOME
+  ansible.builtin.template:
+    src: "{{ item.0.dbca_templatename }}"
+    dest: "{{ oracle_home_db }}/assistants/dbca/templates/{{ item.0.dbca_templatename }}"
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_group }}"
+    mode: '0640'
   with_together:
-     - "{{ oracle_databases }}"
-  when: item.0.dbca_templatename is defined and item.0.dbca_templatename not in('New_Database.dbt','General_Purpose.dbc')
+    - "{{ oracle_databases }}"
+  when: item.0.dbca_templatename is defined and item.0.dbca_templatename not in ('New_Database.dbt', 'General_Purpose.dbc')
 
-- name: Create responsefile for dbca
-  template: src=dbca-create-db.rsp.{{ item.0.oracle_version_db }}.j2 dest={{ oracle_rsp_stage }}/{{ oracle_dbca_rsp }}  owner={{ oracle_user }} group={{ oracle_group }} mode=600 backup=no
+- name: Create dbca response file
+  ansible.builtin.template:
+    src: "dbca-create-db.rsp.{{ item.0.oracle_version_db }}.j2"
+    dest: "{{ oracle_rsp_stage }}/{{ oracle_dbca_rsp }}"
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_group }}"
+    mode: '0600'
+    backup: false
   with_together:
-     - "{{ oracle_databases }}"
-     - "{{ checkdbexist.results }}"
+    - "{{ oracle_databases }}"
+    - "{{ checkdbexist.results }}"
   run_once: "{{ configure_cluster }}"
   when: item.1.stdout != "1"
 
-- name: Create database(s)
-  shell: "time {{ oracle_home_db }}/bin/dbca -createDatabase -responseFile {{ oracle_rsp_stage }}/{{ oracle_dbca_rsp }} -silent -redoLogFileSize {{ item.0.redolog_size_in_mb }} {{ dbca_initParams }} -ignorePreReqs"
+- name: Create database(s) via dbca
+  ansible.builtin.shell: >
+    time {{ oracle_home_db }}/bin/dbca
+    -createDatabase
+    -responseFile {{ oracle_rsp_stage }}/{{ oracle_dbca_rsp }}
+    -silent
+    -redoLogFileSize {{ item.0.redolog_size_in_mb }}
+    {{ dbca_initParams }}
+    -ignorePreReqs
   with_together:
-     - "{{ oracle_databases }}"
-     - "{{ checkdbexist.results }}"
+    - "{{ oracle_databases }}"
+    - "{{ checkdbexist.results }}"
+  become: true
   become_user: "{{ oracle_user }}"
-  run_once: "{{ configure_cluster}}"
-  when: item.1.stdout != "1" and item.0.state |upper == "PRESENT"
+  run_once: "{{ configure_cluster }}"
+  when: item.1.stdout != "1" and item.0.state | upper == "PRESENT"
   register: oradbcreate
 
-- debug: var=item
-  with_items:
-       - "{{ oradbcreate.results|map(attribute='stdout_lines')|list }}"
-  run_once: "{{ configure_cluster}}"
+- name: Show dbca output
+  ansible.builtin.debug:
+    var: item
+  loop: "{{ oradbcreate.results | map(attribute='stdout_lines') | list }}"
+  run_once: "{{ configure_cluster }}"
   when: oradbcreate.changed
-  ignore_errors: true
 
-- name: Add dotprofile (1)
-  shell:  ps -ef | grep -w "ora_pmon_{{ item.oracle_db_name }}" |grep -v grep | sed 's/^.*pmon_//g'
-  with_items: "{{ oracle_databases }}"
+- name: Check running database processes
+  ansible.builtin.shell: "ps -ef | grep -w 'ora_pmon_{{ item.oracle_db_name }}' | grep -v grep | sed 's/^.*pmon_//g'"
+  loop: "{{ oracle_databases }}"
   register: dbs
-  changed_when: False
+  changed_when: false
 
-- name: Add dotprofile (2)
-  template: src=dotprofile-db.j2 dest={{ oracle_user_home }}/.profile_{{ item.0.oracle_db_name }} owner={{ oracle_user }} group={{ oracle_group }} mode=775 backup=yes
+- name: Add dotprofile for each database
+  ansible.builtin.template:
+    src: dotprofile-db.j2
+    dest: "{{ oracle_user_home }}/.profile_{{ item.0.oracle_db_name }}"
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_group }}"
+    mode: '0775'
+    backup: true
   with_together:
-  - "{{oracle_databases}}"
-  - "{{dbs.results}}"
+    - "{{ oracle_databases }}"
+    - "{{ dbs.results }}"
 
-- name: Check if database is running
-  shell: ps -ef |grep pmon |grep -v grep
+- name: Show running Oracle processes
+  ansible.builtin.debug:
+    msg: "{{ psout.stdout_lines }}"
+  when: psout is defined
+
+- name: Check if database is running (pmon)
+  ansible.builtin.shell: "ps -ef | grep pmon | grep -v grep"
   register: psout
-  ignore_errors: true
-
-- debug: var=psout.stdout_lines
+  changed_when: false
+  failed_when: false

@@ -2,7 +2,8 @@
 # Before executing this playbook, please refer the documentation in collection_dir/docs directory.
 #
 - name: Create DB User
-  hosts: localhost              
+  hosts: localhost
+  connection: local
   remote_user: oracle           # Oracle Database Username
   gather_facts: false
   vars_files:

@@ -1,34 +1,48 @@
-hostname: ansible_db                  # AIX hostname where the Database is running.
+# Manage Pluggable Databases - Variables section
+hostname: ansible-db                  # AIX hostname where the database is running.
 listener_port: 1521                   # Database listener port.
-oracle_db_name: devdb                 # Database Service Name.
-oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+oracle_db_name: prod                  # CDB service name (the container database).
+# oracle_db_home not needed - oracle_pdb module uses Thin mode (pure Python, no Oracle client required)
 
-create_pdb: False        # Set it to True to Create a fresh PDB. Otherwise, set False.
-drop_pdb: True         # Set it to True to Drop an existing PDB. Otherwise, set False.
-plug_pdb: False         # Set it to True to Create a PDB from an XML file. Otherwise, set False.
-unplug_pdb: False       # Set it to True to Unplug a PDB into an XML file. Otherwise, set False.
+# ── Operation flags — set exactly one to true ─────────────────────────────────
+create_pdb: false       # true = create a fresh PDB from seed
+plug_pdb: false         # true = plug a PDB from an existing XML file
+clone_pdb: true        # true = clone an existing PDB (CREATE PLUGGABLE DATABASE <new> FROM <source>)
+drop_pdb: false         # true = drop an existing PDB
+unplug_pdb: false        # true = unplug a PDB to an XML file
 
-pdb_oradata_dest: +DATA # Path to store PDB datafiles. 
-pdb_seed_dest: +DATA    # PDB Seed datafiles path.
-xml_file_dest:          # Path to where to create/use the XML files.
+# ── Storage ───────────────────────────────────────────────────────────────────
+pdb_oradata_dest: /d01/19c/oradata              # ASM diskgroup (or FS path) to store PDB datafiles.
+pdb_seed_dest: /d01/19c/oradata/PROD/pdbseed    # PDB Seed datafiles location. Use "select name from v$datafile where name like '%pdbseed%';"
+xml_file_dest: /tmp                             # Directory path for XML manifest files (used with plug/unplug).
 
-#PDB Creation Variables  [When the above "create_pdb" or "plug_pdb" are set to True]
+# ── PDB Create / Plug variables ───────────────────────────────────────────────
+# Used when create_pdb: true or plug_pdb: true
+create_oracle_pdbs:
+- pdb_name: prodpdb1                                      # Name of the PDB to create or plug.
+  cdb: "{{ oracle_db_name }}"                               # Parent CDB name.
+  state: present                                            # present = create/plug the PDB.
+  datafile_dest: "{{ pdb_oradata_dest }}"                   # Datafile destination.
+  file_name_convert: "{{ pdb_seed_dest }},{{ pdb_oradata_dest }}"
+  xml_dest: "{{ xml_file_dest }}"                           # Directory for the XML file.
+  xml_file: prodpdb1.xml                                     # XML manifest filename (plug only).
 
-create_oracle_pdbs:               # Set these parameters to create a new PDB from SEED PDB. Make sure to set plug_pdb variable "False"
-   - pdb_name: devpdb1            # Name of the PDB to be created or plugged from XML file.
-     cdb: "{{ oracle_db_name }}"
-     state: present               # present - creates PDB.
-     file_name_convert: "{{ pdb_seed_dest }},{{ pdb_oradata_dest }}"
-     xml_dest: "{{ xml_file_dest }}"         
-     xml_file: ansipdb4.xml       # XML File name.
-     datafile_dest: "{{ pdb_oradata_dest }}"
+# ── PDB Clone variables ───────────────────────────────────────────────────────
+# Used when clone_pdb: true
+# The source PDB must be open READ ONLY (or READ WRITE with local undo enabled) in the same CDB.
+clone_oracle_pdbs:
+- pdb_name: prodpdb_clone                                  # Name of the new (cloned) PDB.
+  source_pdb: prodpdb                                       # Existing PDB to clone (the FROM clause).
+  cdb: "{{ oracle_db_name }}"                               # Parent CDB name.
+  state: present                                            # present = create the clone.
+  datafile_dest: "{{ pdb_oradata_dest }}"                   # Datafile destination (CREATE_FILE_DEST). Alternative: file_name_convert.
 
-#PDB Drop & Unplug Variables  [When the above "unplug_pdb" or "drop_pdb" are set to True]
-
-drop_oracle_pdbs:                 # Set these parameters to create a new PDB using an XML File.
-   - pdb_name: devpdb1             # Name of the PDB to be dropped/unplugged.
-     cdb: "{{ oracle_db_name }}"  
-     state: absent                # absent - drops a pdb, unplugged - unplugs a pdb
-     file_name_convert: "{{ pdb_seed_dest }},{{ pdb_oradata_dest }}"
-     xml_dest: "{{ xml_file_dest }}"
-     xml_file: ansipdb4.xml       # XML File name.
+# ── PDB Drop / Unplug variables ───────────────────────────────────────────────
+# Used when drop_pdb: true or unplug_pdb: true
+drop_oracle_pdbs:
+- pdb_name: prodpdb1                                        # Name of the PDB to drop or unplug.
+  cdb: "{{ oracle_db_name }}"                               # Parent CDB name.
+  state: absent                                             # absent = drop | unplugged = unplug to XML
+  datafile_dest: "{{ pdb_oradata_dest }}"
+  xml_dest: "{{ xml_file_dest }}"                           # Directory for the XML file.
+  xml_file: prodpdb1.xml                                    # XML manifest filename (unplug only).

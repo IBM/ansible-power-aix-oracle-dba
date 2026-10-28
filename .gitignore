@@ -1,0 +1,8 @@
+misc/
+docs/backup/
+scripts/
+.bob/
+*tracker*.html
+MIGRATION_CONTEXT.md
+playbooks/*.log
+MIGRATION_CONTEXT.md.bkup

@@ -1,10 +1,12 @@
-# Playbook to manage redo log groups.
-# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+# Playbook to manage database redo log groups and size.
+# Before executing this playbook, please refer to the documentation inside the collection docs directory.
 #
-- hosts: localhost
+- name: Manage DB Redo Logs
+  hosts: localhost
   connection: local
+  gather_facts: false
   vars_files:
-   - vars/vault.yml
-   - vars/manage-redo-vars.yml
+    - vars/vault.yml
+    - vars/manage-redo-vars.yml
   roles:
-     - { role: oradb_manage_redo }
+    - { role: oradb_manage_redo }

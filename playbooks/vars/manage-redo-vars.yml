@@ -1,8 +1,20 @@
-hostname: ansible_db                           # AIX hostname where the Database is running.
-service_name: devdb                            # Database service name.
-listener_port: 1521                            # Database port number.
-oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+# Manage Redo Logs - Variables section
+hostname: ansible-db                        # AIX Lpar hostname where the database is running.
+listener_port: 1521                         # Database port number.
+# oracle_db_home not needed - oracle_redo module uses Thin mode (pure Python, no Oracle client required)
+
+# Loop mechanics (loop over "oracle_databases"):
+#   item -> dict : service_name, redolog_groups, redolog_size, state
+#
+# default_dbpass = SYS password used to CONNECT to the DB as SYSDBA (vault.yml)
+#
+# Note: Redo logs are managed at the CDB / Instance level.
+#       - redolog_groups: Target total number of redo log groups per thread
+#       - redolog_size: Target size for all redo log files (suffix: M, G, or T, e.g. 150M, 1G)
+
 oracle_databases:
-       redolog_groups: 2        # Provide the number of required REDO log groups required in the DB.
-       redolog_size: 150M       # Redo log file size, the existing redo logs size will be changed to this value.
-       state: present           # "present" - creates redo groups, "absent" - drops redo groups.
+- service_name: prod                        # CDB service name (or standalone DB service name)
+  redolog_groups: 3                         # Total number of redo log groups required in the DB
+  redolog_size: 200M                        # Redo log file size (e.g. 150M, 1G)
+  # datafile: "/d01/19c/oradata/PROD"       # Optional: directory or ASM diskgroup (+DATA). Auto-discovered from v$logfile if omitted.
+  state: present                            # present

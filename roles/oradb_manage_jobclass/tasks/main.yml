@@ -4,14 +4,30 @@
     service_name: "{{ service_name }}"
     port: "{{ listener_port }}"
     user: "{{ db_user }}"
-    password: "{{ db_password_cdb }}"
+    password: "{{ db_password }}"
     mode: "{{ db_mode }}"
     state: "{{ state }}"
     resource_group: "{{ resource_group }}"
     name: "{{ class_name }}"
     logging: "{{ logging }}"
     history: "{{ history }}"
-  environment: "{{ oracle_env }}"
   register: jobclass
-- debug:
-    var: jobclass
+
+- name: Show job class result
+  ansible.builtin.debug:
+    msg: "Job class {{ class_name | upper }}: state={{ state }}, changed={{ jobclass.changed }}"
+
+- name: Verify job class in DBA_SCHEDULER_JOB_CLASSES
+  oracle_sql:
+    user: "{{ db_user }}"
+    password: "{{ db_password }}"
+    service_name: "{{ service_name }}"
+    hostname: "{{ hostname }}"
+    port: "{{ listener_port }}"
+    mode: "{{ db_mode }}"
+    sql: "select job_class_name, resource_consumer_group, logging_level, log_history from dba_scheduler_job_classes where job_class_name = upper('{{ class_name }}')"
+  register: jobclass_verify
+
+- name: Show job class [name, resource group, logging level, log history (days)]
+  ansible.builtin.debug:
+    msg: "{{ jobclass_verify.msg }}"

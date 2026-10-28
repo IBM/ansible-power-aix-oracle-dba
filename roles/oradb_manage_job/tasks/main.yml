@@ -4,7 +4,7 @@
     service_name: "{{ service_name }}"
     user: "{{ db_user }}"
     port: "{{ listener_port }}"
-    password: "{{ db_password_cdb }}"
+    password: "{{ db_password }}"
     mode: "{{ db_mode }}"
     state: "{{ state }}"
     enabled: "{{ enabled }}"
@@ -12,5 +12,23 @@
     job_action: "{{ job_action }}"
     job_type: "{{ job_type }}"
     repeat_interval: "{{ repeat_interval }}"
-  environment: "{{ oracle_env }}"
   register: job
+
+- name: Show job result
+  ansible.builtin.debug:
+    msg: "Job {{ job_name | upper }}: state={{ state }}, changed={{ job.changed }}"
+
+- name: Verify job in DBA_SCHEDULER_JOBS
+  oracle_sql:
+    user: "{{ db_user }}"
+    password: "{{ db_password }}"
+    service_name: "{{ service_name }}"
+    hostname: "{{ hostname }}"
+    port: "{{ listener_port }}"
+    mode: "{{ db_mode }}"
+    sql: "select owner, job_name, job_type, enabled, repeat_interval from dba_scheduler_jobs where owner = upper('{{ job_name.split('.')[0] }}') and job_name = upper('{{ job_name.split('.')[1] }}')"
+  register: job_verify
+
+- name: Show job [owner, job name, job type, enabled, repeat interval]
+  ansible.builtin.debug:
+    msg: "{{ job_verify.msg }}"

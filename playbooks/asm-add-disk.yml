@@ -3,7 +3,7 @@
 #
 - name: Add disk to ASM Diskgroup
   gather_facts: no
-  hosts: rac21
+  hosts: all
   remote_user: oracle
   vars_files:
    - vars/asm-add-disk-vars.yml

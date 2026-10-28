@@ -4,16 +4,41 @@
     service_name: "{{ service_name }}"
     port: "{{ listener_port }}"
     user: "{{ db_user }}"
-    password: "{{ db_password_cdb }}"
+    password: "{{ db_password }}"
     mode: "{{ db_mode }}"
-    name: ansigroup1
+    name: "{{ consumer_group }}"
     state: "{{ state }}"
-    comments: This is a test consumer resource group
+    comments: "{{ comments }}"
     grant: "{{ grant }}"
     map_oracle_user: "{{ map_oracle_user }}"
     map_service_name: "{{ map_service_name }}"
     map_client_machine: "{{ map_client_machine }}"
-  environment: "{{ oracle_env }}"
   register: rsc
-- debug:
-    var: rsc
+
+- name: Show consumer group result
+  ansible.builtin.debug:
+    msg: "{{ rsc.msg if rsc.msg else 'No changes' }}"
+
+- name: Verify consumer group in DBA_RSRC_CONSUMER_GROUPS and mappings
+  oracle_sql:
+    user: "{{ db_user }}"
+    password: "{{ db_password }}"
+    service_name: "{{ service_name }}"
+    hostname: "{{ hostname }}"
+    port: "{{ listener_port }}"
+    mode: "{{ db_mode }}"
+    sql: "{{ item }}"
+  loop:
+    - "select consumer_group, mgmt_method, comments from dba_rsrc_consumer_groups where consumer_group = upper('{{ consumer_group }}')"
+    - "select attribute, value from dba_rsrc_group_mappings where consumer_group = upper('{{ consumer_group }}') order by attribute, value"
+  loop_control:
+    label: "{{ item[:60] }}"
+  register: rsc_verify
+
+- name: Show consumer group [consumer_group, mgmt_method, comments]
+  ansible.builtin.debug:
+    msg: "{{ rsc_verify.results[0].msg }}"
+
+- name: Show group mappings [attribute, value]
+  ansible.builtin.debug:
+    msg: "{{ rsc_verify.results[1].msg }}"

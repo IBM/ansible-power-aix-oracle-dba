@@ -1,12 +1,12 @@
-# Playbook to drop RAC/Non-RAC databases.
-# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+# Playbook to drop RAC/Non-RAC databases using DBCA.
+# Before executing this playbook, please refer the documentation inside the docs/ directory.
 #
 - name: Drop a Database
-  hosts: all                     # Target Lpar hostname.
-  remote_user: oracle                   # Remote username.
+  hosts: all                    # Target LPAR hostname defined in the inventory
+  remote_user: oracle           # Oracle OS user that owns the Oracle installation
   gather_facts: false
   vars_files:
+   - vars/vault.yml             # SYS password — load first
    - vars/delete-db-vars.yml
-   - vars/vault.yml  
   roles:
      - { role: oradb_delete }

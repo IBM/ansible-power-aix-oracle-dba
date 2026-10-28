@@ -1,15 +1,23 @@
-hostname: ansible_db                           # AIX hostname where the Database is running.
-service_name: devdb                            # Database service name.
-listener_port: 1521                            # Database port number.
-oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
+# Manage Database Tablespaces - Variables section
+hostname: ansible-db                        # AIX Lpar hostname where the database is running.
+listener_port: 1521                         # Database port number.
+# oracle_db_home not needed - oracle_tablespace module uses Thin mode (pure Python, no Oracle client required)
+
+# Loop mechanics (with_subelements over "tablespaces"):
+#   item.0  -> outer dict       : service_name
+#   item.1  -> tablespace entry : name, datafile, size, autoextend, next, maxsize, state, ...
+#
+# default_dbpass = SYS password used to CONNECT to the DB as SYSDBA (vault.yml)
 
 oracle_databases:
-      - tablespaces:
-          - name: devusertbs      # Tablespace name for creation.
-            datafile: +DATA     # Diskgroup name in which tablespace needs to be created.
-            #datafile: '/u02/db19c/dbs/ +DATA'           # Specify datafile path & name in case of non ASM.
-            size: 1g     # Desired size of the datafile.
-            maxsize: 2g   # Desired maxsize for the datafile.
-            state: absent     # present, absent, read_only, read_write, offline, online.
-            autoextend: true   # Whether to extend the datafile size automatically or not. True or False.
-            next: 100m      # Set this only if autoextend parameter is set to True, otherwise comment this parameter.
+- service_name: prodpdb                     # PDB / CDB service name
+  tablespaces:
+  - name: demotbs                        # Tablespace name
+    datafile: "/d01/19c/oradata/PROD/demo01.dbf"    # ASM diskgroup or filesystem path (e.g. '/u02/oradata/devusertbs01.dbf')
+    size: 100M                              # Initial datafile size (e.g. 100M, 1G)
+    autoextend: true                        # Enable autoextend: true | false
+    next: 50M                               # Next extent allocation size
+    maxsize: 2G                             # Maximum datafile size
+    content: permanent                      # permanent | temp | undo
+    bigfile: false                          # true | false
+    state: present                          # present | absent | read_only | read_write | offline | online

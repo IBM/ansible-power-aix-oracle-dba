@@ -4,7 +4,7 @@
     service_name: "{{ service_name }}"
     port: "{{ listener_port }}"
     user: "{{ db_user }}"
-    password: "{{ db_password_cdb }}"
+    password: "{{ db_password }}"
     mode: "{{ db_mode }}"
     state: "{{ state }}"
     resource_plan: "{{ resource_plan }}"
@@ -12,7 +12,23 @@
     interval: "{{ interval }}"
     comments: "{{ comments }}"
     duration_hour: "{{ duration_hour }}"
-  environment: "{{ oracle_env }}"
-  register: jobclass
-- debug:
-    var: jobclass
+  register: jobwindow
+
+- name: Show job window result
+  ansible.builtin.debug:
+    msg: "Job window {{ window_name | upper }}: state={{ state }}, changed={{ jobwindow.changed }}"
+
+- name: Verify window in DBA_SCHEDULER_WINDOWS
+  oracle_sql:
+    user: "{{ db_user }}"
+    password: "{{ db_password }}"
+    service_name: "{{ service_name }}"
+    hostname: "{{ hostname }}"
+    port: "{{ listener_port }}"
+    mode: "{{ db_mode }}"
+    sql: "select window_name, resource_plan, enabled, to_char(duration) as duration, repeat_interval from dba_scheduler_windows where window_name = upper('{{ window_name }}')"
+  register: jobwindow_verify
+
+- name: Show window [name, resource plan, enabled, duration, repeat interval]
+  ansible.builtin.debug:
+    msg: "{{ jobwindow_verify.msg }}"

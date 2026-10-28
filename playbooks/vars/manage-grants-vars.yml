@@ -1,15 +1,58 @@
-# Grant/Revoke Database Users privileges - Variables section
-hostname: ansible_db                        # AIX Lpar hostname where the database is running.
+# Grant/Revoke Database User Privileges - Variables section
+hostname: ansible-db                           # AIX Lpar hostname where the database is running.
 listener_port: 1521                         # Database port number.
-oracle_db_home: /home/ansible/oracle_client      # Oracle Instant Client path on the ansible controller.
+# oracle_db_home not needed - oracle_grants module uses Thin mode (pure Python, no Oracle client required)
 
-oracle_databases:                           # Database users list to be created
-      - users:
-         - schema: testuser1              # Username to be created.
-        service_name: devpdb                 # Database service name.
-        grants_mode: enforce                # enforce|append.
-        grants:
-         - connect                          # Provide name of the privilege as a list to grant to the user.
-         - resource
-         - drop any table
-        state: present                       # present|absent|locked|unlocked [present: Creates user, absent: Drops user]
+# Loop mechanics (with_subelements over "users"):
+#   item.0  -> outer dict : service_name, state, grants_mode
+#   item.1  -> user entry : schema, grants, object_privs, directory_privs
+#
+# default_dbpass = SYS password used to CONNECT to the DB as SYSDBA  (vault.yml)
+# grants         = system/role privilege list  (e.g. connect, resource, dba)
+# object_privs   = object-level privileges     (e.g. select on schema.table)
+# directory_privs= directory privileges        (e.g. read on directory MY_DIR)
+# grants_mode    = enforce (exact match, revokes unlisted) | append (additive only)
+
+oracle_databases:
+- service_name: prodpdb
+  state: present                          # present | absent (revoke all listed grants)
+  grants_mode: enforce                    # enforce | append
+  users:
+  - schema: pbatch
+    grants:
+    - connect
+    - resource
+    - create database link
+    - create procedure
+
+  - schema: pwrite
+    grants:
+    - connect
+    - resource
+    - create table
+    - create sequence
+
+  - schema: pselect
+    grants:
+    - connect
+    - select any table
+    - select any dictionary
+
+# ── Examples of additional grant types (uncomment as needed) ──────────────────
+#
+#   Object-level privileges:
+#   - schema: pselect
+#     grants:
+#     - connect
+#     object_privs:
+#     - "select on hr.employees"
+#     - "select on hr.departments"
+#
+#   Directory privileges:
+#   - schema: pbatch
+#     grants:
+#     - connect
+#     - resource
+#     directory_privs:
+#     - "read on directory DATA_PUMP_DIR"
+#     - "write on directory DATA_PUMP_DIR"

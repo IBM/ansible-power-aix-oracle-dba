@@ -4,14 +4,30 @@
     service_name: "{{ service_name }}"
     port: "{{ listener_port }}"
     user: "{{ db_user }}"
-    password: "{{ db_password_cdb }}"
+    password: "{{ db_password }}"
     mode: "{{ db_mode }}"
     state: "{{ state }}"
     repeat_interval: "{{ repeat_interval }}"
     convert_to_upper: "{{ convert_to_upper }}"
     comments: "{{ comments }}"
     name: "{{ schedule_name }}"
-  environment: "{{ oracle_env }}"
   register: job
-- debug:
-    var: job
+
+- name: Show job schedule result
+  ansible.builtin.debug:
+    msg: "Job schedule {{ schedule_name | upper }}: state={{ state }}, changed={{ job.changed }}"
+
+- name: Verify schedule in DBA_SCHEDULER_SCHEDULES
+  oracle_sql:
+    user: "{{ db_user }}"
+    password: "{{ db_password }}"
+    service_name: "{{ service_name }}"
+    hostname: "{{ hostname }}"
+    port: "{{ listener_port }}"
+    mode: "{{ db_mode }}"
+    sql: "select owner, schedule_name, repeat_interval, comments from dba_scheduler_schedules where owner = upper('{{ schedule_name.split('.')[0] }}') and schedule_name = upper('{{ schedule_name.split('.')[1] }}')"
+  register: job_verify
+
+- name: Show schedule [owner, schedule name, repeat interval, comments]
+  ansible.builtin.debug:
+    msg: "{{ job_verify.msg }}"

@@ -11,7 +11,7 @@
 # Patch files staging variables#
 ################################
 #ora_binary_location: local                        # local|nfs|remote.
-#ora_nfs_host: 129.40.76.1                       # NFS server name if "ora_binary_location is nfs".
+#ora_nfs_host: nfshost                       # NFS server name if "ora_binary_location is nfs".
 #ora_nfs_device: /repos                          # NFS filesystem if "ora_binary_location is nfs".
 #ora_nfs_filesystem: /repos                      # Path on the target lpar to mount the NFS filesystem if "ora_binary_location is nfs".
 #oracle_patch_stage: /backup/patches/RU          # Provide the path on the target lpar with sufficient space to extract patch zipfiles if "ora_binary_locationis local". This path will be created by this Ansible playbook.
@@ -47,7 +47,7 @@ oracle_install_version_gi: 12.1.0
 
 ora_binary_location: local
 
-ora_nfs_host: 129.40.76.1
+ora_nfs_host: nfshost
 ora_nfs_device: /repos
 ora_nfs_filesystem: /repos
 

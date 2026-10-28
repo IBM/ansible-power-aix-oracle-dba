@@ -1,15 +1,17 @@
-hostname: ansible_db                           # AIX hostname where the Database is running.
-service_name: devpdb                           # Database service name.
-listener_port: 1521                            # Database port number.
-oracle_db_home: /home/ansible/oracle_client    # Oracle Instant Client path on the ansible controller.
-state: present                  # State: Present/Absent
-consumer_group: ansigroup1      # Desired consumer group name
-comments:  This is a test consumer resource group       # Optional
+# Manage Resource Consumer Group - Variables section
+hostname: ansible-db                        # AIX LPAR hostname where the database is running (TCP endpoint).
+listener_port: 1521                         # Database listener port.
+service_name: prodpdb                       # Database service name to connect to as SYSDBA.
+# oracle_db_home not needed — oracle_rsrc_consgroup module uses Thin mode (pure Python, no Oracle client required)
+
+state: present                              # present = create/modify the consumer group | absent = drop it
+consumer_group: ansigroup1                  # Consumer group name (stored uppercase).
+comments: This is a test consumer resource group   # Optional comment.
 grant:
-   - testuser1                  # Name of the user to provide grants to resource group.
+- pselect                                   # Users/roles granted switch privilege on this group (must exist, others are ignored).
 map_oracle_user:
-   - testuser1                  # Map user
+- pselect                                   # Map sessions of this Oracle user to the group.
 map_service_name:
-   - devpdb                     # Map service name
+- prodpdb                                   # Map sessions connecting through this service name to the group.
 map_client_machine:
-   - x123vm456                  # Map client machine name
+- x123vm456                                 # Map sessions from this client machine to the group.

@@ -1,5 +1,23 @@
-- include: create_pdb.yml
+---
+- name: Validate — only one operation flag may be true at a time
+  ansible.builtin.assert:
+    that:
+      - "[create_pdb, plug_pdb, clone_pdb, drop_pdb, unplug_pdb] | select('equalto', true) | list | length <= 1"
+    fail_msg: >
+      ERROR: More than one operation flag is set to true.
+      Only one of create_pdb, plug_pdb, clone_pdb, drop_pdb, unplug_pdb may be true at a time.
+      Current values — create_pdb: {{ create_pdb }}, plug_pdb: {{ plug_pdb }},
+      clone_pdb: {{ clone_pdb }}, drop_pdb: {{ drop_pdb }}, unplug_pdb: {{ unplug_pdb }}
+    success_msg: "Operation flag validation passed."
+
+- name: Configure PDB (create or plug)
+  ansible.builtin.include_tasks: create_pdb.yml
   when: create_pdb or plug_pdb
 
-- include: drop_pdb.yml
+- name: Configure PDB (clone from an existing PDB)
+  ansible.builtin.include_tasks: clone_pdb.yml
+  when: clone_pdb
+
+- name: Configure PDB (drop or unplug)
+  ansible.builtin.include_tasks: drop_pdb.yml
   when: drop_pdb or unplug_pdb

@@ -3,3 +3,6 @@ primary-db ansible_host=111.11.11.111
 
 [standby]
 standby-db ansible_host=222.22.22.222
+
+host242
+pilotdb

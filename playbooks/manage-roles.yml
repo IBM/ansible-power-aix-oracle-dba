@@ -1,8 +1,10 @@
 # Playbook to manage database roles.
 # Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
 #
-- hosts: localhost
+- name: Manage DB Roles
+  hosts: localhost
   connection: local
+  gather_facts: false
   vars_files:
    - vars/vault.yml
    - vars/manage-roles-vars.yml

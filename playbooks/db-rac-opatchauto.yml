@@ -1,6 +1,6 @@
 # Use this playbook to patch Oracle Database binary home.
 - name: Apply binary patches
-  hosts: rachosts        # Provide AIX Lapr hostgroup name defined in Ansible inventory. All the RAC nodes must be defined as a group in the Ansible inventory. When using ACFS for shared Oracle DB Home, provide only the 1st node hostname.
+  hosts: all        # Provide AIX Lapr hostgroup name defined in Ansible inventory. All the RAC nodes must be defined as a group in the Ansible inventory. When using ACFS for shared Oracle DB Home, provide only the 1st node hostname.
   remote_user: root    # Remote AIX Lpar username.
   vars_files:
    - vars/db-rac-opatchauto-vars.yml

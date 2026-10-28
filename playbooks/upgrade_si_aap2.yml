@@ -1,3 +1,4 @@
+# Playbook to upgrade Single Instance Database (both JFS & ASM). This is used when this playbooks is run from Ansible Automation Platform. 
 - hosts: all
   remote_user: root
   gather_facts: true

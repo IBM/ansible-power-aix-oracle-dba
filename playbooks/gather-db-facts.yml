@@ -1,10 +1,12 @@
-# Playbook to gather DB facts.
-# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+# Playbook to gather Oracle Database facts and inventory.
+# Before executing this playbook, please refer to the documentation inside the collection docs directory.
 #
-- hosts: localhost
+- name: Gather DB Facts
+  hosts: localhost
   connection: local
+  gather_facts: false
   vars_files:
-   - vars/vault.yml
-   - vars/gather-dbfacts-vars.yml
+    - vars/vault.yml
+    - vars/gather-dbfacts-vars.yml
   roles:
-     - { role: oradb_gather_dbfacts }
+    - { role: oradb_gather_dbfacts }
