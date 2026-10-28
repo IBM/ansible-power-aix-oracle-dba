@@ -17,6 +17,7 @@ Following functionalities can be achieved with this collection.
 - Single Instance Grid Infrastructure and Database Upgrade from 12c to 19c
 - RAC Grid Infrastructure and Database Upgrade from 12c to 19c
 - Introduced Dataguard feature for single instance database using RMAN Backup and RMAN DUPLICATE method
+- Oracle 19c cross-endian database migration from x86 Linux to AIX using Oracle's M5 method [RMAN incremental backups & Full Transportable Data Pump]
 
 Version Change:
 
@@ -27,6 +28,10 @@ PODBA v3.0.0
 - Enhanced database and grid facts gathering modules (oracle_facts with 9 comprehensive categories including OPatch inventory, tablespaces, redo, and jobs; oracle_gi_facts with OPatch patches, crsctl resource status, and asmcmd lsdg diskgroup metrics).
 - Standardized variable structures, zero-indent YAML, per-user privilege definitions, and dynamic initialization parameter management (setting, clearing, and resetting parameters).
 - Modernized documentation across the collection with structured Markdown guides, verified execution logs, and SQL/CLI verification commands.
+- Introduced Oracle 19c cross-endian migration from x86 Linux to AIX using Oracle's M5 method and the DBMIG 5.1 scripts (MOS Doc 2999157.1). Supports Non-CDB to Non-CDB, PDB to PDB and Non-CDB to PDB.
+- New playbook m5_migration.yml with roles mig_prechecks, mig_rman_L0_L1 and mig_rman_L1F, run as tagged stages: prechecks, L0 baseline, repeatable L1 incrementals, L1F cutover and go-live.
+- Migration hosts are defined in their own [mig] inventory group (mig_source, mig_destination), so migration runs never touch other hosts.
+- Added ansible.posix as a collection dependency.
 
 PODBA v2.0.9
 
