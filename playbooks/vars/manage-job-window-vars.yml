@@ -1,10 +1,12 @@
-hostname: ansible_db                           # AIX hostname where the Database is running.
-service_name: devpdb                           # Database service name.
-listener_port: 1521                            # Database port number.
-# oracle_db_home not needed - oracle_jobwindow module uses Thin mode (pure Python, no Oracle client required)
-resource_plan: DEFAULT_MAINTENANCE_PLAN        # Resource plan name.
-window_name: ANSI_WINDOW                       # Scheduler Window Name.
-interval: freq=daily;byday=SUN;byhour=6;byminute=0; bysecond=0  # Interval.
-comments: This is a window for Ansible testing  # Comments
-state: enabled                                 # enabled, disabled, absent
-duration_hour: 12                              # Duration 12/24
+# Manage DBMS Scheduler Job Window - Variables section
+hostname: ansible-db                        # AIX LPAR hostname where the database is running (TCP endpoint).
+listener_port: 1521                         # Database listener port.
+service_name: prodpdb                       # Database service name to connect to as SYSDBA.
+# oracle_db_home not needed — oracle_jobwindow module uses Thin mode (pure Python, no Oracle client required)
+
+state: enabled                              # enabled = create/modify and enable | disabled = create/modify and disable | absent = drop
+window_name: ANSI_WINDOW                    # Scheduler window name (stored uppercase, owned by SYS).
+resource_plan: DEFAULT_MAINTENANCE_PLAN     # Resource plan activated while the window is open. Must already exist.
+interval: freq=daily;byday=SUN;byhour=6;byminute=0;bysecond=0   # Repeat interval (DBMS_SCHEDULER calendar syntax).
+duration_hour: 12                           # Window duration in hours.
+comments: This is a window for Ansible testing   # Optional comment.

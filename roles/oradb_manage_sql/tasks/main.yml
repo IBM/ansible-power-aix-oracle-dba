@@ -1,24 +1,17 @@
-- oracle_sql:
-    username: "{{ user }}"
-    password: "{{ default_dbpass }}"
+- name: Run SQL scripts
+  oracle_sql:
+    user: "{{ db_user }}"
+    password: "{{ db_password }}"
     service_name: "{{ service_name }}"
     hostname: "{{ hostname }}"
     port: "{{ listener_port }}"
     mode: "{{ db_mode }}"
     script: "{{ item.script }}"
-  with_items:
-    - "{{ sqlfile }}"
-  environment: "{{ oracle_env }}"
-  register: output
-
-- set_fact:
-   sql_ouput: |-
-        [
-        {% for rp in output.results %}
-                "{{ rp.msg }}",
-        {% endfor %}
-        ]
+  loop: "{{ sqlfile }}"
+  loop_control:
+    label: "{{ item.script }}"
+  register: sql_output
 
 - name: SQL Output
-  debug:
-    var: sql_ouput
+  ansible.builtin.debug:
+    msg: "{{ sql_output.results | map(attribute='msg') | list }}"

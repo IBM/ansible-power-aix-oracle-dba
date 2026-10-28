@@ -1,24 +1,20 @@
-- oracle_sql:
-    username: "{{ user }}"
-    password: "{{ db_password_cdb }}"
+- name: Run SQL queries
+  oracle_sql:
+    user: "{{ db_user }}"
+    password: "{{ db_password }}"
     service_name: "{{ service_name }}"
     hostname: "{{ hostname }}"
     port: "{{ listener_port }}"
     mode: "{{ db_mode }}"
     sql: "{{ item.query }}"
-  with_items:
-    - "{{ sql_query }}"
-  environment: "{{ oracle_env }}"
-  register: output
-
-- set_fact:
-   query_ouput: |-
-        [
-        {% for rp in output.results %}
-                "{{ rp.item }}: {{ rp.msg }}",
-        {% endfor %}
-        ]
+  loop: "{{ sql_query }}"
+  loop_control:
+    label: "{{ item.query }}"
+  register: query_output
 
 - name: SQL Output
-  debug:
-    var: query_ouput
+  ansible.builtin.debug:
+    msg: "{{ item.item.query }}: {{ item.msg }}"
+  loop: "{{ query_output.results }}"
+  loop_control:
+    label: "{{ item.item.query }}"

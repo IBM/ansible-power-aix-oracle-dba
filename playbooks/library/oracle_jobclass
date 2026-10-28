@@ -129,7 +129,7 @@ def main():
             port          = dict(default=1521, type='int'),
             service_name  = dict(required=True),
             user          = dict(required=False),
-            password      = dict(required=False),
+            password      = dict(required=False, no_log=True),
             mode          = dict(default='normal', choices=["normal","sysdba"]),
             state         = dict(default="present", choices=["present", "absent"]),
             name          = dict(required=True),
@@ -189,7 +189,7 @@ def main():
     result = query_existing(module.params['name'])
     if result['exists'] and module.params['state'] == "present":
         # Check attributes and modify if needed
-        if (result['comments'] != module.params['comments']) or (result['resource_group'] != module.params['resource_group']) or (result['service'] != module.params['service']) or (result['history'] != module.params['history']) or (result['logging'] != module.params['logging'].upper()):
+        if (result['comments'] != module.params['comments']) or ((result['resource_group'] or '').upper() != (module.params['resource_group'] or '').upper()) or (result['service'] != module.params['service']) or (result['history'] != module.params['history']) or (result['logging'] != module.params['logging'].upper()):
             c = conn.cursor()
             c.execute("""
             DECLARE

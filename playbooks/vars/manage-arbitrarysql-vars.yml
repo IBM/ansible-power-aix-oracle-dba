@@ -1,7 +1,9 @@
-hostname: ansible_db                           # AIX hostname where the Database is running.
-service_name: devpdb                           # Database service name.
-listener_port: 1521                            # Database port number.
-# oracle_db_home not needed - oracle_sql module uses Thin mode (pure Python, no Oracle client required)
-sqlfile:
-   - { script: 'create.sql' }   # SQL Script 1 location & name of the file.
-   - { script: 'insert.sql' }   # SQL Script 2 location & name of the file.
+# Run Arbitrary SQL Scripts - Variables section
+hostname: ansible-db                        # AIX LPAR hostname where the database is running (TCP endpoint).
+listener_port: 1521                         # Database listener port.
+service_name: prodpdb                       # Database service name to connect to as SYSDBA.
+# oracle_db_home not needed — oracle_sql module uses Thin mode (pure Python, no Oracle client required)
+
+sqlfile:                                    # Scripts are read from the Ansible control node and run in the order listed.
+- { script: 'create.sql' }                  # SQL Script 1 location & name of the file.
+- { script: 'insert.sql' }                  # SQL Script 2 location & name of the file.

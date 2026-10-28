@@ -4,12 +4,28 @@
     service_name: "{{ service_name }}"
     port: "{{ listener_port }}"
     user: "{{ db_user }}"
-    password: "{{ db_password_cdb }}"
+    password: "{{ db_password }}"
     mode: "{{ db_mode }}"
     preference_name: "{{ preference_name }}"
     preference_value: "{{ preference_value }}"
     state: "{{ state }}"
-  environment: "{{ oracle_env }}"
   register: stats
-- debug:
-    var: stats
+
+- name: Show global preference result
+  ansible.builtin.debug:
+    msg: "{{ stats.msg }}"
+
+- name: Verify preference with DBMS_STATS.GET_PREFS
+  oracle_sql:
+    user: "{{ db_user }}"
+    password: "{{ db_password }}"
+    service_name: "{{ service_name }}"
+    hostname: "{{ hostname }}"
+    port: "{{ listener_port }}"
+    mode: "{{ db_mode }}"
+    sql: "select '{{ preference_name | upper }}' as preference, dbms_stats.get_prefs('{{ preference_name | upper }}') as value from dual"
+  register: stats_verify
+
+- name: Show current preference value [preference, value]
+  ansible.builtin.debug:
+    msg: "{{ stats_verify.msg }}"
