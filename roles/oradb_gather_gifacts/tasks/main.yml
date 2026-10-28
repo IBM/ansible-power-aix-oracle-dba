@@ -1,7 +1,49 @@
+---
 - name: Return GI facts
   oracle_gi_facts:
   environment: "{{ oracle_env }}"
   register: gifacts
-#  ignore_errors: true
-- debug:
-   var: gifacts
+
+- name: "1. Cluster & GI Version Status"
+  debug:
+    msg:
+      - "Cluster Name: {{ gifacts.ansible_facts.oracle_gi_facts.clustername }}"
+      - "GI Version: {{ gifacts.ansible_facts.oracle_gi_facts.version }}"
+      - "Grid Home: {{ gifacts.ansible_facts.oracle_gi_facts.grid_home }}"
+      - "Clusterware: {{ gifacts.ansible_facts.oracle_gi_facts.is_clusterware }}"
+
+- name: "2. Applied GI Patches (OPatch)"
+  debug:
+    var: gifacts.ansible_facts.oracle_gi_facts.patches
+
+- name: "3. Grid & Cluster Resource Status (crsctl stat res -t)"
+  debug:
+    var: gifacts.ansible_facts.oracle_gi_facts.resource_status
+
+- name: "4. Network & VIP Configuration"
+  debug:
+    msg:
+      - "Networks: {{ gifacts.ansible_facts.oracle_gi_facts.network }}"
+      - "VIPs: {{ gifacts.ansible_facts.oracle_gi_facts.vip }}"
+  when: gifacts.ansible_facts.oracle_gi_facts.is_clusterware | bool
+
+- name: "5. SCAN & SCAN Listeners"
+  debug:
+    msg:
+      - "SCANs: {{ gifacts.ansible_facts.oracle_gi_facts.scan }}"
+      - "SCAN Listeners: {{ gifacts.ansible_facts.oracle_gi_facts.scan_listener }}"
+  when: gifacts.ansible_facts.oracle_gi_facts.is_clusterware | bool
+
+- name: "6. Local Listeners"
+  debug:
+    var: gifacts.ansible_facts.oracle_gi_facts.local_listener
+
+- name: "7. Registered Databases"
+  debug:
+    var: gifacts.ansible_facts.oracle_gi_facts.database_list
+
+- name: "8. ASM Status & Diskgroups"
+  debug:
+    msg:
+      - "ASM Status: {{ gifacts.ansible_facts.oracle_gi_facts.asm_status }}"
+      - "ASM Diskgroups (asmcmd lsdg): {{ gifacts.ansible_facts.oracle_gi_facts.asm_diskgroups }}"

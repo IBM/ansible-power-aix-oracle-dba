@@ -7,91 +7,54 @@ ANSIBLE_METADATA = {
 DOCUMENTATION = '''
 ---
 module: oracle_gi_facts
-short_description: Returns some facts about Grid Infrastructure environment
+short_description: Returns facts about Oracle Grid Infrastructure environment (RAC or Standalone)
 description:
-    - Returns some facts about Grid Infrastructure environment
-    - Must be run on a remote host
+    - Gathers read-only facts about Oracle Grid Infrastructure on the target host.
+    - Collects cluster name, GI release version, active networks, VIPs, SCANs, SCAN listeners,
+      local listeners, registered databases, and ASM status/diskgroups.
+    - Must be run on the target AIX/Linux host where Grid Infrastructure is installed.
 version_added: "2.4"
 options:
     oracle_home:
         description:
-            - Grid Infrastructure home, can be absent if ORACLE_HOME environment variable is set
+            - Grid Infrastructure home directory path (can also be supplied via ORACLE_HOME environment variable)
         required: false
 notes:
     - Oracle Grid Infrastructure 12cR1 or later required
-    - Must be run as (become) GI owner
-author: Ilmar Kerm, ilmar.kerm@gmail.com, @ilmarkerm
+    - Must be run as the GI owner (e.g. grid or oracle)
+requirements: [ "srvctl", "crsctl" ]
+author: IBM Power AIX Oracle DBA Collection Team
 '''
 
 EXAMPLES = '''
----
-- hosts: localhost
-  vars:
-    oracle_env:
-      ORACLE_HOME: /u01/app/grid/product/12.1.0.2/grid
+- hosts: all
+  gather_facts: false
   tasks:
     - name: Return GI facts
       oracle_gi_facts:
-      environment: "{{ oracle_env }}"
+      environment:
+        ORACLE_HOME: /ora/grid
 '''
 
 import os, re
 from socket import gethostname, getfqdn
-
-# The following is to make the module usable in python 2.6 (RHEL6/OEL6)
-# Source: http://pydoc.net/pep8radius/0.9.0/pep8radius.shell/
-try:
-    from subprocess import check_output, CalledProcessError
-except ImportError:  # pragma: no cover
-    # python 2.6 doesn't include check_output
-    # monkey patch it in!
-    import subprocess
-    STDOUT = subprocess.STDOUT
-
-    def check_output(*popenargs, **kwargs):
-        if 'stdout' in kwargs:  # pragma: no cover
-            raise ValueError('stdout argument not allowed, '
-                             'it will be overridden.')
-        process = subprocess.Popen(stdout=subprocess.PIPE,
-                                   *popenargs, **kwargs)
-        output, _ = process.communicate()
-        retcode = process.poll()
-        if retcode:
-            cmd = kwargs.get("args")
-            if cmd is None:
-                cmd = popenargs[0]
-            raise subprocess.CalledProcessError(retcode, cmd,
-                                                output=output)
-        return output
-    subprocess.check_output = check_output
-
-    # overwrite CalledProcessError due to `output`
-    # keyword not being available (in 2.6)
-    class CalledProcessError(Exception):
-
-        def __init__(self, returncode, cmd, output=None):
-            self.returncode = returncode
-            self.cmd = cmd
-            self.output = output
-
-        def __str__(self):
-            return "Command '%s' returned non-zero exit status %d" % (
-                self.cmd, self.returncode)
-    subprocess.CalledProcessError = CalledProcessError
-
-def is_executable(fpath):
-    return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+import subprocess
 
 def exec_program_lines(arguments):
     try:
-        output = check_output(arguments)
-        return output.splitlines()
-    except CalledProcessError:
-        # Just ignore the error
-        return ['']
+        output = subprocess.check_output(arguments, stderr=subprocess.STDOUT)
+        if isinstance(output, bytes):
+            output = output.decode('utf-8', errors='replace')
+        return [line.strip() for line in output.splitlines() if line.strip()]
+    except Exception:
+        return []
 
 def exec_program(arguments):
-    return exec_program_lines(arguments)[0]
+    lines = exec_program_lines(arguments)
+    return lines[0] if lines else ''
+
+def is_executable(fpath):
+    return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 
 def hostname_to_fqdn(hostname):
     if "." not in hostname:
@@ -99,182 +62,337 @@ def hostname_to_fqdn(hostname):
     else:
         return hostname
 
-def local_listener():
-    global srvctl, shorthostname, iscrs, vips
+def local_listener(srvctl, shorthostname, iscrs):
     args = [srvctl, 'status', 'listener']
     if iscrs:
         args += ['-n', shorthostname]
     listeners_out = exec_program_lines(args)
-    re_listener_name = re.compile('Listener (.+) is enabled')
+    re_listener_name = re.compile(r'Listener\s+([A-Za-z0-9_]+)\s+is\s+enabled', re.IGNORECASE)
     listeners = []
     out = []
     for l in listeners_out:
-        if "is enabled" in l:
-            m = re_listener_name.search(l)
+        m = re_listener_name.search(l)
+        if m:
             listeners.append(m.group(1))
+    if not listeners:
+        # Fallback to config listener
+        cfg_out = exec_program_lines([srvctl, 'config', 'listener'])
+        for l in cfg_out:
+            m = re.search(r'Name:\s*([A-Za-z0-9_]+)', l)
+            if m and m.group(1) not in listeners:
+                listeners.append(m.group(1))
     for l in listeners:
-        config = {}
+        config = {'name': l}
         output = exec_program_lines([srvctl, 'config', 'listener', '-l', l])
         for line in output:
-            if line.startswith('Name:'):
-                config['name'] = line[6:]
-            elif line.startswith('Type:'):
-                config['type'] = line[6:]
+            if line.startswith('Type:'):
+                config['type'] = line[5:].strip()
             elif line.startswith('Network:'):
-                config['network'] = line[9:line.find(',')]
+                config['network'] = line[8:].strip()
             elif line.startswith('End points:'):
-                config['endpoints'] = line[12:]
+                config['endpoints'] = line[11:].strip()
                 for proto in config['endpoints'].split('/'):
-                    p = proto.split(':')
-                    config[p[0].lower()] = p[1]
-#        if "network" in config.keys():
-#            config['address'] = vips[config['network']]['fqdn']
-#            config['ipv4'] = vips[config['network']]['ipv4']
-#            config['ipv6'] = vips[config['network']]['ipv6']
-#        out.append(config)
+                    if ':' in proto:
+                        p = proto.split(':')
+                        config[p[0].lower()] = p[1]
+        out.append(config)
     return out
 
-def scan_listener():
-    global srvctl, shorthostname, iscrs, networks, scans
+def scan_listener(srvctl, networks, scans, iscrs):
     out = {}
+    if not iscrs:
+        return out
     for n in networks.keys():
         output = exec_program_lines([srvctl, 'config', 'scan_listener', '-k', n])
         for line in output:
             endpoints = None
-            # 19c
-            m = re.search('Endpoints: (.+)', line)
-            if m is not None:
-                endpoints = m.group(1)
+            m = re.search(r'Endpoints:\s*(.+)', line)
+            if m:
+                endpoints = m.group(1).strip()
             else:
-                # 18c, 12c
-                m = re.search('SCAN Listener (.+) exists. Port: (.+)', line)
-                if m is not None:
-                    endpoints = m.group(2)
+                m = re.search(r'SCAN Listener\s+(.+)\s+exists\.\s*Port:\s*(.+)', line)
+                if m:
+                    endpoints = m.group(2).strip()
             if endpoints:
-                out[n] = {'network': n, 'scan_address': scans[n]['fqdn'], 'endpoints': endpoints, 'ipv4': scans[n]['ipv4'], 'ipv6': scans[n]['ipv6']}
+                scan_fqdn = scans[n]['fqdn'] if (n in scans and 'fqdn' in scans[n]) else ''
+                scan_ipv4 = scans[n]['ipv4'] if (n in scans and 'ipv4' in scans[n]) else []
+                scan_ipv6 = scans[n]['ipv6'] if (n in scans and 'ipv6' in scans[n]) else []
+                out[n] = {
+                    'network': n,
+                    'scan_address': scan_fqdn,
+                    'endpoints': endpoints,
+                    'ipv4': scan_ipv4,
+                    'ipv6': scan_ipv6
+                }
                 for proto in endpoints.split('/'):
-                    p = proto.split(':')
-                    out[n][p[0].lower()] = p[1]
+                    if ':' in proto:
+                        p = proto.split(':')
+                        out[n][p[0].lower()] = p[1]
                 break
     return out
 
-def get_networks():
-    global srvctl, shorthostname, iscrs
+def get_networks(srvctl):
     out = {}
     item = {}
     output = exec_program_lines([srvctl, 'config', 'network'])
     for line in output:
-        m = re.search('Network ([0-9]+) exists', line)
-        if m is not None:
-            if "network" in item.keys():
+        m = re.search(r'Network\s+([0-9]+)\s+exists', line)
+        if m:
+            if "network" in item:
                 out[item['network']] = item
             item = {'network': m.group(1)}
         elif line.startswith('Subnet IPv4:'):
-            item['ipv4'] = line[13:]
+            item['ipv4'] = line[12:].strip()
         elif line.startswith('Subnet IPv6:'):
-            item['ipv6'] = line[13:]
-    if "network" in item.keys():
+            item['ipv6'] = line[12:].strip()
+    if "network" in item:
         out[item['network']] = item
     return out
 
-def get_vips():
-    global srvctl, shorthostname, iscrs
+def get_vips(srvctl, shorthostname, iscrs):
+    if not iscrs:
+        return {}
     output = exec_program_lines([srvctl, 'config', 'vip', '-n', shorthostname])
     vip = {}
     out = {}
     for line in output:
         if line.startswith('VIP exists:'):
-            if "network" in vip.keys():
+            if "network" in vip:
                 out[vip['network']] = vip
             vip = {}
-            m = re.search('network number ([0-9]+),', line)
-            vip['network'] = m.group(1)
+            m = re.search(r'network number\s+([0-9]+)', line)
+            vip['network'] = m.group(1) if m else '1'
         elif line.startswith('VIP Name:'):
-            vip['name'] = line[10:]
+            vip['name'] = line[9:].strip()
             vip['fqdn'] = hostname_to_fqdn(vip['name'])
         elif line.startswith('VIP IPv4 Address:'):
-            vip['ipv4'] = line[18:]
+            vip['ipv4'] = line[17:].strip()
         elif line.startswith('VIP IPv6 Address:'):
-            vip['ipv6'] = line[18:]
-    if "network" in vip.keys():
+            vip['ipv6'] = line[17:].strip()
+    if "network" in vip:
         out[vip['network']] = vip
     return out
-    
-def get_scans():
-    global srvctl, shorthostname, iscrs
+
+def get_scans(srvctl, iscrs):
+    if not iscrs:
+        return {}
     out = {}
     item = {}
     output = exec_program_lines([srvctl, 'config', 'scan', '-all'])
     for line in output:
         if line.startswith('SCAN name:'):
-            if "network" in item.keys():
+            if "network" in item:
                 out[item['network']] = item
-            m = re.search('SCAN name: (.+), Network: ([0-9]+)', line)
-            item = {'network': m.group(2), 'name': m.group(1), 'ipv4': [], 'ipv6': []}
-            item['fqdn'] = hostname_to_fqdn(item['name'])
+            m = re.search(r'SCAN name:\s*([^,]+),\s*Network:\s*([0-9]+)', line)
+            if m:
+                item = {'network': m.group(2), 'name': m.group(1).strip(), 'ipv4': [], 'ipv6': []}
+                item['fqdn'] = hostname_to_fqdn(item['name'])
+            else:
+                item = {'network': '1', 'name': line[10:].strip(), 'ipv4': [], 'ipv6': []}
+                item['fqdn'] = hostname_to_fqdn(item['name'])
         else:
-            m = re.search('SCAN [0-9]+ (IPv[46]) VIP: (.+)', line)
-            if m is not None:
-                item[m.group(1).lower()] += [m.group(2)]
-    if "network" in item.keys():
+            m = re.search(r'SCAN\s+[0-9]+\s+(IPv[46])\s+VIP:\s*(.+)', line)
+            if m and item:
+                key = m.group(1).lower()
+                if key not in item:
+                    item[key] = []
+                item[key].append(m.group(2).strip())
+    if "network" in item:
         out[item['network']] = item
     return out
-    
-# Ansible code
+
+def get_asm_diskgroups(grid_home):
+    asmcmd = os.path.join(grid_home, 'bin', 'asmcmd')
+    if not is_executable(asmcmd):
+        return []
+
+    env = os.environ.copy()
+    if 'ORACLE_SID' not in env:
+        env['ORACLE_SID'] = '+ASM'
+
+    try:
+        output = subprocess.check_output([asmcmd, 'lsdg'], stderr=subprocess.STDOUT, env=env)
+        if isinstance(output, bytes):
+            output = output.decode('utf-8', errors='replace')
+        lines = [line.strip() for line in output.splitlines() if line.strip()]
+    except Exception:
+        return []
+
+    diskgroups = []
+    for line in lines:
+        if line.startswith('State') or line.startswith('-----') or 'Total_MB' in line:
+            continue
+        parts = line.split()
+        if len(parts) >= 8:
+            dg_name = parts[-1].rstrip('/')
+            state = parts[0]
+            dg_type = parts[1]
+            try:
+                if len(parts) >= 13:
+                    voting_files = parts[-2]
+                    usable_file_mb = parts[-4]
+                    free_mb = parts[-6]
+                    total_mb = parts[-7]
+                else:
+                    total_mb = parts[7]
+                    free_mb = parts[8]
+                    usable_file_mb = parts[10] if len(parts) > 10 else ''
+                    voting_files = 'N'
+
+                t_mb = int(total_mb) if str(total_mb).isdigit() else 0
+                f_mb = int(free_mb) if str(free_mb).isdigit() else 0
+                pct_free = round((float(f_mb) / float(t_mb) * 100), 2) if t_mb > 0 else 0.0
+
+                diskgroups.append({
+                    'name': dg_name,
+                    'state': state,
+                    'type': dg_type,
+                    'total_mb': t_mb,
+                    'free_mb': f_mb,
+                    'usable_file_mb': int(usable_file_mb) if str(usable_file_mb).isdigit() else usable_file_mb,
+                    'pct_free': pct_free,
+                    'voting_files': voting_files
+                })
+            except Exception:
+                diskgroups.append({
+                    'name': dg_name,
+                    'state': state,
+                    'type': dg_type,
+                    'raw': line
+                })
+    return diskgroups
+
+def get_opatch_patches(grid_home):
+    opatch = os.path.join(grid_home, 'OPatch', 'opatch')
+    if not is_executable(opatch):
+        return []
+
+    try:
+        output = subprocess.check_output([opatch, 'lspatches'], stderr=subprocess.STDOUT)
+        if isinstance(output, bytes):
+            output = output.decode('utf-8', errors='replace')
+        lines = [line.strip() for line in output.splitlines() if line.strip()]
+    except Exception:
+        return []
+
+    patches = []
+    for line in lines:
+        if 'OPatch succeeded' in line or 'OPatch version' in line or not line:
+            continue
+        if ';' in line:
+            parts = line.split(';', 1)
+            patches.append({
+                'patch_id': parts[0].strip(),
+                'description': parts[1].strip()
+            })
+        elif not line.startswith('Oracle Interim Patch Installer'):
+            parts = line.split(None, 1)
+            if parts:
+                patches.append({
+                    'patch_id': parts[0],
+                    'description': parts[1] if len(parts) > 1 else ''
+                })
+    return patches
+
+def get_resource_status(crsctl):
+    if not is_executable(crsctl):
+        return []
+    try:
+        output = subprocess.check_output([crsctl, 'stat', 'res', '-t'], stderr=subprocess.STDOUT)
+        if isinstance(output, bytes):
+            output = output.decode('utf-8', errors='replace')
+        return [line.rstrip() for line in output.splitlines() if line.rstrip()]
+    except Exception:
+        return []
+
+from ansible.module_utils.basic import AnsibleModule
+
 def main():
-    global module, shorthostname, hostname, srvctl, crsctl, cemutlo, iscrs, vips, networks, scans
-    msg = ['']
     module = AnsibleModule(
         argument_spec = dict(
             oracle_home = dict(required=False)
         ),
         supports_check_mode=True
     )
-    # Preparation
-    facts = {}
+
     if module.params["oracle_home"]:
         os.environ['ORACLE_HOME'] = module.params["oracle_home"]
-    srvctl = os.path.join(os.environ['ORACLE_HOME'], 'bin', 'srvctl')
-    crsctl = os.path.join(os.environ['ORACLE_HOME'], 'bin', 'crsctl')
-    cemutlo = os.path.join(os.environ['ORACLE_HOME'], 'bin', 'cemutlo')
+
+    if 'ORACLE_HOME' not in os.environ or not os.environ['ORACLE_HOME']:
+        module.fail_json(changed=False, msg="ORACLE_HOME environment variable or oracle_home parameter is required.")
+
+    grid_home = os.environ['ORACLE_HOME']
+    srvctl = os.path.join(grid_home, 'bin', 'srvctl')
+    crsctl = os.path.join(grid_home, 'bin', 'crsctl')
+    cemutlo = os.path.join(grid_home, 'bin', 'cemutlo')
+
     if not is_executable(srvctl) or not is_executable(crsctl):
-        module.fail_json(changed=False, msg="Are you sure ORACLE_HOME=%s points to GI home? I can't find executables srvctl or crsctl under bin/." % os.environ['ORACLE_HOME'])
-    iscrs = True # This needs to be dynamically set if it is full clusterware or Oracle restart
+        module.fail_json(changed=False, msg="Cannot find executable srvctl or crsctl under %s/bin." % grid_home)
+
     hostname = gethostname()
     shorthostname = hostname.split('.')[0]
-    #
-    if module.check_mode:
-        module.exit_json(changed=False)
-    # Cluster name
-    if iscrs:
-        facts.update({'clustername': exec_program([cemutlo, '-n'])})
-    else:
-        facts.update({'clustername': 'ORACLE_RESTART'})
-    # Cluster version
-    if iscrs:
-        version = exec_program([crsctl, 'query','crs','activeversion'])
-    else:
-        version = exec_program([crsctl, 'query','has','releaseversion'])
-    m = re.search('\[([0-9\.]+)\]$', version)
-    facts.update({'version': m.group(1)})
-    # VIPS
-    vips = get_vips()
-    facts.update({'vip': vips.values()})
-    # Networks
-    networks = get_networks()
-    facts.update({'network': networks.values()})
-    # SCANs
-    scans = get_scans()
-    facts.update({'scan': scans.values()})
-    # Listener
-    facts.update({'local_listener': local_listener()})
-    facts.update({'scan_listener': scan_listener().values() if iscrs else []})
-    # Databases
-    facts.update({'database_list': exec_program_lines([srvctl, 'config', 'database'])})
-    # Output
-    module.exit_json(msg=", ".join(msg), changed=False, ansible_facts=facts)
 
+    # Detect if Clusterware (CRS / RAC) or Oracle Restart (HAS / SI)
+    iscrs = False
+    try:
+        crs_out = exec_program([crsctl, 'check', 'crs'])
+        if 'CRS-' in crs_out or 'online' in crs_out.lower() or 'healthy' in crs_out.lower():
+            iscrs = True
+    except Exception:
+        iscrs = False
 
-from ansible.module_utils.basic import *
+    facts = {
+        'grid_home': grid_home,
+        'hostname': hostname,
+        'is_clusterware': iscrs
+    }
+
+    # Cluster name & GI version
+    if iscrs and is_executable(cemutlo):
+        cluster_name = exec_program([cemutlo, '-n'])
+        facts['clustername'] = cluster_name if cluster_name else 'CRS_CLUSTER'
+        version_out = exec_program([crsctl, 'query', 'crs', 'activeversion'])
+    else:
+        facts['clustername'] = 'ORACLE_RESTART'
+        version_out = exec_program([crsctl, 'query', 'has', 'releaseversion'])
+
+    m = re.search(r'\[([0-9\.]+)\]', version_out)
+    facts['version'] = m.group(1) if m else version_out
+
+    # Networks, VIPs, SCANs
+    networks = get_networks(srvctl)
+    facts['network'] = list(networks.values())
+
+    vips = get_vips(srvctl, shorthostname, iscrs)
+    facts['vip'] = list(vips.values())
+
+    scans = get_scans(srvctl, iscrs)
+    facts['scan'] = list(scans.values())
+
+    # Listeners
+    facts['local_listener'] = local_listener(srvctl, shorthostname, iscrs)
+    facts['scan_listener'] = list(scan_listener(srvctl, networks, scans, iscrs).values()) if iscrs else []
+
+    # Registered databases
+    db_list = [d.strip() for d in exec_program_lines([srvctl, 'config', 'database']) if d.strip()]
+    facts['database_list'] = db_list
+
+    # Applied Patches via OPatch
+    facts['patches'] = get_opatch_patches(grid_home)
+
+    # Resource Status (crsctl stat res -t)
+    facts['resource_status'] = get_resource_status(crsctl)
+
+    # ASM status & diskgroups (via asmcmd lsdg)
+    asm_status = exec_program_lines([srvctl, 'status', 'asm'])
+    facts['asm_status'] = asm_status
+
+    diskgroups = get_asm_diskgroups(grid_home)
+    if not diskgroups:
+        diskgroups = [dg.strip() for dg in exec_program_lines([srvctl, 'status', 'diskgroup']) if dg.strip()]
+    facts['asm_diskgroups'] = diskgroups
+
+    module.exit_json(msg="Grid facts gathered successfully", changed=False, ansible_facts={'oracle_gi_facts': facts})
+
 if __name__ == '__main__':
     main()

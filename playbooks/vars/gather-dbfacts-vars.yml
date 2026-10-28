@@ -1,4 +1,7 @@
-hostname: ansible_db                    # AIX lpar hostname where the database is running.
-listener_port: 1521                     # Database port number
+# Gather Database Facts - Variables section
+hostname: ansible-db                        # AIX Lpar hostname where the database is running.
+listener_port: 1521                         # Database port number.
 # oracle_db_home not needed - oracle_facts module uses Thin mode (pure Python, no Oracle client required)
-service_name: devdb                     # Service name of a PDB or CDB.
+
+# Service name of a CDB, PDB, or Standalone database
+service_name: prod                          # Target database service name (e.g. prod, prodpdb)

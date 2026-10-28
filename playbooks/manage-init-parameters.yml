@@ -1,10 +1,12 @@
 # Playbook to manage database initialization parameters.
-# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+# Before executing this playbook, please refer to the documentation inside the collection docs directory.
 #
-- hosts: localhost
+- name: Manage Database Initialization Parameters
+  hosts: localhost
   connection: local
+  gather_facts: false
   vars_files:
-   - vars/vault.yml
-   - vars/manage-init-parameters-vars.yml
+    - vars/vault.yml
+    - vars/manage-init-parameters-vars.yml
   roles:
-     - { role: oradb_manage_initparams }
+    - { role: oradb_manage_initparams }

@@ -20,6 +20,14 @@ Following functionalities can be achieved with this collection.
 
 Version Change:
 
+PODBA v3.0.0
+
+- Migrated underlying Python Oracle driver from cx_Oracle (thick mode) to python-oracledb (thin mode) — pure Python over TCP with no Oracle Instant Client or oracle_db_home required on the Ansible control node.
+- Architectural separation between database operations (executing locally from control node over TCP) and Grid Infrastructure / ASM / OS operations (executing on target host via SSH as grid/oracle).
+- Enhanced database and grid facts gathering modules (oracle_facts with 9 comprehensive categories including OPatch inventory, tablespaces, redo, and jobs; oracle_gi_facts with OPatch patches, crsctl resource status, and asmcmd lsdg diskgroup metrics).
+- Standardized variable structures, zero-indent YAML, per-user privilege definitions, and dynamic initialization parameter management (setting, clearing, and resetting parameters).
+- Modernized documentation across the collection with structured Markdown guides, verified execution logs, and SQL/CLI verification commands.
+
 PODBA v2.0.9
 
 - Tested role separation during upgrade.

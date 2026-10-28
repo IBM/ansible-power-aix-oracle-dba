@@ -694,7 +694,7 @@ def main():
             tablespace    = dict(required=True, aliases=['name','ts']),
             state         = dict(default="present", choices=["present", "absent", "read_only", "read_write", "offline", "online" ]),
             bigfile       = dict(default=False, type='bool'),
-            datafile          = dict(required=False, type='list', aliases=['datafile','df']),
+            datafile          = dict(required=False, type='list', aliases=['df', 'path']),
             numfiles      = dict(required=False),
             size          = dict(required=False),
             content       = dict(default='permanent', choices=['permanent', 'temp', 'undo']),

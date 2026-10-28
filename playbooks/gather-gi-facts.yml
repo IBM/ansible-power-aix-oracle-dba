@@ -1,9 +1,11 @@
-# Playbook to gather facts about Grid
+# Playbook to gather facts about Oracle Grid Infrastructure (Standalone or RAC).
+# Before executing this playbook, please refer to the documentation inside the collection docs directory.
 #
-- hosts: all                          # AIX Lpar where Grid Services are running.
-  remote_user: oracle
-  vars:
-   oracle_env:
-      ORACLE_HOME: /ora/grid          # Grid Home Path on the above AIX Lpar.
+- name: Gather Grid Infrastructure Facts
+  hosts: pilotdb
+  remote_user: grid
+  gather_facts: true
+  vars_files:
+    - vars/gather-gifacts-vars.yml
   roles:
-     - { role: oradb_gather_gifacts } 
+    - { role: oradb_gather_gifacts }

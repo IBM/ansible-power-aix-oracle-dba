@@ -1,18 +1,19 @@
+---
 - name: Manage redologs
   oracle_redo:
-        hostname={{ hostname }}
-        service_name={{ service_name }}
-        port={{ listener_port }}
-        user={{ db_user }}
-        password={{ db_password_cdb }}
-        mode={{ db_mode }}
-        size={{ item.redolog_size }}
-        groups={{ item.redolog_groups }}
-  with_items:
-      - "{{oracle_databases}}"
+    hostname={{ hostname }}
+    service_name={{ item.service_name | default(service_name) }}
+    port={{ listener_port_template }}
+    user={{ db_user }}
+    password={{ db_password_cdb }}
+    mode={{ db_mode }}
+    size={{ item.redolog_size }}
+    groups={{ item.redolog_groups }}
+    datafile={{ item.datafile | default(omit) }}
+  loop: "{{ oracle_databases }}"
   environment: "{{ oracle_env }}"
-  when: oracle_databases is defined and item.redolog_size is defined and item.redolog_groups is defined and item.state is defined
+  when: oracle_databases is defined and item.redolog_size is defined and item.redolog_groups is defined
   loop_control:
-      label: "port: {{ listener_port }} service: {{ service_name }} groups: {{ item.redolog_groups }} size: {{ item.redolog_size }}"
+    label: "port: {{ listener_port_template }} service: {{ item.service_name | default(service_name) }} groups: {{ item.redolog_groups }} size: {{ item.redolog_size }}"
   register: param_change
   tags: redolog
