@@ -108,6 +108,36 @@ Notes:
   (Oracle 18c+ hot clone). Otherwise Oracle returns `ORA-65081` / `ORA-65040`.
 - Verify: `select name, open_mode from v$pdbs;`
 
+Sample run:
+
+```text
+$ ansible-playbook manage-pdb.yml --ask-vault-pass
+Vault password:
+
+PLAY [Manage Pluggable Databases] *****************************************************************************************************
+
+TASK [oradb_manage_pdb : Validate — only one operation flag may be true at a time] ****************************************************
+ok: [localhost] => {
+    "changed": false,
+    "msg": "Operation flag validation passed."
+}
+
+TASK [oradb_manage_pdb : Configure PDB (create or plug)] ******************************************************************************
+skipping: [localhost]
+
+TASK [oradb_manage_pdb : Configure PDB (clone from an existing PDB)] ******************************************************************
+included: /home/ansible/shiva/git/ansible-power-aix-oracle-dba/roles/oradb_manage_pdb/tasks/clone_pdb.yml for localhost
+
+TASK [oradb_manage_pdb : Clone PDB from an existing PDB] ******************************************************************************
+changed: [localhost] => (item=prodpdb -> prodpdb_clone)
+
+TASK [oradb_manage_pdb : Configure PDB (drop or unplug)] ******************************************************************************
+skipping: [localhost]
+
+PLAY RECAP ****************************************************************************************************************************
+localhost                  : ok=3    changed=1    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0
+```
+
 ---
 
 ## Scenario 2 — Unplug a PDB to an XML file
