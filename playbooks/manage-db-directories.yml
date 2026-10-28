@@ -1,8 +1,9 @@
-# Playbook to manage database directories.
-# Before executing this playbook, please refer the documentation inside the collection_dir/docs directory.
+# Playbook to manage Oracle database directories (CREATE/DROP DIRECTORY).
+# Before executing this playbook, please refer the documentation inside the docs/ directory.
 #
-- hosts: localhost
-  connection: local
+- name: Manage DB Directories
+  hosts: localhost
+  gather_facts: false
   vars_files:
    - vars/vault.yml
    - vars/manage-directories-vars.yml

@@ -1,12 +1,21 @@
 - name: Delete database(s)
   shell: "{{ oracle_home_db }}/bin/dbca -deleteDatabase -sourceDB {{ item.oracle_db_name }} -sysDBAUserName sys -sysDBAPassword {{ default_dbpass }} -silent"
   with_items: "{{ oracle_databases }}"
-  when: item.state |upper == 'ABSENT'
-  tags:
-    - oradbdelete
+  when: item.state | upper == 'ABSENT'
   register: oradbdelete
   ignore_errors: true
+  no_log: true
+  tags:
+    - oradbdelete
 
-- ansible.builtin.debug:
-    msg: "{{ item.stdout_lines }}"
+- name: Collect DBCA output lines
+  ansible.builtin.set_fact:
+    dbca_output: "{{ dbca_output | default([]) + item.stdout_lines | reject('search', 'sysDBAPassword') | list }}"
   loop: "{{ oradbdelete.results }}"
+  when: item.stdout_lines is defined
+  no_log: true
+
+- name: Print DBCA output
+  ansible.builtin.debug:
+    msg: "{{ dbca_output }}"
+  when: dbca_output is defined
