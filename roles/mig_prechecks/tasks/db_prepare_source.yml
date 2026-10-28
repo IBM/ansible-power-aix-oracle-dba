@@ -171,7 +171,7 @@
 # lands wherever the DATA_PUMP_DIR Oracle directory object resolves on SOURCE,
 # not M5DIR. Without redirecting it here, it stays at Oracle's default
 # ($ORACLE_BASE/admin/<sid>/dpdump/), which both DBMIG's own internal
-# scp-to-destination step and mig_rman_L1F/tasks/capture_expdp_file.yml
+# scp-to-destination step and mig_rman_l1f/tasks/capture_expdp_file.yml
 # expect to be m5_dumpdir instead — confirmed live: a real L1F run's export
 # succeeded but the dumpfile was never found because of exactly this gap.
 # Mirrors db_prepare_dest.yml, which already creates both directories on

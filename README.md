@@ -29,7 +29,7 @@ PODBA v3.0.0
 - Standardized variable structures, zero-indent YAML, per-user privilege definitions, and dynamic initialization parameter management (setting, clearing, and resetting parameters).
 - Modernized documentation across the collection with structured Markdown guides, verified execution logs, and SQL/CLI verification commands.
 - Introduced Oracle 19c cross-endian migration from x86 Linux to AIX using Oracle's M5 method and the DBMIG 5.1 scripts (MOS Doc 2999157.1). Supports Non-CDB to Non-CDB, PDB to PDB and Non-CDB to PDB.
-- New playbook m5_migration.yml with roles mig_prechecks, mig_rman_L0_L1 and mig_rman_L1F, run as tagged stages: prechecks, L0 baseline, repeatable L1 incrementals, L1F cutover and go-live.
+- New playbook m5_migration.yml with roles mig_prechecks, mig_rman_l0_l1 and mig_rman_l1f, run as tagged stages: prechecks, L0 baseline, repeatable L1 incrementals, L1F cutover and go-live.
 - Migration hosts are defined in their own [mig] inventory group (mig_source, mig_destination), so migration runs never touch other hosts.
 - Added ansible.posix as a collection dependency.
 
