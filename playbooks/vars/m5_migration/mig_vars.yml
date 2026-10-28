@@ -253,7 +253,7 @@ bkp_dest_parm:           "{{ m5_backupdir }}"
 # rman_log_benign_patterns: Optional — informational Oracle messages that are
 # legitimately prefixed "ORA-" but are not errors and must NOT fail the RMAN
 # backup/restore log scan (verify_backup_log.yml / verify_restore_log.yml in
-# mig_rman_L0_L1 and mig_rman_L1F). Confirmed live: ORA-28002 (the connecting
+# mig_rman_l0_l1 and mig_rman_l1f). Confirmed live: ORA-28002 (the connecting
 # account's password is inside its profile's PASSWORD_GRACE_TIME window) is
 # printed on every login by SQL*Plus/RMAN once a password is close to expiry
 # — harmless, doesn't block anything — but the old blanket "'ORA-' not in
@@ -292,7 +292,7 @@ dp_parallel:             1
 
 # dp_enc_prompt: Optional — Y = prompt for encryption password, N = do not
 # prompt (DP_ENC_PROMPT). Independent of impdp_run_mode (role default,
-# roles/mig_rman_L1F/defaults/main.yml).
+# roles/mig_rman_l1f/defaults/main.yml).
 
 dp_enc_prompt:           "N"
 
@@ -431,8 +431,8 @@ dest_oracle_sid_effective: >-
 
 # dest_connect_string_effective: full Oracle Net (Easy Connect) connect string used
 # wherever an "@connect_string" is needed against the DESTINATION — RMAN's
-# "target sys@..." for PDB→PDB restore (mig_rman_L0_L1 and mig_rman_L1F
-# run_restore.yml) and impdp.sh's ORACLE_CONNECT_STRING (mig_rman_L1F run_impdp.yml).
+# "target sys@..." for PDB→PDB restore (mig_rman_l0_l1 and mig_rman_l1f
+# run_restore.yml) and impdp.sh's ORACLE_CONNECT_STRING (mig_rman_l1f run_impdp.yml).
 #
 # Built as host:port/service against the destination listener — NOT a bare SID or
 # "cdb_sid/pdb_name" string, which is not valid Oracle Net syntax without a matching

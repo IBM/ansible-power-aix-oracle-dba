@@ -1,0 +1,128 @@
+---
+# roles/mig_rman_l1f/tasks/set_tablespaces_readwrite.yml
+# Set all migrated tablespaces to READ WRITE on destination.
+# Runs on: destination host (sqlplus directly — no Instant Client needed).
+
+- name: "[mig_rman_l1f:postchecks] Check current status of migrated tablespaces on destination"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ dest_oracle_home }}
+    export ORACLE_SID={{ dest_oracle_sid_effective }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF LINESIZE 200
+      {% if dest_pdb_name | default('') | length > 0 %}
+      ALTER SESSION SET CONTAINER = {{ dest_pdb_name }};
+      {% endif %}
+      SELECT tablespace_name || ':' || status FROM dba_tablespaces
+      WHERE tablespace_name IN ({{ m5_tablespace_list_items | map('regex_replace', '^(.*)$', "'\1'") | join(',') }});
+      EXIT;
+    SQLEOF
+  register: ts_current_status
+  changed_when: false
+
+# ALTER TABLESPACE ... READ WRITE is NOT idempotent — ORA-01646 if the
+# tablespace is already READ WRITE. Confirmed live: USERS was already READ
+# WRITE on destination (pre-existing in the destination DB, unlike the
+# TEST* tablespaces which are genuinely transported and land READ ONLY),
+# and with WHENEVER SQLERROR EXIT in place that aborted the whole script at
+# USERS — the other 7 tablespaces never even got attempted. So: only issue
+# READ WRITE for tablespaces the query above actually reports as READ ONLY
+# right now; anything already read-write is left alone (already in the
+# desired end-state, nothing to do). Anything in some OTHER state (OFFLINE
+# etc.) is neither altered nor silently assumed fine — it just won't appear
+# in either list here, and the "Assert all tablespaces are ONLINE" check
+# below still independently catches that.
+#
+# IMPORTANT: DBA_TABLESPACES.STATUS never actually contains the string
+# "READ WRITE" — a normal writable tablespace reports STATUS='ONLINE', not
+# "READ WRITE" (that literal string only appears in this column for a
+# tablespace explicitly placed OFFLINE with a not-yet-recovered state, which
+# isn't the case we care about here). Confirmed live against the real
+# destination before deploying: with an ONLINE-based check, all 8
+# tablespaces showed already read-write; a first draft of this task that
+# matched ":READ WRITE" instead matched nothing at all and would have
+# silently produced an empty result both ways.
+- name: "[mig_rman_l1f:postchecks] Determine which tablespaces are actually READ ONLY right now"
+  ansible.builtin.set_fact:
+    ts_readonly_now: >-
+      {{ ts_current_status.stdout_lines | default([])
+         | select('search', ':READ ONLY')
+         | map('regex_replace', ':READ ONLY.*$', '') | map('trim') | list }}
+    ts_already_readwrite: >-
+      {{ ts_current_status.stdout_lines | default([])
+         | select('search', ':ONLINE')
+         | map('regex_replace', ':ONLINE.*$', '') | map('trim') | list }}
+
+- name: "[mig_rman_l1f:postchecks] Tablespace status before cutback"
+  ansible.builtin.debug:
+    msg: >-
+      {{ ts_readonly_now | length }} READ ONLY, will be set READ WRITE:
+      {{ ts_readonly_now | join(', ') if ts_readonly_now | length > 0 else '(none)' }}.
+      {{ ts_already_readwrite | length }} already READ WRITE, left alone:
+      {{ ts_already_readwrite | join(', ') if ts_already_readwrite | length > 0 else '(none)' }}.
+
+- name: "[mig_rman_l1f:postchecks] Set READ-ONLY migrated tablespaces to READ WRITE on destination"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ dest_oracle_home }}
+    export ORACLE_SID={{ dest_oracle_sid_effective }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      WHENEVER SQLERROR EXIT FAILURE ROLLBACK
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+      {% if dest_pdb_name | default('') | length > 0 %}
+      ALTER SESSION SET CONTAINER = {{ dest_pdb_name }};
+      {% endif %}
+      {% for ts in ts_readonly_now %}
+      ALTER TABLESPACE {{ ts }} READ WRITE;
+      {% endfor %}
+      EXIT;
+    SQLEOF
+  register: ts_rw_result
+  when: ts_readonly_now | length > 0
+
+- name: "[mig_rman_l1f:postchecks] Assert tablespaces were set READ WRITE without SQL errors"
+  ansible.builtin.assert:
+    that: ts_rw_result.rc == 0
+    fail_msg: >
+      Setting tablespaces READ WRITE failed (rc={{ ts_rw_result.rc }}) — most
+      likely ORA-00959 (tablespace does not exist), meaning the import never
+      actually plugged these tablespaces in. Output: {{ ts_rw_result.stdout }}
+    success_msg: "ALTER TABLESPACE ... READ WRITE issued for {{ ts_readonly_now | length }} tablespace(s), no SQL errors."
+  when: ts_readonly_now | length > 0
+
+# Counts tablespaces that ARE both present AND ONLINE, and asserts that count
+# equals the full expected list — not just "none are non-ONLINE". A tablespace
+# that doesn't exist at all (e.g. the import silently imported nothing) is
+# indistinguishable from "all ONLINE" under a WHERE status != 'ONLINE' query:
+# both return "no rows selected". Asserting an exact positive count closes
+# that false-positive gap.
+- name: "[mig_rman_l1f:postchecks] Verify tablespace READ WRITE status"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ dest_oracle_home }}
+    export ORACLE_SID={{ dest_oracle_sid_effective }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+      {% if dest_pdb_name | default('') | length > 0 %}
+      ALTER SESSION SET CONTAINER = {{ dest_pdb_name }};
+      {% endif %}
+      SELECT COUNT(*) FROM dba_tablespaces
+      WHERE tablespace_name IN ({{ m5_tablespace_list_items | map('regex_replace', '^(.*)$', "'\1'") | join(',') }})
+      AND status = 'ONLINE';
+      EXIT;
+    SQLEOF
+  register: ts_online_count
+  changed_when: false
+
+- name: "[mig_rman_l1f:postchecks] Assert all tablespaces are ONLINE"
+  ansible.builtin.assert:
+    that: ts_online_count.stdout | trim | int == m5_tablespace_list_items | length
+    fail_msg: >
+      Expected {{ m5_tablespace_list_items | length }} tablespaces ONLINE
+      ({{ m5_tablespace_list_items | join(', ') }}), found
+      {{ ts_online_count.stdout | trim }} — some are missing entirely or not
+      ONLINE. Review: SELECT tablespace_name, status FROM dba_tablespaces on
+      destination.
+    success_msg: >-
+      All {{ m5_tablespace_list_items | length }} migrated tablespaces
+      confirmed present and ONLINE (READ WRITE).

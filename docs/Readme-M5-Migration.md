@@ -21,8 +21,8 @@ ansible-power-aix-oracle-dba/
 │           └── mig_vault.yml        ← SYS / SYSTEM passwords (ansible-vault encrypted)
 └── roles/
     ├── mig_prechecks/               ← OS/DB checks, patch checks, SSH, DB prep, DBMIG deploy → tag: prechecks
-    ├── mig_rman_L0_L1/              ← L0 baseline + L1 incremental                          → tags: rman_l0 | rman_l1
-    └── mig_rman_L1F/                ← L1F + import + postchecks + validation (cutover)      → tag: rman_l1f  ⚠ DOWNTIME
+    ├── mig_rman_l0_l1/              ← L0 baseline + L1 incremental                          → tags: rman_l0 | rman_l1
+    └── mig_rman_l1f/                ← L1F + import + postchecks + validation (cutover)      → tag: rman_l1f  ⚠ DOWNTIME
 ```
 
 Run every command **from the `playbooks/` directory**, like the other PowerODBA playbooks. The `playbooks/roles` symlink lets the playbook find the roles.
@@ -32,8 +32,8 @@ Run every command **from the `playbooks/` directory**, like the other PowerODBA 
 | Role | Tag | Plays | What it does |
 |------|-----|-------|--------------|
 | `mig_prechecks` | `prechecks` | one play on `mig_source:mig_destination`, then a mark-complete play | OS/DB checks, patch checks, SSH equivalence, source/destination DB prep, DBMIG 5.1 deploy |
-| `mig_rman_L0_L1` | `rman_l0` or `rman_l1` | one play on `mig_source:mig_destination` | RMAN backup on source → restore on destination (L0 once, L1 repeated) |
-| `mig_rman_L1F` | `rman_l1f` | a source play, a destination play, then a mark-complete play | L1F backup → restore → Data Pump import → table-count check → tablespaces READ WRITE → utlrp → stats → validate |
+| `mig_rman_l0_l1` | `rman_l0` or `rman_l1` | one play on `mig_source:mig_destination` | RMAN backup on source → restore on destination (L0 once, L1 repeated) |
+| `mig_rman_l1f` | `rman_l1f` | a source play, a destination play, then a mark-complete play | L1F backup → restore → Data Pump import → table-count check → tablespaces READ WRITE → utlrp → stats → validate |
 
 Each role's tasks carry their own `when: inventory_hostname in groups[...]` guard, so a host runs only its own half of a combined play.
 
@@ -210,7 +210,7 @@ All migration settings are in one file, in this section order. Within each secti
 
 Precheck and validation reports are both written on the controller, to `/home/ansible/m5_migration/reports` by default (`precheck_report_dir`, `validation_report_dir`).
 
-Fixed values that shouldn't change per environment live in the roles' `defaults/main.yml`: the standalone bugfix patch IDs (`bugfix_patch_id`, `tde_bugfix_patch_id`, `stdby_bugfix_patch_id`), disk/memory thresholds, `system_usr` and the TDE marker path in `mig_prechecks`; `impdp_run_mode` in `mig_rman_L1F`.
+Fixed values that shouldn't change per environment live in the roles' `defaults/main.yml`: the standalone bugfix patch IDs (`bugfix_patch_id`, `tde_bugfix_patch_id`, `stdby_bugfix_patch_id`), disk/memory thresholds, `system_usr` and the TDE marker path in `mig_prechecks`; `impdp_run_mode` in `mig_rman_l1f`.
 
 ### Vault variables — `playbooks/vars/m5_migration/mig_vault.yml`
 ```yaml
@@ -235,14 +235,14 @@ Runs once, skipped when `prechecks.done` exists. Tasks in sequence:
 8. `deploy_dbmig.yml` — M5 directory tree on both hosts, copy + unzip DBMIG to both, `dbmig_driver.properties`, tablespace list
 9. `generate_report.yml` — `precheck_<source-host>.txt` in `precheck_report_dir` on the controller
 
-### `mig_rman_L0_L1`
+### `mig_rman_l0_l1`
 Single role, tag-selected level:
 - `--tags rman_l0` → `rman_level: L0` (full baseline, run once — gated by `rman_l0.done`)
 - `--tags rman_l1` → `rman_level: L1` (incremental, repeat — no gate)
 
 Flow: lock-check → backup (source) → verify log → get cmdfile → copy backup pieces → restore (destination) → verify log
 
-### `mig_rman_L1F`
+### `mig_rman_l1f`
 Combined cutover role:
 1. Confirmation pause, lock check, L1F backup (source) — sets tablespaces READ ONLY → **DOWNTIME STARTS**
 2. Verify backup log, get restore cmdfile, copy backup pieces, capture the Data Pump dump file

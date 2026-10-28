@@ -1,0 +1,49 @@
+---
+# roles/mig_rman_l1f/tasks/gather_stats.yml
+# Gather DBMS_STATS for application schema on destination post-import.
+# Runs on: destination host (sqlplus directly — no Instant Client needed).
+
+# SQL*Plus's "EXEC <stmt>" shorthand only reads a SINGLE LINE — it is not a
+# multi-line PL/SQL block starter the way BEGIN...END; is. A prior version
+# of this task spread "EXEC DBMS_STATS.GATHER_SCHEMA_STATS(" and its
+# parameters across several lines; SQL*Plus silently took just the first
+# line as the whole command (translating it to
+# "BEGIN DBMS_STATS.GATHER_SCHEMA_STATS(; END;"), discarding every
+# parameter — confirmed live via the resulting PLS-00103 syntax error on the
+# stray "(;". Fixed by using an explicit BEGIN...END; block terminated with
+# "/", which SQL*Plus correctly accumulates across multiple lines regardless
+# of length.
+- name: "[mig_rman_l1f:postchecks] Gather stats for {{ app_schema | upper }} schema"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ dest_oracle_home }}
+    export ORACLE_SID={{ dest_oracle_sid_effective }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      WHENEVER SQLERROR EXIT FAILURE ROLLBACK
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+      {% if dest_pdb_name | default('') | length > 0 %}
+      ALTER SESSION SET CONTAINER = {{ dest_pdb_name }};
+      {% endif %}
+      BEGIN
+        DBMS_STATS.GATHER_SCHEMA_STATS(
+          ownname          => '{{ app_schema | upper }}',
+          estimate_percent => DBMS_STATS.AUTO_SAMPLE_SIZE,
+          cascade          => TRUE,
+          degree           => 8
+        );
+      END;
+      /
+      EXIT;
+    SQLEOF
+  async: 3600
+  poll:  120
+  register: stats_result
+
+- name: "[mig_rman_l1f:postchecks] Assert stats gather completed without SQL errors"
+  ansible.builtin.assert:
+    that: stats_result.rc == 0
+    fail_msg: >
+      DBMS_STATS.GATHER_SCHEMA_STATS for {{ app_schema | upper }} failed
+      (rc={{ stats_result.rc }}). A missing/empty schema (e.g. the import
+      didn't actually run) is a likely cause. Output: {{ stats_result.stdout }}
+    success_msg: "DBMS_STATS for {{ app_schema | upper }} schema completed (rc=0)."

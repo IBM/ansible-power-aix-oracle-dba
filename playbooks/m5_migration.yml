@@ -4,8 +4,8 @@
 #
 # Roles (one tag per stage):
 #   mig_prechecks   OS/DB checks, patch checks, SSH, DB prep, DBMIG deploy → tag: prechecks
-#   mig_rman_L0_L1  L0 baseline + L1 incremental backup+restore            → tags: rman_l0 | rman_l1
-#   mig_rman_L1F    L1F backup+restore + import + postchecks + validate    → tag: rman_l1f
+#   mig_rman_l0_l1  L0 baseline + L1 incremental backup+restore            → tags: rman_l0 | rman_l1
+#   mig_rman_l1f    L1F backup+restore + import + postchecks + validate    → tag: rman_l1f
 #
 # Variables : vars/m5_migration/mig_vars.yml
 # Passwords : vars/m5_migration/mig_vault.yml   (ansible-vault encrypted)
@@ -115,7 +115,7 @@
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Stage 2 — RMAN L0 (baseline) + L1 (incremental, repeat)
-# Role : mig_rman_L0_L1
+# Role : mig_rman_l0_l1
 # Tags : rman_l0 | rman_l1
 # Downtime: NONE
 # ══════════════════════════════════════════════════════════════════════════════
@@ -129,7 +129,7 @@
   vars:
     rman_level: L0
   roles:
-    - role: mig_rman_L0_L1
+    - role: mig_rman_l0_l1
       tags: [rman_l0]
 
 - name: "RMAN L1 — Incremental Backup + Restore"
@@ -141,12 +141,12 @@
   vars:
     rman_level: L1
   roles:
-    - role: mig_rman_L0_L1
+    - role: mig_rman_l0_l1
       tags: [rman_l1]
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Stage 3 — L1F final backup + restore + import + postchecks
-# Role : mig_rman_L1F
+# Role : mig_rman_l1f
 # Tag  : rman_l1f
 #
 # ⚠ DOWNTIME WINDOW — run during maintenance window
@@ -182,7 +182,7 @@
       run_once: true
 
   roles:
-    - role: mig_rman_L1F
+    - role: mig_rman_l1f
       tags: [rman_l1f]
 
 - name: "⚠ DOWNTIME — L1F Restore + Import + Postchecks on destination"
@@ -194,7 +194,7 @@
   vars:
     rman_level: L1F
   roles:
-    - role: mig_rman_L1F
+    - role: mig_rman_l1f
       tags: [rman_l1f]
 
 # ── Mark cutover complete (done_dir lives on the source host) ─────────────────
