@@ -297,8 +297,8 @@ ok: [primary-db] => (item={'src': '/tmp/ansible/scripts/primary.pfile', 'dest': 
 ok: [primary-db] => (item={'src': '/u01/product/19.3.0.0.0/database/dbs/orapworcl', 'dest': 'orapworcl'})
 
 TASK [dataguard_primary_config : Copy fetched files from control node to standby] *********************************************************************************************************************
-ok: [primary-db -> standby-db(129.40.76.242)] => (item={'src': 'orapworcl', 'mode': '0640'})
-ok: [primary-db -> standby-db(129.40.76.242)] => (item={'src': 'standby.pfile', 'mode': '0644'})
+ok: [primary-db -> standby-db(dbhost)] => (item={'src': 'orapworcl', 'mode': '0640'})
+ok: [primary-db -> standby-db(dbhost)] => (item={'src': 'standby.pfile', 'mode': '0644'})
 
 TASK [dataguard_standby_config : Run initialization tasks] ********************************************************************************************************************************************
 skipping: [primary-db]

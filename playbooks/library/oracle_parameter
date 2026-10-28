@@ -51,8 +51,9 @@ options:
         default: present
         choices: ['present','absent','reset']
 notes:
-    - cx_Oracle needs to be installed
-requirements: [ "cx_Oracle","re" ]
+    - oracledb needs to be installed
+    - Uses Thin mode by default, which requires no Oracle client installation
+requirements: [ "oracledb","re" ]
 author: Mikael Sandström, oravirt@gmail.com, @oravirt
 '''
 
@@ -70,11 +71,11 @@ oracle_parameter: hostname=remote-db-server service_name=orcl user=system passwo
 '''
 import re
 try:
-    import cx_Oracle
+    import oracledb
 except ImportError:
-    cx_oracle_exists = False
+    oracledb_exists = False
 else:
-    cx_oracle_exists = True
+    oracledb_exists = True
 
 
 # Check if the parameter exists
@@ -98,9 +99,8 @@ def check_parameter_exists(module, mode, msg, cursor, name):
     try:
             cursor.execute(sql)
             result = (cursor.fetchone())
-    except cx_Oracle.DatabaseError as exc:
-            error, = exc.args
-            msg = error.message+ 'sql: ' + sql
+    except oracledb.DatabaseError as exc:
+            msg = str(exc) + ' sql: ' + sql
             return False
 
     if result:
@@ -146,9 +146,8 @@ def modify_parameter(module, mode, msg, cursor, name, value, comment, scope, sid
     sql += 'scope=%s sid=\'%s\'' % (scope,sid)
     try:
         cursor.execute(sql)
-    except cx_Oracle.DatabaseError as exc:
-        error, = exc.args
-        msg = 'Blergh, something went wrong while changing the value - %s sql: %s' % (error.message, sql)
+    except oracledb.DatabaseError as exc:
+        msg = 'Blergh, something went wrong while changing the value - %s sql: %s' % (str(exc), sql)
         module.fail_json(msg=msg, changed=False)
 
     name = clean_string(name)
@@ -193,7 +192,7 @@ def reset_parameter(module, mode, msg, cursor, name, value, comment, scope, sid)
 
     try:
         cursor.execute(sql)
-    except cx_Oracle.DatabaseError as exc:
+    except oracledb.DatabaseError as exc:
         error, = exc.args
         if error.code == 32010:
             name = clean_string(name)
@@ -201,7 +200,7 @@ def reset_parameter(module, mode, msg, cursor, name, value, comment, scope, sid)
             module.exit_json(msg=msg, changed=False)
             return True
 
-        msg = 'Blergh, something went wrong while resetting the parameter - %s sql: %s' % (error.message, sql)
+        msg = 'Blergh, something went wrong while resetting the parameter - %s sql: %s' % (str(exc), sql)
         return False
 
     name = clean_string(name)
@@ -230,9 +229,8 @@ def get_curr_value(module, mode, msg, cursor, name, scope):
         cursor.execute(sql)
         result = (cursor.fetchall()[0][0])
 
-    except cx_Oracle.DatabaseError as exc:
-        error, = exc.args
-        msg = 'Blergh, something went wrong while getting current value - %s sql: %s' % (error.message, sql)
+    except oracledb.DatabaseError as exc:
+        msg = 'Blergh, something went wrong while getting current value - %s sql: %s' % (str(exc), sql)
         module.fail_json(msg=msg, changed=False)
 
     return result
@@ -275,35 +273,34 @@ def main():
 
 
 
-    if not cx_oracle_exists:
-        module.fail_json(msg="The cx_Oracle module is required. 'pip install cx_Oracle' should do the trick. If cx_Oracle is installed, make sure ORACLE_HOME & LD_LIBRARY_PATH is set")
+    if not oracledb_exists:
+        module.fail_json(msg="The oracledb module is required. 'pip install oracledb' should do the trick. Thin mode is used by default and requires no Oracle client installation.")
 
     wallet_connect = '/@%s' % service_name
     try:
         if (not user and not password ): # If neither user or password is supplied, the use of an oracle wallet is assumed
             if mode == 'sysdba':
                 connect = wallet_connect
-                conn = cx_Oracle.connect(wallet_connect, mode=cx_Oracle.SYSDBA)
+                conn = oracledb.connect(dsn=wallet_connect, mode=oracledb.SYSDBA)
             else:
                 connect = wallet_connect
-                conn = cx_Oracle.connect(wallet_connect)
+                conn = oracledb.connect(dsn=wallet_connect)
 
         elif (user and password ):
             if mode == 'sysdba':
-                dsn = cx_Oracle.makedsn(host=hostname, port=port, service_name=service_name)
+                dsn = oracledb.makedsn(host=hostname, port=port, service_name=service_name)
                 connect = dsn
-                conn = cx_Oracle.connect(user, password, dsn, mode=cx_Oracle.SYSDBA)
+                conn = oracledb.connect(user=user, password=password, dsn=dsn, mode=oracledb.SYSDBA)
             else:
-                dsn = cx_Oracle.makedsn(host=hostname, port=port, service_name=service_name)
+                dsn = oracledb.makedsn(host=hostname, port=port, service_name=service_name)
                 connect = dsn
-                conn = cx_Oracle.connect(user, password, dsn)
+                conn = oracledb.connect(user=user, password=password, dsn=dsn)
 
         elif (not(user) or not(password)):
-            module.fail_json(msg='Missing username or password for cx_Oracle')
+            module.fail_json(msg='Missing username or password for oracledb')
 
-    except cx_Oracle.DatabaseError as exc:
-        error, = exc.args
-        msg = 'Could not connect to database - %s, connect descriptor: %s' % (error.message, connect)
+    except oracledb.DatabaseError as exc:
+        msg = 'Could not connect to database - %s, connect descriptor: %s' % (str(exc), connect)
         module.fail_json(msg=msg, changed=False)
 
     cursor = conn.cursor()
