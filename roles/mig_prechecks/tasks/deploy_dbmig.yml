@@ -1,0 +1,137 @@
+---
+# roles/mig_prechecks/tasks/deploy_dbmig.yml
+# Deploy DBMIG 5.1 on source AND create identical directory structure on destination.
+# Source: m5_deploy_dbmig role tasks (create_directories, deploy_dbmig_zip, configure_properties)
+# Guide Section 4.8
+# Runs on: source host (delegates directory creation and ZIP copy to destination)
+
+# ── Create M5 directory tree on source ────────────────────────────────────────
+- name: "[prechecks:dbmig] Create M5 directory tree on source"
+  ansible.builtin.file:
+    path:  "{{ item }}"
+    state: directory
+    owner: oracle
+    group: oinstall
+    mode:  '0755'
+  loop:
+    - "{{ m5_workdir }}"
+    - "{{ m5_workdir }}/cmd"
+    - "{{ m5_workdir }}/log"
+    - "{{ m5_workdir }}/done"
+    - "{{ m5_dumpdir }}"
+    - "{{ m5_backupdir }}"
+
+# ── Create IDENTICAL directory tree on destination (DBMIG needs same paths) ───
+- name: "[prechecks:dbmig] Create M5 directory tree on destination (same paths)"
+  ansible.builtin.file:
+    path:  "{{ item }}"
+    state: directory
+    owner: oracle
+    group: oinstall
+    mode:  '0755'
+  loop:
+    - "{{ m5_workdir }}"
+    - "{{ m5_workdir }}/cmd"
+    - "{{ m5_workdir }}/log"
+    - "{{ m5_workdir }}/done"
+    - "{{ m5_dumpdir }}"
+    - "{{ m5_backupdir }}"
+  delegate_to: "{{ groups['mig_destination'][0] }}"
+
+# ── DBMIG ZIP must be staged locally before deployment ────────────────────────
+# DBMIG.zip is Oracle-proprietary and is NOT shipped with this collection —
+# download it per KA Doc 2999157.1 step 1.2 and place it in roles/mig_prechecks/files/.
+- name: "[prechecks:dbmig] Check DBMIG ZIP is staged on the controller"
+  ansible.builtin.stat:
+    path: "{{ role_path }}/files/{{ dbmig_zip }}"
+  register: dbmig_zip_staged
+  delegate_to: localhost
+  become: false
+  run_once: true
+
+- name: "[prechecks:dbmig] Assert DBMIG ZIP is staged on the controller"
+  ansible.builtin.assert:
+    that: dbmig_zip_staged.stat.exists
+    fail_msg: >
+      {{ role_path }}/files/{{ dbmig_zip }} not found.
+      Download DBMIG.zip from MOS per KA Doc 2999157.1 ("1. Preparation" —
+      md5sum 24b5acb9e7cbe600de7547faf1e86962) and place it at that path
+      (see roles/mig_prechecks/files/README.md) before re-running prechecks.
+    success_msg: "DBMIG ZIP staged: {{ role_path }}/files/{{ dbmig_zip }} ✓"
+  run_once: true
+
+# ── DBMIG ZIP: copy to both hosts, unzip ─────────────────────────────────────
+- name: "[prechecks:dbmig] Copy DBMIG ZIP to source"
+  ansible.builtin.copy:
+    src:   "{{ role_path }}/files/{{ dbmig_zip }}"
+    dest:  "{{ m5_workdir }}/{{ dbmig_zip }}"
+    owner: oracle
+    group: oinstall
+    mode:  '0640'
+
+- name: "[prechecks:dbmig] Unzip DBMIG on source"
+  ansible.builtin.shell: |
+    cd {{ m5_workdir }}
+    unzip -o {{ dbmig_zip }} 2>&1
+    echo "Unzip rc: $?"
+  register: dbmig_unzip_src
+
+- name: "[prechecks:dbmig] Copy DBMIG ZIP to destination"
+  ansible.builtin.copy:
+    src:   "{{ role_path }}/files/{{ dbmig_zip }}"
+    dest:  "{{ m5_workdir }}/{{ dbmig_zip }}"
+    owner: oracle
+    group: oinstall
+    mode:  '0640'
+  delegate_to: "{{ groups['mig_destination'][0] }}"
+
+- name: "[prechecks:dbmig] Unzip DBMIG on destination"
+  ansible.builtin.shell: |
+    cd {{ m5_workdir }}
+    unzip -o {{ dbmig_zip }} 2>&1
+    echo "Unzip rc: $?"
+  delegate_to: "{{ groups['mig_destination'][0] }}"
+  register: dbmig_unzip_dst
+
+# ── Verify and make scripts executable ───────────────────────────────────────
+- name: "[prechecks:dbmig] Assert dbmig_driver_m5.sh exists on source"
+  ansible.builtin.stat:
+    path: "{{ m5_workdir }}/dbmig_driver_m5.sh"
+  register: dbmig_driver_stat
+  failed_when: not dbmig_driver_stat.stat.exists
+
+- name: "[prechecks:dbmig] Make DBMIG scripts executable on source"
+  ansible.builtin.shell: "chmod 750 {{ m5_workdir }}/*.sh"
+  failed_when: false
+
+- name: "[prechecks:dbmig] Make DBMIG scripts executable on destination"
+  ansible.builtin.shell: "chmod 750 {{ m5_workdir }}/*.sh"
+  delegate_to: "{{ groups['mig_destination'][0] }}"
+  failed_when: false
+
+# ── Render dbmig_driver.properties (deployed to cmd/ subdir) ─────────────────
+- name: "[prechecks:dbmig] Render dbmig_driver.properties from template"
+  ansible.builtin.template:
+    src:   dbmig_driver.properties.j2
+    dest:  "{{ m5_workdir }}/cmd/dbmig_driver.properties"
+    owner: oracle
+    group: oinstall
+    mode:  '0640'
+
+# ── Write tablespace list file (used by dbmig_driver_m5.sh) ──────────────────
+# MOS Doc 2999157.1 Appendix Section 2 + step 1.5:
+# Format MUST be comma-separated on a SINGLE line — e.g. TS1,TS2,TS3
+- name: "[prechecks:dbmig] Write tablespace list file (cmd/dbmig_ts_list.txt)"
+  ansible.builtin.copy:
+    content: "{{ m5_tablespace_list_items | join(',') }}\n"
+    dest:    "{{ m5_workdir }}/cmd/dbmig_ts_list.txt"
+    owner:   oracle
+    group:   oinstall
+    mode:    '0644'
+
+- name: "[prechecks:dbmig] Display properties file path"
+  ansible.builtin.debug:
+    msg: >
+      DBMIG deployed to {{ m5_workdir }}/
+      Properties: {{ m5_workdir }}/cmd/dbmig_driver.properties
+      TS list    : {{ m5_workdir }}/cmd/dbmig_ts_list.txt

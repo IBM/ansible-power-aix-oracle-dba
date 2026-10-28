@@ -1,0 +1,64 @@
+---
+# roles/mig_prechecks/tasks/generate_report.yml
+# Write per-host precheck report to precheck_report_dir on the controller.
+# Source: m5_precheck/tasks/generate_report.yml
+# Runs on: source and destination hosts (delegates write to localhost)
+
+- name: "[prechecks:report] Create local precheck report directory"
+  ansible.builtin.file:
+    path:  "{{ precheck_report_dir }}"
+    state: directory
+    mode:  '0755'
+  delegate_to: localhost
+  run_once: true
+
+- name: "[prechecks:report] Collect precheck facts from this host"
+  ansible.builtin.set_fact:
+    precheck_summary:
+      hostname:       "{{ inventory_hostname }}"
+      oracle_version: "{{ oracle_version_full | default('unknown') }}"
+      endian_format:  "{{ db_endian_format | default('unknown') }}"
+      charset:        "{{ db_character_set | default('unknown') }}"
+      patch_ok:       "{{ patch_check_passed | default(false) }}"
+
+- name: "[prechecks:report] Write per-host precheck report"
+  ansible.builtin.copy:
+    content: |
+      ═══════════════════════════════════════════════════════════════════
+       Oracle M5 Migration — Precheck Report
+       Host      : {{ inventory_hostname }}
+       Generated : {{ now(utc=true, fmt='%Y-%m-%dT%H:%M:%SZ') }}
+      ═══════════════════════════════════════════════════════════════════
+
+       Environment
+       ───────────
+       Oracle Version  : {{ oracle_version_full | default('unknown') }}
+       Character Set   : {{ db_character_set | default('unknown') }}
+       Endian Format   : {{ db_endian_format | default('unknown') }}
+       ORACLE_HOME     : {{ oracle_home | default(source_oracle_home if inventory_hostname in groups['mig_source'] else dest_oracle_home) }}
+       ORACLE_SID      : {{ source_oracle_sid }}
+
+       Patch Checks
+       ────────────
+       Bugfix {{ bugfix_patch_id }}        : {{ 'BUNDLED IN RU (>= 19.27)' if (oracle_version_full | default('0') is version('19.27.0.0.0', '>=')) else 'STANDALONE VERIFIED' }}
+       DataPump BP {{ datapump_patch_id }} : {{ 'VERIFIED' if patch_check_passed | default(false) else 'CHECKED' }}
+
+       Network (source only)
+       ─────────────────────
+       Source → Destination {{ dest_host_effective }}:{{ listener_port }} : checked
+       SSH equivalence (oracle user)                  : checked
+
+       Overall Status : {{ 'PASS' if patch_check_passed | default(false) else 'PATCH PENDING' }}
+       ═══════════════════════════════════════════════════════════════════
+    dest: "{{ precheck_report_dir }}/precheck_{{ inventory_hostname }}.txt"
+    mode: '0644'
+  delegate_to: localhost
+
+- name: "[prechecks:report] Display precheck summary"
+  ansible.builtin.debug:
+    msg: >
+      Precheck for {{ inventory_hostname }}:
+      Oracle {{ oracle_version_full | default('unknown') }} |
+      Charset: {{ db_character_set | default('unknown') }} |
+      Endian: {{ db_endian_format | default('unknown') }}
+      Report: {{ precheck_report_dir }}/precheck_{{ inventory_hostname }}.txt

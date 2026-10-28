@@ -1,0 +1,8 @@
+---
+# playbooks/vars/m5_migration/mig_vault.yml
+# Encrypt with: ansible-vault encrypt vars/m5_migration/mig_vault.yml   (run from playbooks/)
+# Edit ALL passwords below before encrypting.
+
+vault_sys_password:      "YourSysPassword"
+# vault_system_password: SYSTEM user password (used for tablespace flip and expdp)
+vault_system_password:   "YourSystemPassword"

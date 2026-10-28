@@ -1,0 +1,114 @@
+---
+# roles/mig_rman_L0_L1/tasks/main.yml
+# ════════════════════════════════════════════════════════════════════════════════
+# Handles RMAN Level 0 (full baseline) and Level 1 (incremental) cycles.
+# Both levels share identical task flow: lock-check → backup → verify → restore → verify.
+#
+# Tags control which level runs:
+#   --tags rman_l0   → set rman_level: L0 in playbook vars
+#   --tags rman_l1   → set rman_level: L1 in playbook vars
+#
+# Backup runs on source host; restore runs on destination host.
+#
+# Idempotency gates (done_dir lives on the source host):
+#   L0: done_dir/rman_l0.done    — prevents accidental re-run of full baseline
+#   L1: no done-file gate        — L1 is intentionally repeatable (run daily)
+# ════════════════════════════════════════════════════════════════════════════════
+
+# ── Resolve runtime timeout ───────────────────────────────────────────────────
+- name: "[mig_rman_L0_L1] Resolve timeout for {{ rman_level }}"
+  ansible.builtin.set_fact:
+    rman_timeout: "{{ rman_timeout_l1 if rman_level == 'L1' else rman_timeout_l0 }}"
+    l0_already_done: false   # default; overridden below for L0 if done-file exists
+
+# ── L0 idempotency gate ───────────────────────────────────────────────────────
+# Runs on every host (delegates to the source host) so the fact is defined on
+# both source and destination — avoids "undefined variable" in block when conditions.
+- name: "[mig_rman_L0_L1] Check L0 done-file on source"
+  ansible.builtin.stat:
+    path: "{{ done_dir }}/rman_l0.done"
+  register: l0_done_stat
+  delegate_to: "{{ groups['mig_source'][0] }}"
+  when: rman_level == 'L0'
+
+- name: "[mig_rman_L0_L1] Set l0_already_done flag"
+  ansible.builtin.set_fact:
+    l0_already_done: "{{ l0_done_stat.stat.exists | default(false) }}"
+  when: rman_level == 'L0'
+
+- name: "[mig_rman_L0_L1] L0 already completed — skipping entire cycle"
+  ansible.builtin.debug:
+    msg: >
+      L0 baseline already completed (done-file exists).
+      Delete {{ done_dir }}/rman_l0.done to re-run.
+  when:
+    - rman_level == 'L0'
+    - l0_already_done | bool
+  run_once: true
+
+# ── BACKUP — source host ──────────────────────────────────────────────────────
+- name: "[mig_rman_L0_L1:backup] {{ rman_level }} backup phase"
+  when:
+    - inventory_hostname in groups['mig_source']
+    - not (rman_level == 'L0' and l0_already_done | bool)
+  block:
+    - ansible.builtin.include_tasks: check_lockfile.yml
+    - ansible.builtin.include_tasks: run_backup.yml
+    - ansible.builtin.include_tasks: verify_backup_log.yml
+    - ansible.builtin.include_tasks: get_restore_cmdfile.yml
+    - ansible.builtin.include_tasks: sync_backup_pieces.yml
+
+# ── RESTORE — destination host ────────────────────────────────────────────────
+- name: "[mig_rman_L0_L1:restore] {{ rman_level }} restore phase"
+  when:
+    - inventory_hostname in groups['mig_destination']
+    - not (rman_level == 'L0' and l0_already_done | bool)
+  block:
+    - ansible.builtin.include_tasks: run_restore.yml
+    - ansible.builtin.include_tasks: verify_restore_log.yml
+
+# ── Write L0 done-file on source (once, after backup+restore succeed) ─────────
+# IMPORTANT: this play targets "hosts: mig_source:mig_destination" as ONE combined
+# play (m5_migration.yml), not two separate plays. Ansible executes each
+# task in order across every host in the play before moving to the next task
+# — so by the time this task runs, both the backup block (source) and the
+# restore block (destination) have already executed or been skipped for
+# every host. That ordering is correct. But a task failure on ONE host
+# (e.g. restore failing on destination, which run_restore.yml properly
+# asserts on) only excludes THAT host from the rest of the play — it does
+# NOT stop other, unaffected hosts (source, whose backup already succeeded)
+# from continuing. The destination host is the one whose restore result
+# actually matters (its own assert would already have failed and removed it
+# from the play if the restore didn't succeed), so this is scoped to
+# inventory_hostname in groups['mig_destination'].
+#
+# NO run_once here — confirmed live this is actively wrong combined with a
+# "when" host-group check: run_once picks ONE host from the play first
+# (observed: the source host, x181vm226 — apparently just by being first in
+# "mig_source:mig_destination"), evaluates "when" against ONLY that host, and skips
+# the entire task if it doesn't match — it does NOT fall through to try
+# other hosts. So run_once + this guard together skipped the write on every
+# single run, even fully successful ones with zero failures (confirmed:
+# "skipping: [x181vm226]" on a run whose PLAY RECAP showed failed=0). The
+# "when" guard alone is sufficient here: groups['mig_destination'] has exactly
+# one host in this collection's topology, so the task naturally executes
+# exactly once — on the destination host, if and only if it's still active.
+- name: "[mig_rman_L0_L1] Write L0 done-file on source"
+  ansible.builtin.file:
+    path:  "{{ done_dir }}/rman_l0.done"
+    state: touch
+    mode:  '0644'
+  delegate_to: "{{ groups['mig_source'][0] }}"
+  when:
+    - rman_level == 'L0'
+    - not (l0_already_done | bool)
+    - inventory_hostname in groups['mig_destination']
+
+- name: "[mig_rman_L0_L1] {{ rman_level }} cycle COMPLETE"
+  ansible.builtin.debug:
+    msg: >
+      mig_rman_L0_L1 {{ rman_level }} cycle complete.
+      Restore cmdfile used: {{ hostvars[groups['mig_source'][0]]['restore_cmdfile'] | default('N/A') }}
+  when:
+    - not (rman_level == 'L0' and l0_already_done | bool)
+    - inventory_hostname in groups['mig_destination']

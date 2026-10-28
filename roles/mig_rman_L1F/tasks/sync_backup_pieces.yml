@@ -1,0 +1,151 @@
+---
+# roles/mig_rman_L1F/tasks/sync_backup_pieces.yml
+# Copy RMAN L1F backup pieces from source to destination using SSH/SCP.
+# Required when m5_backupdir is LOCAL disk on source (not an NFS share).
+#
+# KA MOS Doc 2999157.1 step 4.x: "If not using a shared NFS, copy the working
+# directory to the destination host." Mirrors mig_rman_L0_L1/sync_backup_pieces.yml —
+# the piece list comes from PARSING THE CURRENT RUN'S RESTORE CMDFILE (the exact
+# "RESTORE ... FROM BACKUPSET '<path>', ..." piece paths DBMIG generated for this
+# backup), not a directory-wide glob — m5_backupdir accumulates pieces from every
+# L0/L1/L1F cycle ever run, so a glob would re-find and re-copy old pieces too.
+#
+# Runs within the source-only play (m5_migration.yml Play 1) — destination-side
+# actions use delegate_to explicitly, matching this role's existing convention
+# (see capture_expdp_file.yml).
+# ════════════════════════════════════════════════════════════════════════════════
+
+- name: "[mig_rman_L1F:sync] Set sync_needed flag"
+  ansible.builtin.set_fact:
+    sync_needed: "{{ not (shared_filesystem | default(false) | bool) }}"
+
+- name: "[mig_rman_L1F:sync] Shared filesystem — backup copy skipped (shared_filesystem: YES)"
+  ansible.builtin.debug:
+    msg: >-
+      shared_filesystem is set to YES — shared storage assumed.
+      Destination reads {{ m5_backupdir }} directly. No copy needed.
+  when: not sync_needed | bool
+
+# ── Extract this run's exact backup piece list from the restore cmdfile ───────
+- name: "[mig_rman_L1F:sync] Read restore cmdfile ({{ restore_cmdfile }})"
+  ansible.builtin.slurp:
+    src: "{{ restore_cmdfile }}"
+  delegate_to: "{{ groups['mig_source'][0] }}"
+  register: restore_cmdfile_raw
+  when: sync_needed | bool
+
+- name: "[mig_rman_L1F:sync] Extract current-run backup piece paths from restore cmdfile"
+  # Excludes '%' from the captured path: the cmdfile also contains
+  # "ALLOCATE CHANNEL ... FORMAT '{{ m5_backupdir }}/L1F_%d_%N_%t_%s_%p'"
+  # lines (the RMAN format template, single-quoted, same path prefix) —
+  # without excluding '%', that literal template string itself gets
+  # captured as if it were a real backup piece. Real, resolved piece
+  # filenames never contain a literal '%' (RMAN substitutes those
+  # placeholders with actual values at backup time), so this reliably
+  # tells template lines apart from real piece paths.
+  ansible.builtin.set_fact:
+    current_run_pieces: >-
+      {{ (restore_cmdfile_raw.content | b64decode)
+         | regex_findall("'(" ~ (m5_backupdir ~ "/") | regex_escape ~ "[^'%]+)'")
+         | unique }}
+  when: sync_needed | bool
+
+- name: "[mig_rman_L1F:sync] Stat each current-run backup piece on source"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ current_run_pieces }}"
+  loop_control:
+    label: "{{ item | basename }}"
+  delegate_to: "{{ groups['mig_source'][0] }}"
+  register: current_run_piece_stats
+  when: sync_needed | bool
+
+- name: "[mig_rman_L1F:sync] Assert current-run backup pieces exist on source"
+  ansible.builtin.assert:
+    that:
+      - current_run_pieces | length > 0
+      - current_run_piece_stats.results | default([]) | rejectattr('stat.exists') | list | length == 0
+    fail_msg: >
+      {{ 'No backup piece paths found in ' + restore_cmdfile + ' (cmdfile parsing may need review).'
+         if current_run_pieces | length == 0
+         else 'Missing on source: ' ~ (current_run_piece_stats.results | rejectattr('stat.exists') | map(attribute='item') | list) }}
+      Check DBMIG backup completed cleanly:
+        cat {{ m5_workdir }}/log/rman_mig_bkp.log
+    success_msg: >
+      Found {{ current_run_pieces | length }} L1F backup piece(s) referenced by the
+      current cmdfile, totalling
+      {{ (current_run_piece_stats.results | map(attribute='stat.size') | sum / 1024 / 1024 / 1024) | round(1) }} GB.
+  when: sync_needed | bool
+
+- name: "[mig_rman_L1F:sync] Show transfer plan"
+  ansible.builtin.debug:
+    msg: >-
+      Transferring {{ current_run_pieces | length }} L1F backup pieces
+      ({{ (current_run_piece_stats.results | map(attribute='stat.size') | sum / 1024 / 1024 / 1024) | round(1) }} GB)
+      referenced by {{ restore_cmdfile | basename }}
+      from {{ hostvars[groups['mig_source'][0]].ansible_host }}:{{ m5_backupdir }}/
+      → {{ dest_host_effective }}:{{ m5_backupdir }}/
+      using scp from source (oracle SSH equivalence).
+  when: sync_needed | bool
+
+# ── Ensure backup dir exists on destination (via ssh from source) ─────────────
+- name: "[mig_rman_L1F:sync] Ensure backup directory exists on destination"
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes \
+        -o StrictHostKeyChecking=no \
+        -o ConnectTimeout=30 \
+        {{ dest_user }}@{{ dest_host_effective }} \
+        "mkdir -p {{ m5_backupdir }} && chmod 750 {{ m5_backupdir }}"
+  delegate_to: "{{ groups['mig_source'][0] }}"
+  changed_when: false
+  failed_when: false
+  when: sync_needed | bool
+
+# ── SCP backup pieces: source → destination ───────────────────────────────────
+- name: "[mig_rman_L1F:sync] SCP L1F backup pieces to destination (timeout={{ scp_transfer_timeout }}s)"
+  ansible.builtin.shell: |
+    set -e
+    echo "Starting scp of {{ current_run_pieces | length }} L1F piece(s) (from {{ restore_cmdfile | basename }}) to {{ dest_user }}@{{ dest_host_effective }}:{{ m5_backupdir }}/"
+    scp -B -p \
+        -o StrictHostKeyChecking=no \
+        -o ConnectTimeout=30 \
+        -o ServerAliveInterval=60 \
+        -o ServerAliveCountMax=10 \
+        {{ current_run_pieces | map('quote') | join(' ') }} \
+        {{ dest_user }}@{{ dest_host_effective }}:{{ m5_backupdir }}/
+    RC=$?
+    echo "scp exit code: ${RC}"
+    exit ${RC}
+  delegate_to: "{{ groups['mig_source'][0] }}"
+  async:  "{{ scp_transfer_timeout | int }}"
+  poll:   "{{ rman_poll | int }}"
+  register: scp_result
+  when: sync_needed | bool
+
+- name: "[mig_rman_L1F:sync] SCP transfer complete"
+  ansible.builtin.debug:
+    msg: "SCP transfer finished. rc={{ scp_result.rc | default(0) }}"
+  when: sync_needed | bool
+
+# ── Verify each current-run piece arrived on destination ──────────────────────
+- name: "[mig_rman_L1F:sync] Verify current-run backup pieces arrived on destination"
+  ansible.builtin.stat:
+    path: "{{ m5_backupdir }}/{{ item | basename }}"
+  loop: "{{ current_run_pieces }}"
+  loop_control:
+    label: "{{ item | basename }}"
+  delegate_to: "{{ groups['mig_destination'][0] }}"
+  register: dest_piece_stats
+  when: sync_needed | bool
+
+- name: "[mig_rman_L1F:sync] Assert all current-run backup pieces present on destination"
+  ansible.builtin.assert:
+    that: dest_piece_stats.results | default([]) | rejectattr('stat.exists') | list | length == 0
+    fail_msg: >
+      Backup piece(s) missing on destination after SCP:
+      {{ dest_piece_stats.results | rejectattr('stat.exists') | map(attribute='item') | map('basename') | list }}
+      SSH from source: ssh oracle@{{ dest_host_effective }} ls {{ m5_backupdir }}/
+    success_msg: >
+      All {{ current_run_pieces | length }} L1F backup pieces from the current run
+      verified on destination {{ dest_host_effective }}:{{ m5_backupdir }}/
+  when: sync_needed | bool

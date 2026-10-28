@@ -1,0 +1,101 @@
+---
+# roles/mig_prechecks/tasks/patch_apply_dest.yml
+# CHECK ONLY — assert mandatory patches are already applied on destination.
+# No installation is performed. Apply patches manually before running prechecks.
+# Runs on: destination host (AIX Power)
+#
+# Patches checked:
+#   1. DataPump Bundle Patch 38170982 — mandatory on both hosts per KA Doc 2999157.1.
+#      This is a standalone bundle patch across all 19c versions.
+#
+#   2. Bugfix 35564253 (RMAN cross-platform restore fix) — mandatory per KA Doc 2999157.1.
+#      BUNDLED into the RU from 19.27.0.0.250415 (April 2025 RU) onwards.
+#        version >= 19.27 → already in the RU, no OPatch check needed.
+#        version <  19.27 → must be applied as standalone patch — assert via OPatch.
+
+- name: "[prechecks:patch:dst] Collect OPatch inventory on destination"
+  ansible.builtin.shell: |
+    {{ dest_oracle_home }}/OPatch/opatch lsinventory -oh {{ dest_oracle_home }} 2>&1
+  register: opatch_inv_dst
+  changed_when: false
+  failed_when: false
+
+# ── DataPump Bundle Patch 38170982 (mandatory on all versions) ────────────────
+- name: "[prechecks:patch:dst] Assert DataPump BP {{ datapump_patch_id }} is applied on destination"
+  ansible.builtin.assert:
+    that: datapump_patch_id in opatch_inv_dst.stdout
+    fail_msg: >
+      DataPump Bundle Patch {{ datapump_patch_id }} NOT found on destination {{ inventory_hostname }}.
+      Download it from My Oracle Support and apply it manually before running
+      migration:
+        cd <patch_staging_dir>/{{ datapump_patch_id }}
+        $ORACLE_HOME/OPatch/opatch apply -silent
+        $ORACLE_HOME/OPatch/datapatch -verbose
+    success_msg: "DataPump BP {{ datapump_patch_id }} confirmed on destination {{ inventory_hostname }} ✓"
+
+# ── Bugfix 35564253 — conditional on version < 19.27 ─────────────────────────
+- name: "[prechecks:patch:dst] Bugfix {{ bugfix_patch_id }} bundled in RU >= 19.27 — skipping OPatch check"
+  ansible.builtin.debug:
+    msg: >
+      Destination Oracle {{ dst_oracle_version_full }} >= 19.27: bugfix {{ bugfix_patch_id }}
+      is already included in the installed RU. No standalone OPatch check required.
+  when: dst_oracle_version_full is version('19.27.0.0.0', '>=')
+
+- name: "[prechecks:patch:dst] Assert bugfix {{ bugfix_patch_id }} is applied as standalone patch (version < 19.27)"
+  ansible.builtin.assert:
+    that: bugfix_patch_id in opatch_inv_dst.stdout
+    fail_msg: >
+      Bugfix {{ bugfix_patch_id }} NOT found on destination {{ inventory_hostname }}.
+      Oracle {{ dst_oracle_version_full }} is below 19.27 — this fix is NOT bundled in your RU.
+      You must resolve this before proceeding. Two options:
+        Option A (Recommended): Upgrade to Oracle 19.27 (April 2025 RU) or later.
+                                 The fix is included in the RU from 19.27 onwards.
+        Option B: Apply standalone patch {{ bugfix_patch_id }} to {{ dest_oracle_home }}:
+                    cd <patch_staging_dir>/{{ bugfix_patch_id }}
+                    $ORACLE_HOME/OPatch/opatch apply -silent
+    success_msg: >
+      Bugfix {{ bugfix_patch_id }} confirmed on destination (standalone patch) ✓
+  when: dst_oracle_version_full is version('19.27.0.0.0', '<')
+
+# ── Bugfix 30817822 — required on destination when source uses TDE ───────────
+# Bundled in RU 19.20.0.0.0 and above; must be a standalone patch below that.
+- name: "[prechecks:patch:dst] TDE bugfix {{ tde_bugfix_patch_id }} bundled in RU >= {{ tde_bundled_min_version }} — skipping"
+  ansible.builtin.debug:
+    msg: >
+      Source uses TDE and destination Oracle {{ dst_oracle_version_full }} >= {{ tde_bundled_min_version }}:
+      bugfix {{ tde_bugfix_patch_id }} is already included in the installed RU.
+  when:
+    - hostvars[groups['mig_source'][0]]['tde_in_use'] | default(false)
+    - dst_oracle_version_full is version(tde_bundled_min_version, '>=')
+
+- name: "[prechecks:patch:dst] Assert TDE bugfix {{ tde_bugfix_patch_id }} is applied (source uses TDE, dest RU < {{ tde_bundled_min_version }})"
+  ansible.builtin.assert:
+    that: tde_bugfix_patch_id in opatch_inv_dst.stdout
+    fail_msg: >
+      Source database uses TDE and destination Oracle {{ dst_oracle_version_full }} is below
+      {{ tde_bundled_min_version }} — bugfix {{ tde_bugfix_patch_id }} is NOT bundled in your RU.
+      KA Doc 2999157.1 prerequisites require this fix on the destination when TDE is used on source.
+      Apply it manually:
+        cd <patch_staging_dir>/{{ tde_bugfix_patch_id }}
+        $ORACLE_HOME/OPatch/opatch apply -silent
+    success_msg: >
+      TDE bugfix {{ tde_bugfix_patch_id }} confirmed on destination (standalone patch) ✓
+  when:
+    - hostvars[groups['mig_source'][0]]['tde_in_use'] | default(false)
+    - dst_oracle_version_full is version(tde_bundled_min_version, '<')
+
+# ── Bugfix 35675516 — required on destination when migrating from a standby ──
+- name: "[prechecks:patch:dst] Assert standby-source bugfix {{ stdby_bugfix_patch_id }} is applied (BKP_FROM_STDBY=1)"
+  ansible.builtin.assert:
+    that: stdby_bugfix_patch_id in opatch_inv_dst.stdout
+    fail_msg: >
+      bkp_from_stdby=1 (migrating from a physical standby) but bugfix {{ stdby_bugfix_patch_id }}
+      was NOT found on destination {{ inventory_hostname }}.
+      KA Doc 2999157.1 prerequisites: "If using physical standby database as a migration source,
+      fix for bug {{ stdby_bugfix_patch_id }} is required for your destination database."
+      Apply it manually:
+        cd <patch_staging_dir>/{{ stdby_bugfix_patch_id }}
+        $ORACLE_HOME/OPatch/opatch apply -silent
+    success_msg: >
+      Standby-source bugfix {{ stdby_bugfix_patch_id }} confirmed on destination ✓
+  when: bkp_from_stdby | default(0) | int == 1

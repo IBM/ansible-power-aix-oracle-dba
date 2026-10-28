@@ -9,7 +9,7 @@ readme: "README.md"
 authors:
   - "Shiva Laveti <shiva.laveti@ibm.com>"
   - "Naved Afroz <naved.afroz1@ibm.com>"
-
+  - "Sudhindra Kumasagi <sudhindra.kumasagi@ibm.com>"
 license:
   - "Apache-2.0"
 
@@ -24,7 +24,8 @@ tags:
     dba
   ]
 
-dependencies: {}
+dependencies:
+  ansible.posix: ">=1.4.0"   # authorized_key — M5 migration prechecks
 
 repository: "https://github.com/IBM/ansible-power-aix-oracle-dba"
 

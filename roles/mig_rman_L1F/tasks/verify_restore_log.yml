@@ -1,0 +1,46 @@
+---
+# roles/mig_rman_L1F/tasks/verify_restore_log.yml
+# Scan RMAN restore log for RMAN-/ORA- errors after restore completes.
+# Runs on destination host.
+#
+# Uses current_restore_log — the deterministic path run_restore.yml derives
+# from the cmdfile's own name (which is what DBMIG's internal SPOOL command
+# actually writes to). Previously this searched for "restore_{{ rman_level }}_
+# {{ source_oracle_sid }}_*.log" and picked whichever matched was newest by mtime —
+# that happened to usually land on the right file, but only by luck of write
+# timing, not by design.
+
+- name: "[mig_rman_L1F:restore] Scan restore log for errors"
+  ansible.builtin.shell: >
+    egrep -i "RMAN-|ORA-" {{ current_restore_log }}
+  delegate_to: "{{ groups['mig_destination'][0] }}"
+  register: restore_errors
+  changed_when: false
+  failed_when: false
+
+- name: "[mig_rman_L1F:restore] Display restore errors"
+  ansible.builtin.debug:
+    msg: "RESTORE ERRORS:\n{{ restore_errors.stdout_lines }}"
+  when: restore_errors.stdout | length > 0
+
+# Drop known-benign informational lines (e.g. ORA-28002 password-expiry
+# notice) before deciding pass/fail — see rman_log_benign_patterns in
+# playbooks/vars/m5_migration/mig_vars.yml for why this exists.
+- name: "[mig_rman_L1F:restore] Filter out known-benign informational lines"
+  ansible.builtin.set_fact:
+    restore_critical_lines: >-
+      {{ restore_errors.stdout_lines
+         | reject('search', rman_log_benign_patterns | join('|'))
+         | list }}
+  when: restore_errors.stdout | length > 0
+
+- name: "[mig_rman_L1F:restore] Assert no critical restore errors"
+  ansible.builtin.assert:
+    that: >
+      restore_critical_lines | select('search', 'RMAN-') | list | length == 0 and
+      restore_critical_lines | select('search', 'ORA-') | list | length == 0
+    fail_msg: >
+      RMAN {{ rman_level }} restore log contains errors.
+      Review: {{ current_restore_log }}
+    success_msg: "RMAN {{ rman_level }} restore log clean — no errors (WARN- / known-benign only)."
+  when: restore_errors.stdout | length > 0

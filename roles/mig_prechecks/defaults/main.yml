@@ -1,0 +1,35 @@
+---
+# roles/mig_prechecks/defaults/main.yml
+
+# Disk thresholds
+min_disk_gb_source:    500
+min_disk_gb_dest:      400
+min_memory_gb:         16
+
+# Patch defaults (override from mig_vars.yml)
+# bugfix_patch_id (35564253): mandatory on the DESTINATION only per KA Doc 2999157.1
+# ("Ensure to have fix for bug 35564253 applied on your destination database").
+bugfix_patch_id:       "35564253"
+
+# tde_bugfix_patch_id (30817822): required on the DESTINATION only when the source
+# database uses TDE. Already bundled in RU 19.20.0.0.0 and above.
+tde_bugfix_patch_id:      "30817822"
+tde_bundled_min_version:  "19.20.0.0.0"
+
+# stdby_bugfix_patch_id (35675516): required on the DESTINATION only when migrating
+# from a physical standby (BKP_FROM_STDBY=1).
+stdby_bugfix_patch_id: "35675516"
+
+# Absolute floor for the COMPATIBLE parameter on both source and destination,
+# independent of the relative dest>=src check (KA "Migration process explained" note 5).
+min_compatible_version: "19.0.0.0.0"
+
+# Marker touched manually on the SOURCE host once the TDE keystore keys have been
+# exported from source and imported/activated on destination (KA Appendix Section 5).
+tde_keys_marker:       "{{ done_dir }}/tde_keys_transferred.done"
+
+# system_usr: KA recommends SYSTEM user for tablespace flip and expdp
+# (SYSTEM_USR in dbmig_driver.properties). NOTE: SYSTEM_USR is inherited in
+# the vendor script — NOT a user-modifiable property, hence a role default
+# rather than something in playbooks/vars/m5_migration/mig_vars.yml.
+system_usr:            SYSTEM

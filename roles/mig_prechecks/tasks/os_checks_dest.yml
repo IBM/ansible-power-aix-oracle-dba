@@ -1,0 +1,316 @@
+---
+# roles/mig_prechecks/tasks/os_checks_dest.yml
+# Pre-migration checks on the AIX destination host.
+# Assumption: Oracle 19c + Grid Infrastructure already installed and running.
+# Runs on: destination host (AIX Power)
+
+# ── System time ───────────────────────────────────────────────────────────────
+- name: "[prechecks:dst] Display system time"
+  ansible.builtin.command: "date"
+  register: dst_date
+  changed_when: false
+
+- name: "[prechecks:dst] Show system time"
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }} current time: {{ dst_date.stdout }}"
+
+# ── Oracle home and grid home exist ──────────────────────────────────────────
+- name: "[prechecks:dst] Verify dest_oracle_home exists"
+  ansible.builtin.stat:
+    path: "{{ dest_oracle_home }}/bin/oracle"
+  register: dst_oracle_bin
+
+- name: "[prechecks:dst] Assert dest_oracle_home is valid"
+  ansible.builtin.assert:
+    that: dst_oracle_bin.stat.exists
+    fail_msg: "Oracle binary not found at {{ dest_oracle_home }}/bin/oracle"
+    success_msg: "Oracle binary present at {{ dest_oracle_home }}"
+
+# dest_oracle_home_gi is Optional (ASM/Grid Infrastructure only) — a
+# plain-filesystem (JFS) destination with no ASM/GI leaves it blank, and
+# there's nothing to check in that case. Skip rather than hard-fail.
+- name: "[prechecks:dst] Verify GI home exists"
+  ansible.builtin.stat:
+    path: "{{ dest_oracle_home_gi }}/bin/crsctl"
+  register: dst_gi_bin
+  when: dest_oracle_home_gi | default('') | length > 0
+
+- name: "[prechecks:dst] Assert GI home is valid"
+  ansible.builtin.assert:
+    that: dst_gi_bin.stat.exists
+    fail_msg: "crsctl not found at {{ dest_oracle_home_gi }}/bin/crsctl — GI may not be installed"
+    success_msg: "GI binary present at {{ dest_oracle_home_gi }}"
+  when: dest_oracle_home_gi | default('') | length > 0
+
+# ── Destination DB is accessible ─────────────────────────────────────────────
+- name: "[prechecks:dst] Verify destination DB is open"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ dest_oracle_home }}
+    export ORACLE_SID={{ dest_oracle_sid_effective }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+      SELECT status FROM v$instance;
+      EXIT;
+    SQLEOF
+  register: dst_db_status
+  changed_when: false
+
+- name: "[prechecks:dst] Assert destination DB is OPEN"
+  ansible.builtin.assert:
+    that: "'OPEN' in dst_db_status.stdout | upper"
+    fail_msg: "Destination DB {{ dest_oracle_sid_effective }} is not OPEN (got: {{ dst_db_status.stdout | trim }})"
+    success_msg: "Destination DB {{ dest_oracle_sid_effective }} is OPEN"
+
+# ── Endian ────────────────────────────────────────────────────────────────────
+- name: "[prechecks:dst] Query platform endian format on destination"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ dest_oracle_home }}
+    export ORACLE_SID={{ dest_oracle_sid_effective }}
+    export PATH=${ORACLE_HOME}/bin:${PATH}
+    sqlplus -s '/ as sysdba' <<'EOF'
+    SET PAGESIZE 0 FEEDBACK OFF HEADING OFF TRIMSPOOL ON
+    SELECT endian_format FROM v$transportable_platform tp
+    JOIN v$database db ON tp.platform_name = db.platform_name;
+    EXIT;
+    EOF
+  register: dst_endian
+  changed_when: false
+
+- name: "[prechecks:dst] Assert destination is Big Endian (AIX Power)"
+  ansible.builtin.assert:
+    that: "'Big' in dst_endian.stdout"
+    fail_msg: "Destination must be Big Endian (AIX Power). Got: {{ dst_endian.stdout | trim }}"
+    success_msg: "Destination endian confirmed: Big (AIX Power)."
+
+- name: "[prechecks:dst] Set endian fact"
+  ansible.builtin.set_fact:
+    db_endian_format: "{{ dst_endian.stdout | trim }}"
+
+# ── Oracle version on destination ────────────────────────────────────────────
+- name: "[prechecks:dst] Query Oracle version on destination"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ dest_oracle_home }}
+    export ORACLE_SID={{ dest_oracle_sid_effective }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+      SELECT version_full FROM v$instance;
+      EXIT;
+    SQLEOF
+  register: dst_version
+  changed_when: false
+
+- name: "[prechecks:dst] Set dst_oracle_version_full fact"
+  ansible.builtin.set_fact:
+    dst_oracle_version_full: "{{ dst_version.stdout | trim }}"
+
+- name: "[prechecks:dst] Display destination Oracle version"
+  ansible.builtin.debug:
+    msg: "Destination Oracle version: {{ dst_oracle_version_full }}"
+
+# ── Minimum version — destination (KA note 1: minimum v19.18 on BOTH ends) ────
+- name: "[prechecks:dst] Assert Oracle version is 19c and >= 19.18 (KA minimum)"
+  ansible.builtin.assert:
+    that: dst_oracle_version_full is version('19.18.0.0.0', '>=')
+    fail_msg: >
+      Destination Oracle version {{ dst_oracle_version_full }} does NOT meet the minimum requirement.
+      KA Doc 2999157.1 requires Oracle >= 19.18.0.0.0 on both source and destination.
+      Current: {{ dst_oracle_version_full }}
+    success_msg: "Destination Oracle version {{ dst_oracle_version_full }} confirmed (>= 19.18, 19c) ✓"
+
+# ── ARCHIVELOG, compatible, charset, nchar, timezone, edition — destination ───
+- name: "[prechecks:dst] Query log mode, compatible, character sets, timezone, edition on destination"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ dest_oracle_home }}
+    export ORACLE_SID={{ dest_oracle_sid_effective }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+      SELECT log_mode FROM v$database;
+      SELECT value FROM v$parameter WHERE name='compatible';
+      SELECT value FROM nls_database_parameters WHERE parameter='NLS_CHARACTERSET';
+      SELECT value FROM nls_database_parameters WHERE parameter='NLS_NCHAR_CHARACTERSET';
+      SELECT version FROM v$timezone_file;
+      SELECT banner FROM v$version WHERE banner LIKE 'Oracle Database%';
+      EXIT;
+    SQLEOF
+  register: dst_meta
+  changed_when: false
+
+- name: "[prechecks:dst] Set destination DB facts (log_mode / compatible / charsets / timezone / edition)"
+  ansible.builtin.set_fact:
+    dst_log_mode:            "{{ dst_meta.stdout_lines[0] | trim }}"
+    dst_compatible:          "{{ dst_meta.stdout_lines[1] | trim }}"
+    dst_charset:             "{{ dst_meta.stdout_lines[2] | trim }}"
+    dst_nchar_charset:       "{{ dst_meta.stdout_lines[3] | trim }}"
+    dst_timezone_version:    "{{ dst_meta.stdout_lines[4] | trim }}"
+    dst_edition_banner:      "{{ dst_meta.stdout_lines[5] | trim }}"
+
+# See matching comment in os_checks_source.yml — pad to 5 components so
+# "19.0.0" and "19.0.0.0.0" compare as equal instead of the shorter one
+# losing purely on length.
+- name: "[prechecks:dst] Normalize destination compatible to 5 components"
+  ansible.builtin.set_fact:
+    dst_compatible_norm: "{{ (dst_compatible.split('.') + ['0','0','0','0','0'])[:5] | join('.') }}"
+
+- name: "[prechecks:dst] Destination DB metadata"
+  ansible.builtin.debug:
+    msg: >
+      {{ inventory_hostname }}: {{ dest_oracle_sid_effective }}
+      | LogMode={{ dst_log_mode }}
+      | Compatible={{ dst_compatible }}
+      | Charset={{ dst_charset }}
+      | NCharCharset={{ dst_nchar_charset }}
+      | TZVersion={{ dst_timezone_version }}
+      | Edition={{ dst_edition_banner }}
+
+# ── Enterprise Edition only (KA: "cannot be used with Standard Edition") ───────
+- name: "[prechecks:dst] Assert destination is Enterprise Edition"
+  ansible.builtin.assert:
+    that: "'Enterprise Edition' in dst_edition_banner"
+    fail_msg: >
+      Destination database edition is NOT Enterprise Edition ({{ dst_edition_banner }}).
+      KA Doc 2999157.1: cross platform migration via RMAN/Full Transportable is only
+      possible with Enterprise Edition.
+    success_msg: "Destination edition confirmed: Enterprise Edition ✓"
+
+# ── Absolute COMPATIBLE floor (independent of the src/dest relative check) ────
+- name: "[prechecks:dst] Assert destination compatible >= {{ min_compatible_version }}"
+  ansible.builtin.assert:
+    that: dst_compatible_norm is version(min_compatible_version, '>=')
+    fail_msg: >
+      Destination compatible={{ dst_compatible }} is below the minimum {{ min_compatible_version }}
+      required by KA Doc 2999157.1 ("Migration process explained", note 5).
+    success_msg: "Destination compatible {{ dst_compatible }} >= {{ min_compatible_version }} ✓"
+
+# ── Assert ARCHIVELOG on destination ─────────────────────────────────────────
+- name: "[prechecks:dst] Assert destination DB is in ARCHIVELOG mode"
+  ansible.builtin.assert:
+    that: dst_log_mode | upper == 'ARCHIVELOG'
+    fail_msg: >
+      DESTINATION DB is in {{ dst_log_mode }} mode!
+      RMAN cross-platform restore requires ARCHIVELOG mode.
+      Fix: SHUTDOWN IMMEDIATE; STARTUP MOUNT; ALTER DATABASE ARCHIVELOG; ALTER DATABASE OPEN;
+    success_msg: "Destination DB log mode: ARCHIVELOG ✓"
+
+# ── Assert compatible ≥ source compatible ─────────────────────────────────────
+# The destination compatible must be >= source to accept the transported data.
+# Compares the normalized (5-component) values — see comment above — so that
+# e.g. destination="19.0.0" and source="19.0.0.0.0" correctly compare as equal
+# instead of the destination losing purely because its string is shorter.
+- name: "[prechecks:dst] Assert destination compatible >= source compatible"
+  ansible.builtin.assert:
+    that: >
+      (dst_compatible | default('') | length > 0) and
+      (hostvars[groups['mig_source'][0]]['src_compatible'] | default('') | length > 0) and
+      (dst_compatible_norm is version(hostvars[groups['mig_source'][0]]['src_compatible_norm'], '>='))
+    fail_msg: >
+      Destination compatible={{ dst_compatible }} is LOWER than
+      source compatible={{ hostvars[groups['mig_source'][0]]['src_compatible'] }}.
+      Set compatible to {{ hostvars[groups['mig_source'][0]]['src_compatible'] }} or higher
+      on destination: ALTER SYSTEM SET compatible='{{ hostvars[groups['mig_source'][0]]['src_compatible'] }}' SCOPE=SPFILE;
+      Then restart the DB.
+    success_msg: >
+      Compatible OK: destination={{ dst_compatible }}
+      >= source={{ hostvars[groups['mig_source'][0]]['src_compatible'] }} ✓"
+
+# ── Assert character set matches source ──────────────────────────────────────
+# Character sets MUST match for Full Transportable. Mismatch = data corruption.
+- name: "[prechecks:dst] Assert destination character set matches source"
+  ansible.builtin.assert:
+    that: >
+      dst_charset == hostvars[groups['mig_source'][0]]['db_character_set'] | default('')
+    fail_msg: >
+      CHARACTER SET MISMATCH!
+      Source   : {{ hostvars[groups['mig_source'][0]]['db_character_set'] | default('unknown') }}
+      Destination: {{ dst_charset }}
+      Both databases MUST have the same NLS_CHARACTERSET for Full Transportable Export/Import.
+      This requires a database rebuild to fix — do NOT proceed.
+    success_msg: >
+      Character set match: {{ dst_charset }} == {{ hostvars[groups['mig_source'][0]]['db_character_set'] }} ✓"
+
+# ── Assert NLS_NCHAR_CHARACTERSET matches source ──────────────────────────────
+# National character set must also match for Full Transportable Export/Import.
+- name: "[prechecks:dst] Assert destination NCHAR character set matches source"
+  ansible.builtin.assert:
+    that: >
+      dst_nchar_charset == hostvars[groups['mig_source'][0]]['db_nchar_character_set'] | default('')
+    fail_msg: >
+      NCHAR CHARACTER SET MISMATCH!
+      Source     : {{ hostvars[groups['mig_source'][0]]['db_nchar_character_set'] | default('unknown') }}
+      Destination: {{ dst_nchar_charset }}
+      Both databases MUST have the same NLS_NCHAR_CHARACTERSET for Full Transportable
+      Export/Import. This requires a database rebuild to fix — do NOT proceed.
+    success_msg: >
+      NCHAR character set match: {{ dst_nchar_charset }}
+      == {{ hostvars[groups['mig_source'][0]]['db_nchar_character_set'] }} ✓"
+
+# ── Assert timezone file version matches source ───────────────────────────────
+# A timezone version mismatch commonly causes ORA-39405 during transportable import.
+- name: "[prechecks:dst] Assert destination timezone file version matches source"
+  ansible.builtin.assert:
+    that: >
+      dst_timezone_version == hostvars[groups['mig_source'][0]]['db_timezone_version'] | default('')
+    fail_msg: >
+      TIMEZONE FILE VERSION MISMATCH!
+      Source     : {{ hostvars[groups['mig_source'][0]]['db_timezone_version'] | default('unknown') }}
+      Destination: {{ dst_timezone_version }}
+      Mismatched V$TIMEZONE_FILE versions commonly cause ORA-39405 during transportable
+      import. Upgrade the lagging database's timezone file (DBMS_DST) to match before proceeding.
+    success_msg: >
+      Timezone file version match: {{ dst_timezone_version }}
+      == {{ hostvars[groups['mig_source'][0]]['db_timezone_version'] }} ✓"
+
+# ── M5 working directories ────────────────────────────────────────────────────
+- name: "[prechecks:dst] Ensure M5 working directories exist on destination"
+  ansible.builtin.file:
+    path:  "{{ item }}"
+    state: directory
+    owner: oracle
+    group: oinstall
+    mode:  '0755'
+  loop:
+    - "{{ m5_workdir }}"
+    - "{{ m5_workdir }}/cmd"
+    - "{{ m5_workdir }}/log"
+    - "{{ m5_workdir }}/done"
+    - "{{ m5_dumpdir }}"
+    - "{{ m5_backupdir }}"
+
+# ── Backup filesystem space ───────────────────────────────────────────────────
+- name: "[prechecks:dst] Check backup directory disk space"
+  ansible.builtin.shell: "df -g {{ m5_backupdir }} 2>/dev/null || df -BG {{ m5_backupdir }} 2>/dev/null"
+  register: df_bkp
+  changed_when: false
+  failed_when: false
+
+- name: "[prechecks:dst] Display backup directory space"
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }} {{ m5_backupdir }}:\n{{ df_bkp.stdout }}"
+
+# ── Memory check ─────────────────────────────────────────────────────────────
+- name: "[prechecks:dst] Check available memory"
+  ansible.builtin.shell: "svmon -G 2>/dev/null | head -5 || echo 'Memory check N/A'"
+  register: dst_mem
+  changed_when: false
+  failed_when: false
+
+- name: "[prechecks:dst] Display memory"
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }} memory:\n{{ dst_mem.stdout }}"
+
+# ── Reverse connectivity ──────────────────────────────────────────────────────
+- name: "[prechecks:dst] Ping source from destination (reverse connectivity)"
+  ansible.builtin.shell: "ping -c 3 {{ hostvars[groups['mig_source'][0]].ansible_host }}"
+  register: reverse_ping
+  changed_when: false
+  failed_when: false
+
+- name: "[prechecks:dst] Assert destination can reach source"
+  ansible.builtin.assert:
+    that: reverse_ping.rc == 0
+    fail_msg: >
+      Destination {{ inventory_hostname }} cannot ping {{ hostvars[groups['mig_source'][0]].ansible_host }}.
+      RMAN cross-platform restore requires bidirectional connectivity.
+    success_msg: "Reverse connectivity: {{ inventory_hostname }} → {{ hostvars[groups['mig_source'][0]].ansible_host }} OK."

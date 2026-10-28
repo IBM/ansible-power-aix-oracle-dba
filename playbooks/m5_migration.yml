@@ -1,0 +1,214 @@
+---
+# m5_migration.yml — Oracle 19c Cross-Endian Migration (M5): x86 Linux → IBM AIX Power
+# ════════════════════════════════════════════════════════════════════════════════
+#
+# Roles (one tag per stage):
+#   mig_prechecks   OS/DB checks, patch checks, SSH, DB prep, DBMIG deploy → tag: prechecks
+#   mig_rman_L0_L1  L0 baseline + L1 incremental backup+restore            → tags: rman_l0 | rman_l1
+#   mig_rman_L1F    L1F backup+restore + import + postchecks + validate    → tag: rman_l1f
+#
+# Variables : vars/m5_migration/mig_vars.yml
+# Passwords : vars/m5_migration/mig_vault.yml   (ansible-vault encrypted)
+# Inventory : inventory.yml — migration hosts in the [mig] group:
+#               [mig_source]       x86 Linux source database host
+#               [mig_destination]  IBM AIX Power destination database host
+#             The [mig:vars] section sets ansible_user=oracle for these hosts only.
+#
+# Every play targets only mig_source / mig_destination (or localhost), so a
+# migration run never touches the other hosts in the shared inventory.
+# ════════════════════════════════════════════════════════════════════════════════
+#
+# RUNBOOK — run every command from the playbooks/ directory
+# ────────────────────────────────────────────────────────────────────────────────
+#
+#   Step 1 — Pre-checks (once):
+#     nohup ansible-playbook m5_migration.yml -i inventory.yml --tags prechecks \
+#           --vault-password-file ~/.vault_pass > /tmp/m5_01_prechecks.out 2>&1 &
+#
+#   Step 2 — L0 baseline backup + restore (once, no downtime):
+#     nohup ansible-playbook m5_migration.yml -i inventory.yml --tags rman_l0 \
+#           --vault-password-file ~/.vault_pass > /tmp/m5_02_rman_l0.out 2>&1 &
+#
+#   Step 3 — L1 incremental (repeat until cutover, no downtime):
+#     nohup ansible-playbook m5_migration.yml -i inventory.yml --tags rman_l1 \
+#           --vault-password-file ~/.vault_pass > /tmp/m5_02_rman_l1.out 2>&1 &
+#
+#   Step 4 — L1F + Import + Postchecks  *** DOWNTIME WINDOW ***:
+#     nohup ansible-playbook m5_migration.yml -i inventory.yml --tags rman_l1f \
+#           --vault-password-file ~/.vault_pass > /tmp/m5_03_cutover.out 2>&1 &
+#
+#   Step 5 — GO LIVE: drop the guaranteed restore point (once verified,
+#            manual/opt-in only — never runs as part of any tag above,
+#            KA Doc 2999157.1 Section 5 step 9):
+#     ansible-playbook m5_migration.yml -i inventory.yml --tags golive_drop_restore_point --ask-vault-pass
+#
+#   --ask-vault-pass cannot prompt under nohup, so the background steps use
+#   --vault-password-file. Follow any step with: tail -f /tmp/m5_0*.out
+#
+# PREREQUISITES
+# ────────────────────────────────────────────────────────────────────────────────
+#   1. ansible-galaxy collection install -r ../collections/requirements.yml   (ansible.posix)
+#   2. Stage DBMIG_5.1.zip in roles/mig_prechecks/files/ (MOS Doc 2999157.1 — not distributed)
+#   3. Apply DataPump Bundle Patch 38170982 by hand on both hosts (checked, never applied here)
+#   4. Fill in and encrypt vars/m5_migration/mig_vault.yml; create ~/.vault_pass
+#   5. Edit vars/m5_migration/mig_vars.yml and the [mig] groups in inventory.yml
+# ════════════════════════════════════════════════════════════════════════════════
+
+# ── Guard: the migration groups must exist in the inventory that was loaded ────
+# Without -i inventory.yml (or with the [mig] groups missing), every play below
+# would silently match no hosts and a later task would fail with a confusing
+# "'dict object' has no attribute" error. Stop here instead, with the reason.
+- name: "M5 migration — check inventory"
+  hosts: localhost
+  gather_facts: false
+  become: false
+  tags: [always]
+  tasks:
+    - name: "[m5] Assert mig_source and mig_destination each have exactly one host"
+      ansible.builtin.assert:
+        that:
+          - groups['mig_source'] | default([]) | length == 1
+          - groups['mig_destination'] | default([]) | length == 1
+        fail_msg: >-
+          The inventory doesn't define the migration hosts. Run from the playbooks/
+          directory with -i inventory.yml, and make sure inventory.yml has exactly one
+          host in [mig_source] and one in [mig_destination]
+          (found mig_source={{ groups['mig_source'] | default([]) }},
+          mig_destination={{ groups['mig_destination'] | default([]) }}).
+        success_msg: >-
+          Migration hosts: source={{ groups['mig_source'] | default([]) | join(',') }},
+          destination={{ groups['mig_destination'] | default([]) | join(',') }}
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Stage 1 — Pre-checks
+# Role : mig_prechecks
+# Tag  : prechecks
+# ══════════════════════════════════════════════════════════════════════════════
+
+- name: "Prechecks — Source (x86 Linux) & Destination (IBM AIX Power)"
+  hosts: mig_source:mig_destination
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/m5_migration/mig_vars.yml
+    - vars/m5_migration/mig_vault.yml
+  roles:
+    - role: mig_prechecks
+      tags: [prechecks]
+
+# ── Mark prechecks complete AFTER the combined source+destination play finishes ─
+- name: "Prechecks — Mark complete"
+  hosts: localhost
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/m5_migration/mig_vars.yml
+    - vars/m5_migration/mig_vault.yml
+  tags: [prechecks]
+  tasks:
+    - name: "[prechecks] Mark prechecks complete"
+      ansible.builtin.file:
+        path:  "{{ done_dir }}/prechecks.done"
+        state: touch
+        mode:  '0644'
+      delegate_to: "{{ groups['mig_source'][0] }}"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Stage 2 — RMAN L0 (baseline) + L1 (incremental, repeat)
+# Role : mig_rman_L0_L1
+# Tags : rman_l0 | rman_l1
+# Downtime: NONE
+# ══════════════════════════════════════════════════════════════════════════════
+
+- name: "RMAN L0 — Full Baseline Backup + Restore"
+  hosts: mig_source:mig_destination
+  gather_facts: false
+  vars_files:
+    - vars/m5_migration/mig_vars.yml
+    - vars/m5_migration/mig_vault.yml
+  vars:
+    rman_level: L0
+  roles:
+    - role: mig_rman_L0_L1
+      tags: [rman_l0]
+
+- name: "RMAN L1 — Incremental Backup + Restore"
+  hosts: mig_source:mig_destination
+  gather_facts: false
+  vars_files:
+    - vars/m5_migration/mig_vars.yml
+    - vars/m5_migration/mig_vault.yml
+  vars:
+    rman_level: L1
+  roles:
+    - role: mig_rman_L0_L1
+      tags: [rman_l1]
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Stage 3 — L1F final backup + restore + import + postchecks
+# Role : mig_rman_L1F
+# Tag  : rman_l1f
+#
+# ⚠ DOWNTIME WINDOW — run during maintenance window
+#   - STARTS: dbmig_driver_m5.sh L1F sets transport TSs READ ONLY
+#   - ENDS  : set_tablespaces_readwrite task sets dest TSs READ WRITE
+# ══════════════════════════════════════════════════════════════════════════════
+
+- name: "⚠ DOWNTIME — L1F Backup on source"
+  hosts: mig_source
+  gather_facts: false
+  vars_files:
+    - vars/m5_migration/mig_vars.yml
+    - vars/m5_migration/mig_vault.yml
+  vars:
+    rman_level: L1F
+
+  pre_tasks:
+    - name: "⚠ Confirm DOWNTIME WINDOW"
+      ansible.builtin.pause:
+        prompt: |
+          ══════════════════════════════════════════════════════
+          WARNING: DOWNTIME WINDOW IS STARTING
+          ══════════════════════════════════════════════════════
+          dbmig_driver_m5.sh L1F will set ALL transport
+          tablespaces to READ ONLY on {{ source_oracle_sid }}.
+
+          Ensure ALL users are DISCONNECTED from {{ hostvars[groups['mig_source'][0]].ansible_host }}
+          before proceeding.
+
+          Press ENTER to continue or Ctrl+C A to abort.
+          ══════════════════════════════════════════════════════
+      tags: [rman_l1f]
+      run_once: true
+
+  roles:
+    - role: mig_rman_L1F
+      tags: [rman_l1f]
+
+- name: "⚠ DOWNTIME — L1F Restore + Import + Postchecks on destination"
+  hosts: mig_destination
+  gather_facts: false
+  vars_files:
+    - vars/m5_migration/mig_vars.yml
+    - vars/m5_migration/mig_vault.yml
+  vars:
+    rman_level: L1F
+  roles:
+    - role: mig_rman_L1F
+      tags: [rman_l1f]
+
+# ── Mark cutover complete (done_dir lives on the source host) ─────────────────
+- name: "Mark L1F Cutover Complete"
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - vars/m5_migration/mig_vars.yml
+    - vars/m5_migration/mig_vault.yml
+  tags: [rman_l1f]
+  tasks:
+    - name: "[rman_l1f] Write cutover done-file"
+      ansible.builtin.file:
+        path:  "{{ done_dir }}/rman_l1f.done"
+        state: touch
+        mode:  '0644'
+      delegate_to: "{{ groups['mig_source'][0] }}"

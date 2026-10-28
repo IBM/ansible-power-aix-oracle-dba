@@ -6,3 +6,6 @@ scripts/
 MIGRATION_CONTEXT.md
 playbooks/*.log
 MIGRATION_CONTEXT.md.bkup
+# Oracle-proprietary DBMIG utility and patch zips for the M5 migration roles —
+# download from My Oracle Support and stage locally; never commit them.
+roles/mig_prechecks/files/*.zip
