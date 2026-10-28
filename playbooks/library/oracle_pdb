@@ -39,6 +39,15 @@ options:
 		required: false
 		default: pdb_admin
 		aliases: ['pw']
+	source_pdb:
+		description:
+			- Name of an existing PDB in the same CDB to clone. Adds the FROM clause
+			  (CREATE PLUGGABLE DATABASE <name> FROM <source_pdb>) and omits the ADMIN USER clause.
+			- Use with state=present. If the PDB I(name) already exists nothing is cloned.
+			- Mutually exclusive with I(unplug_dest). Use I(datafile_dest) or I(file_name_convert) to place the cloned datafiles.
+		required: false
+		default: None
+		aliases: ['from_pdb','clone_from']
 	datafile_dest:
 		description:
 			- The path where the datafiles will be placed
@@ -98,6 +107,18 @@ oracle_pdb: name=pdb1 sourcedb=cdb1 state=absent un=system pw=Oracle123 oracle_h
 oracle_pdb: name=pdb1 sourcedb=cdb1 state=status un=system pw=Oracle123 oracle_home=/u01/app/oracle/12.2.0.1/db
 
 
+# Clone an existing pdb (CREATE PLUGGABLE DATABASE pdb1_clone FROM pdb1)
+oracle_pdb:
+	name=pdb1_clone
+	sourcedb=cdb1
+	source_pdb=pdb1
+	dfd=/u02/oradata
+	state=present
+	un=sys
+	pw=Oracle123
+	mode=sysdba
+	sn=cdb1
+
 # Unplug a pdb
 oracle_pdb:
 	name=pdb1
@@ -155,18 +176,21 @@ def quote_string(item):
 		return value
 
 def create_pdb(cursor, module, msg, oracle_home, name, sourcedb, pdb_admin_username,
-				pdb_admin_password, datafile_dest, save_state, unplug_dest, file_name_convert):
+				pdb_admin_password, datafile_dest, save_state, unplug_dest, file_name_convert, source_pdb=None):
 
 	run_sql = []
 	opensql = 'alter pluggable database %s open instances=all' % (name)
 	createsql = 'create pluggable database %s ' % (name)
 
 
+	if source_pdb is not None:
+		createsql += ' from %s ' % (source_pdb)
+
 	if unplug_dest is not None:
 		createsql += ' using \'%s\' ' % (unplug_dest)
 		createsql += ' tempfile reuse'
 
-	if unplug_dest is None:
+	if unplug_dest is None and source_pdb is None:
 		createsql += ' admin user %s identified by \"%s\" ' % (pdb_admin_username, pdb_admin_password)
 
 	if datafile_dest != None:
@@ -188,7 +212,7 @@ def create_pdb(cursor, module, msg, oracle_home, name, sourcedb, pdb_admin_usern
 	if save_state:
 		sql = 'alter pluggable database %s save state instances=all' % (name)
 		execute_sql(module, msg, cursor, sql)
-		return True #<-- all is well
+	return True #<-- all is well
 
 def unplug_pdb(cursor, module, msg, oracle_home, name, unplug_dest):
 
@@ -338,6 +362,7 @@ def main():
 			name                   = dict(required=True, aliases = ['pdb','pdb_name']),
 			oracle_home            = dict(default=None, aliases = ['oh']),
 			sourcedb               = dict(required=True, aliases = ['db','container','cdb']),
+			source_pdb             = dict(required=False, aliases = ['from_pdb','clone_from']),
 			state                  = dict(default="present", choices = ["present", "absent", "open", "closed", "read_write", "read_only", "restricted", "status", "unplugged"]),
 			save_state             = dict(default=True, type = 'bool'),
 			pdb_admin_username     = dict(required=False, default = 'pdb_admin', aliases = ['pdbadmun']),
@@ -359,12 +384,13 @@ def main():
 
 
 		),
-		mutually_exclusive=[['datafile_dest', 'file_name_convert']]
+		mutually_exclusive=[['datafile_dest', 'file_name_convert'], ['source_pdb', 'unplug_dest']]
 	)
 
 	name                   = module.params["name"]
 	oracle_home            = module.params["oracle_home"]
 	sourcedb               = module.params["sourcedb"]
+	source_pdb             = module.params["source_pdb"]
 	state                  = module.params["state"]
 	save_state             = module.params["save_state"]
 	pdb_admin_username     = module.params["pdb_admin_username"]
@@ -434,7 +460,7 @@ def main():
 
 	if state in ('present','closed', 'open', 'restricted','read_only','read_write'):
 		if not check_pdb_exists(cursor, module, msg, name):
-			if create_pdb(cursor, module, msg, oracle_home, name, sourcedb, pdb_admin_username, pdb_admin_password, datafile_dest, save_state, unplug_dest, file_name_convert):
+			if create_pdb(cursor, module, msg, oracle_home, name, sourcedb, pdb_admin_username, pdb_admin_password, datafile_dest, save_state, unplug_dest, file_name_convert, source_pdb):
 				ensure_pdb_state(cursor, module, msg, name, state, newpdb,default_tablespace,default_tablespace_type,default_temp_tablespace,timezone)
 				module.exit_json(msg=msg, changed=True)
 			else:

@@ -7,6 +7,7 @@ oracle_db_name: prod                  # CDB service name (the container database
 # ── Operation flags — set exactly one to true ─────────────────────────────────
 create_pdb: false       # true = create a fresh PDB from seed
 plug_pdb: false         # true = plug a PDB from an existing XML file
+clone_pdb: false        # true = clone an existing PDB (CREATE PLUGGABLE DATABASE <new> FROM <source>)
 drop_pdb: true         # true = drop an existing PDB
 unplug_pdb: false        # true = unplug a PDB to an XML file
 
@@ -25,6 +26,16 @@ create_oracle_pdbs:
   file_name_convert: "{{ pdb_seed_dest }},{{ pdb_oradata_dest }}"
   xml_dest: "{{ xml_file_dest }}"                           # Directory for the XML file.
   xml_file: prodpdb1.xml                                     # XML manifest filename (plug only).
+
+# ── PDB Clone variables ───────────────────────────────────────────────────────
+# Used when clone_pdb: true
+# The source PDB must be open READ ONLY (or READ WRITE with local undo enabled) in the same CDB.
+clone_oracle_pdbs:
+- pdb_name: prodpdb1_clone                                  # Name of the new (cloned) PDB.
+  source_pdb: prodpdb                                       # Existing PDB to clone (the FROM clause).
+  cdb: "{{ oracle_db_name }}"                               # Parent CDB name.
+  state: present                                            # present = create the clone.
+  datafile_dest: "{{ pdb_oradata_dest }}"                   # Datafile destination (CREATE_FILE_DEST). Alternative: file_name_convert.
 
 # ── PDB Drop / Unplug variables ───────────────────────────────────────────────
 # Used when drop_pdb: true or unplug_pdb: true

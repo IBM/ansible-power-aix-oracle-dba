@@ -2,7 +2,7 @@
 
 ## Description
 
-This module is used to **create, drop, plug and unplug** Oracle Pluggable Databases (PDBs).
+This module is used to **create, clone, drop, plug and unplug** Oracle Pluggable Databases (PDBs).
 
 - **`oradb_manage_pdb`** — manages PDB lifecycle using the `oracle_pdb` module.
 
@@ -30,6 +30,7 @@ This module is used to **create, drop, plug and unplug** Oracle Pluggable Databa
 # ── Operation flags — set exactly one to true ─────────────────────────────────
 create_pdb: false       # true = create a fresh PDB from seed
 plug_pdb: false         # true = plug a PDB from an existing XML file
+clone_pdb: false        # true = clone an existing PDB (CREATE PLUGGABLE DATABASE <new> FROM <source>)
 drop_pdb: false         # true = drop an existing PDB
 unplug_pdb: false       # true = unplug a PDB to an XML file
 ```
@@ -40,6 +41,7 @@ unplug_pdb: false       # true = unplug a PDB to an XML file
 |-----------|--------------|
 | Create PDB | `present` |
 | Plug PDB from XML | `present` |
+| Clone an existing PDB | `present` |
 | Drop PDB | `absent` |
 | Unplug PDB to XML | `unplugged` |
 
@@ -72,6 +74,39 @@ ok: [localhost] => { "msg": "Operation flag validation passed." }
 TASK [oradb_manage_pdb : Create PDB from seed]
 changed: [localhost] => (item=...pdb_name: prodpdb1, state: present...)
 ```
+
+---
+
+## Scenario 1b — Clone an existing PDB
+
+Set `clone_pdb: true`, all others `false`. This runs
+`CREATE PLUGGABLE DATABASE <pdb_name> FROM <source_pdb>` inside the CDB (the `FROM` clause is the
+`source_pdb` option of the `oracle_pdb` module). No `ADMIN USER` clause is generated — the clone
+inherits the users of the source PDB.
+
+```yaml
+create_pdb: false
+plug_pdb: false
+clone_pdb: true
+drop_pdb: false
+unplug_pdb: false
+
+clone_oracle_pdbs:
+- pdb_name: prodpdb1_clone
+  source_pdb: prodpdb
+  cdb: "{{ oracle_db_name }}"
+  state: present
+  datafile_dest: "{{ pdb_oradata_dest }}"      # CREATE_FILE_DEST. Alternative: file_name_convert: "<old path>,<new path>"
+```
+
+Notes:
+
+- Use **either** `datafile_dest` **or** `file_name_convert` (mutually exclusive in the module).
+- The clone is opened (`OPEN INSTANCES=ALL`) and its state saved (`save_state: true` by default).
+- If a PDB named `pdb_name` already exists, nothing is cloned (idempotent).
+- The source PDB must be in a state that allows cloning: open `READ ONLY`, or open `READ WRITE` when the CDB uses local undo
+  (Oracle 18c+ hot clone). Otherwise Oracle returns `ORA-65081` / `ORA-65040`.
+- Verify: `select name, open_mode from v$pdbs;`
 
 ---
 
@@ -179,8 +214,8 @@ The playbook fails immediately before touching anything:
 TASK [oradb_manage_pdb : Validate — only one operation flag may be true at a time]
 fatal: [localhost]: FAILED! => {
     "msg": "ERROR: More than one operation flag is set to true.
-            Only one of create_pdb, plug_pdb, drop_pdb, unplug_pdb may be true at a time.
-            Current values — create_pdb: true, plug_pdb: false, drop_pdb: false, unplug_pdb: true"
+            Only one of create_pdb, plug_pdb, clone_pdb, drop_pdb, unplug_pdb may be true at a time.
+            Current values — create_pdb: true, plug_pdb: false, clone_pdb: false, drop_pdb: false, unplug_pdb: true"
 }
 ```
 
@@ -198,6 +233,7 @@ oracle_db_name: prod                  # CDB service name (the container database
 # ── Operation flags — set exactly one to true ─────────────────────────────────
 create_pdb: false       # true = create a fresh PDB from seed
 plug_pdb: false         # true = plug a PDB from an existing XML file
+clone_pdb: false        # true = clone an existing PDB
 drop_pdb: false         # true = drop an existing PDB
 unplug_pdb: false       # true = unplug a PDB to an XML file
 
@@ -215,6 +251,14 @@ create_oracle_pdbs:
   file_name_convert: "{{ pdb_seed_dest }},{{ pdb_oradata_dest }}"
   xml_dest: "{{ xml_file_dest }}"
   xml_file: prodpdb1.xml
+
+# ── PDB Clone variables ───────────────────────────────────────────────────────
+clone_oracle_pdbs:
+- pdb_name: prodpdb1_clone
+  source_pdb: prodpdb
+  cdb: "{{ oracle_db_name }}"
+  state: present
+  datafile_dest: "{{ pdb_oradata_dest }}"
 
 # ── PDB Drop / Unplug variables ───────────────────────────────────────────────
 drop_oracle_pdbs:
@@ -237,6 +281,7 @@ drop_oracle_pdbs:
 | `oracle_db_name` | `manage-pdb-vars.yml` | CDB service name (the container database) |
 | `create_pdb` | `manage-pdb-vars.yml` | `true` to create a PDB from seed |
 | `plug_pdb` | `manage-pdb-vars.yml` | `true` to plug a PDB from XML |
+| `clone_pdb` | `manage-pdb-vars.yml` | `true` to clone an existing PDB (`FROM` clause) |
 | `drop_pdb` | `manage-pdb-vars.yml` | `true` to drop a PDB |
 | `unplug_pdb` | `manage-pdb-vars.yml` | `true` to unplug a PDB to XML |
 | `pdb_oradata_dest` | `manage-pdb-vars.yml` | Datafile destination (ASM diskgroup or FS path) |

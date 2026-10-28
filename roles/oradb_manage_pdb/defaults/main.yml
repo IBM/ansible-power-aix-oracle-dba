@@ -1,4 +1,5 @@
 configure_cluster: false
+clone_pdb: false
 db_user: sys
 db_password_cdb: "{% if dbpasswords is defined and dbpasswords[item[1].cdb] is defined and dbpasswords[item[1].cdb][db_user] is defined%}{{dbpasswords[item[1].cdb][db_user]}}{% else %}{{ default_dbpass}}{% endif%}"
 db_mode: sysdba
