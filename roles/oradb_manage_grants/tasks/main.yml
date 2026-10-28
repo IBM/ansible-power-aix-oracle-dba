@@ -3,13 +3,13 @@
   oracle_grants:
           role={{ item.1.role }}
           state={{ item.0.state }}
-          grants={{ item.0.grants |default(omit) }}
+          grants={{ item.1.grants |default(omit) }}
           grants_mode={{ item.0.grants_mode |default(omit)  }}
-          object_privs={{ item.0.object_privs | default (omit) }}
-          directory_privs={{ item.0.directory_privs | default (omit)}}
+          object_privs={{ item.1.object_privs | default (omit) }}
+          directory_privs={{ item.1.directory_privs | default (omit)}}
           hostname={{ hostname }}
           port={{ listener_port_template }}
-          service_name={{ item.0.pdb_name }}
+          service_name={{ item.0.service_name }}
           user={{ db_user }}
           password={{ db_password_pdb}}
           mode={{ db_mode }}
@@ -19,19 +19,19 @@
       - roles
       - flags:
         skip_missing: True
-  when: oracle_databases is defined and item.0 is defined and item.0.state|lower == 'present' and (item.0.grants is defined or item.0.object_privs is defined)
+  when: oracle_databases is defined and item.0 is defined and item.1 is defined and item.0.state|lower == 'present' and (item.1.grants is defined or item.1.object_privs is defined)
   loop_control:
-      label: "port: {{ listener_port_template }}, service: {{ item.0.pdb_name }}, role: {{ item.0.name | default('none') }}, grants: {{ item.0.grants | default(omit) }}, state: {{ item.0.state }}"
+      label: "port: {{ listener_port_template }}, service: {{ item.0.service_name }}, role: {{ item.1.role | default('none') }}, grants: {{ item.1.grants | default(omit) }}, state: {{ item.0.state }}"
   tags: users,grants
 
 - name: Manage schema grants
   oracle_grants:
           schema={{ item.1.schema }}
           state={{ item.0.state }}
-          grants={{ item.0.grants | default (omit) }}
+          grants={{ item.1.grants | default (omit) }}
           grants_mode={{ item.0.grants_mode |default(omit)  }}
-          object_privs={{ item.0.object_privs |default (omit)}}
-          directory_privs={{ item.0.directory_privs | default (omit)}}
+          object_privs={{ item.1.object_privs |default (omit)}}
+          directory_privs={{ item.1.directory_privs | default (omit)}}
           hostname={{ hostname }}
           port={{ listener_port_template }}
           service_name={{ item.0.service_name }}
@@ -44,7 +44,7 @@
       - users
       - flags:
         skip_missing: True
-  when: oracle_databases is defined and item.0 is defined and item.0.state|lower == 'present' and (item.0.grants is defined or item.0.object_privs is defined)
+  when: oracle_databases is defined and item.0 is defined and item.1 is defined and item.0.state|lower == 'present' and (item.1.grants is defined or item.1.object_privs is defined)
   loop_control:
-      label: "port: {{ listener_port_template }}, service: {{ item.0.service_name }}, schema: {{ item.1.schema | default('none') }}, grants: {{ item.0.grants | default(omit) }}, state: {{ item.0.state }}"
+      label: "port: {{ listener_port_template }}, service: {{ item.0.service_name }}, schema: {{ item.1.schema | default('none') }}, grants: {{ item.1.grants | default(omit) }}, state: {{ item.0.state }}"
   tags: users,grants

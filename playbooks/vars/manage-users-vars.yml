@@ -1,26 +1,43 @@
 # Create/Drop Database Users - Variables section
-hostname: ansible_db                        # AIX Lpar hostname where the database is running.
+hostname: ansible-db                           # AIX Lpar hostname where the database is running.
 listener_port: 1521                         # Database port number.
 # oracle_db_home not needed - oracle_user module uses Thin mode (pure Python, no Oracle client required)
 
-oracle_databases:                           # Database users list to be created
-      - users:
-         - schema: testuser1              # Username to be created.
-        default_tablespace: users           # Default tablespace to be assigned to the user.
-        service_name: devpdb                 # Database service name.
-        schema_password: "{{ default_dbpass }}"            # Password for the user.
-        grants_mode: enforce                # enforce|append.
-        grants:
-         - connect                          # Provide name of the privilege as a list to grant to the user.
-         - resource
-        state: present                       # present|absent|locked|unlocked [present: Creates user, absent: Drops user]
-# Multiple users can be created with different attributes as shown below.
-      - users:
-         - schema: testuser2
-        default_tablespace: users
-        service_name: devpdb
-        grants_mode: enforce
-        grants:
-         - connect
-        schema_password: "{{ default_dbpass }}"
-        state: present
+# Loop mechanics (with_subelements over "users"):
+#   item.0  -> outer dict : service_name, state, grants_mode
+#   item.1  -> user entry : schema, schema_password, default_tablespace, grants, ...
+#
+# default_dbpass  = SYS password used to CONNECT to the DB  (vault.yml)
+# schema_password = password SET on the new schema           (vault.yml → schema_passwords)
+# grants          = per-user privilege list                  (defined inline below)
+
+oracle_databases:
+- service_name: prodpdb
+  state: present                          # present | absent | locked | unlocked
+  grants_mode: enforce                    # enforce | append
+  users:
+  - schema: pbatch
+    schema_password: "{{ schema_passwords['pbatch'] }}"
+    default_tablespace: users
+    grants:
+    - connect
+    - resource
+    - create database link
+    - create procedure
+
+  - schema: pwrite
+    schema_password: "{{ schema_passwords['pwrite'] }}"
+    default_tablespace: users
+    grants:
+    - connect
+    - resource
+    - create table
+    - create sequence
+
+  - schema: pselect
+    schema_password: "{{ schema_passwords['pselect'] }}"
+    default_tablespace: users
+    grants:
+    - connect
+    - select any table
+    - select any dictionary

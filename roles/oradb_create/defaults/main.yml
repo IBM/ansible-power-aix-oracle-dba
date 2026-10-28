@@ -7,16 +7,18 @@ oracle_rsp_stage: "{{ oracle_stage }}/rsp"
 oracle_profile_name: ".profile_{{ item.oracle_db_name }}"       # Name of profile-file. Sets up the environment for that database. One per database
 datafile_dest: "{% if item.0.storage_type|upper == 'FS' %}{{ oracle_dbf_dir_fs }}{% elif item.0.storage_type|upper == 'ASM' %}{{ oracle_dbf_dir_asm }}{% else %}{% endif %}"
 recoveryfile_dest: "{% if item.0.storage_type|upper == 'FS' %}{{ oracle_reco_dir_fs }}{% elif item.0.storage_type|upper == 'ASM' %}{{ oracle_reco_dir_asm }}{% else %}{% endif %}"
-configure_cluster: True   # Set it true when creating RAC database
+configure_cluster: True   # True for RAC/RACONENODE databases; False for Single Instance (SI)
 oracle_install_option_gi: "none"
 oracle_gi_cluster_type: STANDARD
 hostgroup_hub: "{{ hostgroup }}-hub"
 hostgroup_leaf: "{{ hostgroup }}-leaf"
-create_listener: "{% if oracle_install_option_gi is defined %}False{% elif oracle_install_option_gi is undefined %}{% if item.listener_name is defined %}True{% else %}False{% endif %}{% endif %}"
+# create_listener defaults to false — GI/ASM/RAC environments use the Grid listener.
+# Override in create-db-vars.yml for standalone SI environments without GI.
+create_listener: false
 listener_name_template: "{% if item.listener_name is defined %}{{ item.listener_name }}{% else %}{{ listener_name }}{% endif %}"
 listener_protocols_template: "{% if item.listener_protocols is defined %}{{ item.listener_protocols }}{% else %}{{ listener_protocols }}{% endif %}"
 listener_port_template: "{% if item.listener_port is defined %}{{ item.listener_port }}{% else %}{{ listener_port }}{% endif %}"
-listener_name: ANSILIST
+listener_name: LISTENER
 listener_protocols: TCP
 listener_port: 1521
 autostartup_service: false
@@ -28,8 +30,8 @@ oracle_dbf_dir_fs: /u01/abcl/datafiles                 # Provide path on the Lpa
 oracle_reco_dir_fs: 
 oracle_dbf_dir_asm:                      # Provide ASM diskgroup name to store datafiles.
 oracle_reco_dir_asm:
-oracle_db_mem_percent: 40
-redolog_size_in_mb: 50
-oracle_database_type:
-oracle_db_mem_totalmb:   
+oracle_db_mem_percent: 40    # % of total physical memory to allocate to Oracle (used when oracle_db_mem_totalmb is not set)
+redolog_size_in_mb: 50       # Default redo log size in MB (can be overridden per-db in oracle_databases)
+oracle_database_type:        # MULTIPURPOSE | DATA_WAREHOUSING | OLTP — used by dbca for memory distribution
+oracle_db_mem_totalmb:       # Total memory in MB for Oracle; takes precedence over oracle_db_mem_percent when set
 service_name:
