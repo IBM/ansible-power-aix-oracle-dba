@@ -1,0 +1,21 @@
+---
+galaxy_info:
+  role_name: mig_prechecks
+  author: Sudhindra Kumasagi
+  description: "Ansible role performs the prechecks and preparation for the Oracle 19c cross-endian (M5) migration: OS and database checks, patch checks, SSH equivalence, source and destination database preparation, and DBMIG deployment."
+  company: IBM
+
+  license: Apache-2.0
+
+  min_ansible_version: '2.14'
+
+  platforms:
+    - name: AIX
+      versions:
+        - all
+    - name: EL
+      versions:
+        - all
+
+  galaxy_tags: [aix, oracle, migration]
+dependencies: []

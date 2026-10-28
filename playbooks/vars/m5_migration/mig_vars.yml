@@ -1,0 +1,476 @@
+---
+# ════════════════════════════════════════════════════════════════════════════════
+# playbooks/vars/m5_migration/mig_vars.yml
+# Oracle M5 Cross-Endian Migration — Single Master Variables File
+# Collection : ibm.power_aix_oracle_m5_migration
+# Source     : x86 Linux (Little-Endian)
+# Destination: IBM AIX Power (Big-Endian)
+# Method     : Oracle M5 — RMAN Cross-Platform Incremental + Full Transportable
+# ════════════════════════════════════════════════════════════════════════════════
+
+# ════════════════════════════════════════════════════════════════════════════════
+# Database Identity
+# ════════════════════════════════════════════════════════════════════════════════
+#
+# source_oracle_sid / dest_oracle_sid: ORACLE_SID on each host. dest_oracle_sid
+# is the destination SID when non-CDB, or the CDB root SID when the destination
+# IS a CDB (Topology B/C below) — see dest_oracle_sid_effective in Computed
+# Values at the end of this file, which picks whichever one is actually
+# correct for your topology. Set dest_oracle_sid regardless; it's the
+# fallback for the simple Non-CDB→Non-CDB case.
+#
+# listener_port: Oracle listener port, same on source and destination.
+# Embedded directly in dest_connect_string_effective and src_scan (both feed
+# real RMAN/impdp connect strings) — not just informational.
+#
+# source_oracle_home / dest_oracle_home: $ORACLE_HOME of the database on each host.
+# $ORACLE_BASE of the source install isn't configured here — queried live via
+# the standard orabase utility where it's needed (db_prepare_source.yml's BCT
+# file path) instead of asking the operator to keep a second,
+# ORACLE_HOME-derived path in sync by hand.
+#
+# db_create_file_dest: OMF destination on the destination DB (ASM diskgroup or path).
+#
+# dest_oracle_home_gi: Grid Infrastructure home on destination — Optional,
+# ASM only. Verified present by checking for {{ dest_oracle_home_gi }}/bin/crsctl.
+# Leave blank ("") for a plain-filesystem (JFS) destination with no ASM/GI —
+# the GI-home precheck is skipped automatically when this is blank.
+# ════════════════════════════════════════════════════════════════════════════════
+
+source_oracle_sid:       ecommdb                 # Source database SID (ORACLE_SID)
+dest_oracle_sid:         ecommdb                 # Destination database SID (non-CDB) or CDB root SID
+listener_port:           1521                    # Oracle listener port (source and destination)
+source_oracle_home:      /u01/db19c              # $ORACLE_HOME of the source database
+dest_oracle_home:        /u01/19c/database/home  # $ORACLE_HOME of the destination database
+db_create_file_dest:     "+DATA"                 # OMF destination on destination DB
+
+dest_oracle_home_gi:     /u01/19c/grid/home      # Optional — ASM/Grid Infrastructure only; blank ("") skips the GI-home check
+
+# ════════════════════════════════════════════════════════════════════════════════
+# Host Identity
+# ════════════════════════════════════════════════════════════════════════════════
+#
+# Neither host's address is configured here — both source and destination are
+# addressed via Ansible inventory (ansible_host) everywhere an address is
+# needed; see dest_host_effective in Computed Values at the end of this file.
+# Previously this collection had dest_hostname (Oracle Net) and dest_ssh_host
+# (SSH/SCP) as two deliberately-separate variables, in case a jump host or a
+# different network ever sat behind one but not the other. Collapsed into one
+# inventory-derived value per request — if your environment genuinely needs
+# the DB listener reachable at a different address than SSH, override
+# dest_host_effective directly (or reintroduce the split) rather than editing
+# every call site.
+#
+# dest_user / source_user: OS user for SSH/SCP on each host (same account
+# used for the oracle SSH equivalence between hosts). source_user defaults to
+# the same account as dest_user; override here if source and destination use
+# different OS accounts.
+# ════════════════════════════════════════════════════════════════════════════════
+
+dest_user:               oracle
+source_user:             oracle
+
+# ════════════════════════════════════════════════════════════════════════════════
+# File Transfer
+# ════════════════════════════════════════════════════════════════════════════════
+#
+# How RMAN backup pieces and the DataPump dump file get from source to
+# destination (see Migration Working Directories below for where they live
+# on each host).
+#
+# shared_filesystem: YES if source and destination share the same mounted
+# m5_workdir (typically an NFS mount — destination reads backup pieces/the
+# DataPump dump file directly, no copy needed); NO (default) means they do
+# NOT share storage, and those files are copied to dest_host_effective via SCP.
+# Accepts YES/NO/true/false/yes/no (Ansible boolean parsing) — not case-sensitive.
+# Actually mounting the shared export at the same path on both hosts is a
+# one-time infrastructure step outside this collection's job — Ansible just
+# assumes it's already correctly backed, however you've configured it, by the
+# time these playbooks run.
+#
+# DBMIG'S OWN "DEST_SERVER" property (dbmig_driver.properties, templated
+# separately from dbmig_driver.properties.j2) is DIFFERENT from this — it's
+# Oracle's own vendor property controlling DBMIG's own internal SSH
+# auto-copy of the restore cmdfile, and DBMIG has no idea shared_filesystem
+# exists; it only ever looks at whether that one exported line is blank.
+# dest_host_effective ALWAYS resolves to the real address regardless of
+# shared_filesystem — it's still needed by our own SCP tasks' variable
+# resolution even when they don't run. Only the rendered DEST_SERVER= line
+# in the properties file is conditional on shared_filesystem (blank when
+# YES, dest_host_effective's value otherwise) — see dbmig_driver.properties.j2.
+# ════════════════════════════════════════════════════════════════════════════════
+
+shared_filesystem:       NO
+
+# scp_transfer_timeout: separate from rman_timeout_l0/l1f on purpose — backup
+# pieces and the DataPump dump file are SCP'd to the destination as their own
+# async step (sync_backup_pieces.yml, capture_expdp_file.yml), and transfer
+# duration depends on network bandwidth between hosts, not on how long the
+# RMAN backup itself took. Set generously (48h) so it isn't a practical
+# constraint for large multi-TB transfers — reuses rman_poll for the
+# check-in interval. Optional — only relevant when shared_filesystem is NO
+# (no transfer happens when YES).
+
+scp_transfer_timeout:    172800   # 48 hours — Optional, only used when shared_filesystem is NO
+
+# ════════════════════════════════════════════════════════════════════════════════
+# Migration Working Directories
+# ════════════════════════════════════════════════════════════════════════════════
+#
+# done_dir: idempotency markers (prechecks.done, rman_l0.done, ...) — created
+# on the SOURCE host, nested under m5_workdir. Each stage checks for its own
+# marker here before deciding whether to re-run. Delete a marker to force
+# that stage to run again.
+#
+# precheck_report_dir: per-host precheck text reports (precheck_<hostname>.txt)
+# — written to the Ansible CONTROLLER, one per prechecks run, for easy review
+# without needing to log into either host.
+#
+# m5_workdir / m5_dumpdir / m5_backupdir: MUST be the identical absolute path
+# on both source and destination — when shared_filesystem is NO because
+# that's where copied files are expected to land; when YES because "same
+# path" is what makes it resolve to the same shared storage on both sides.
+#
+# dest_workdir / dest_dpdmp: same values as m5_workdir/m5_dumpdir — DBMIG
+# property-name aliases, used only by the dbmig_driver.properties template,
+# which expects DBMIG's own property names.
+#
+# validation_report_dir: CONTROLLER-local — validate_migration.yml's
+# directory-create and report-write tasks run delegate_to: localhost, not an
+# Oracle host. An explicit path next to precheck_report_dir, so the report
+# location doesn't depend on where the playbook file happens to live.
+# ════════════════════════════════════════════════════════════════════════════════
+
+done_dir:                "{{ m5_workdir }}/done"
+precheck_report_dir:     /home/ansible/m5_migration/reports
+
+m5_workdir:              /u01/m5
+m5_dumpdir:              /u01/m5/m5dir
+m5_backupdir:            /u01/m5/backup
+
+dest_workdir:            /u01/m5
+dest_dpdmp:              /u01/m5/m5dir
+
+validation_report_dir:   /home/ansible/m5_migration/reports
+
+# ════════════════════════════════════════════════════════════════════════════════
+# Topology — set these four vars to define migration type
+# ════════════════════════════════════════════════════════════════════════════════
+
+# Topology A — Non-CDB → Non-CDB (default, most common — leave all four blank/0):
+#   mig_pdb:       0
+#   pdb_name:      ""
+#   dest_cdb_sid:  ""
+#   dest_pdb_name: ""
+#
+# Topology B — PDB → PDB (source CDB PDB → destination CDB PDB):
+#   mig_pdb:       1
+#   pdb_name:      "SOURCEPDB"   (source PDB name — goes into PDB_NAME in properties)
+#   dest_cdb_sid:  "cdbprd"      (destination CDB SID for ORACLE_SID in impdp.sh)
+#   dest_pdb_name: "DESTPDB"     (destination PDB name — for ORACLE_CONNECT_STRING in impdp.sh)
+#
+# Topology C — Non-CDB → PDB (non-CDB source → PDB on CDB destination):
+#   mig_pdb:       0             (source is non-CDB → MIG_PDB=0 in properties)
+#   pdb_name:      ""            (no source PDB name — PDB_NAME blank in properties)
+#   dest_cdb_sid:  "cdbprd"      (destination CDB SID for ORACLE_SID in impdp.sh)
+#   dest_pdb_name: "DESTPDB"     (destination PDB — for ORACLE_CONNECT_STRING in impdp.sh)
+#
+# KA Appendix Section 6 table confirms:
+#   PDB_NAME set (MIG_PDB=1) → source is CDB (PDB→PDB)
+#   PDB_NAME not set (MIG_PDB=0) → source is Non-CDB
+#
+# dest_oracle_sid_effective, dest_connect_string_effective, and src_scan are
+# all DERIVED from these four variables — see Computed Values at the end of
+# this file. Do not edit those directly; edit the four topology vars instead.
+# ════════════════════════════════════════════════════════════════════════════════
+
+mig_pdb:                 0     # 1 = PDB→PDB, 0 = non-CDB source
+pdb_name:                ""    # source PDB name (MIG_PDB=1 only)
+dest_cdb_sid:            ""    # CDB SID on destination (Topology B+C only)
+dest_pdb_name:           ""    # destination PDB name (Topology B+C only)
+
+# ════════════════════════════════════════════════════════════════════════════════
+# Tablespaces to Migrate
+# ════════════════════════════════════════════════════════════════════════════════
+
+# Edit m5_tablespace_list_items only — the comma-separated m5_tablespace_list
+# used wherever DBMS_TTS needs one lives in Computed Values at the end of
+# this file; derived automatically, do not edit it directly.
+# Include ALL tablespaces from the source database EXCEPT SYSTEM, SYSAUX, UNDO, TEMP.
+# KA note 2: "all other tablespace names must be included in dbmig_ts_list.txt"
+#
+# Replace these example tablespace names with your actual source tablespace names.
+# ════════════════════════════════════════════════════════════════════════════════
+
+m5_tablespace_list_items:
+  - USERS
+  - APP_DATA
+  - APP_IDX
+
+# ════════════════════════════════════════════════════════════════════════════════
+# RMAN / DBMIG Parameters
+# ════════════════════════════════════════════════════════════════════════════════
+
+# rman_channels: number of parallel RMAN channels DBMIG opens per backup/restore
+# (DBMIG's own CHN property) — more channels means faster backup/restore up to
+# your storage's real I/O ceiling. See rman_timeout_l0/l1/l1f below for how
+# long a backup/restore/transfer is allowed to run.
+
+rman_channels:           8
+
+# rman_section_size: RMAN's SECTION SIZE — splits large datafiles into pieces
+# of at most this size, so multiple channels can work on one big datafile in
+# parallel instead of one channel handling it alone.
+
+rman_section_size:       "64G"
+
+rman_timeout_l0:         14400    # 4 hours — Level 0 full backup
+rman_timeout_l1:         7200     # 2 hours — Level 1 incremental
+rman_timeout_l1f:        10800    # 3 hours — Level 1 Final (downtime)
+
+# rman_poll: how often (seconds) Ansible checks whether an async RMAN
+# backup/restore has finished — see the rman_timeout_* comments above for
+# what "async" actually buys you here (it's a safety ceiling, not something
+# you wait through on a healthy run).
+
+rman_poll:               60
+
+# lock_file: DBMIG's own concurrency lock — created at the start of every
+# backup, prevents two driver runs overlapping. A stale one left over from a
+# previous failed/interrupted run blocks the NEXT run until removed; see
+# check_lockfile.yml, which asserts it's absent before starting.
+
+lock_file:               "{{ m5_workdir }}/log/rman_mig_bkp.lck"
+
+# bkp_dest_type: DISK or SBT_TAPE (MOS Doc 2999157.1 Appendix Section 1)
+
+bkp_dest_type:           DISK
+
+# bkp_dest_parm: backup destination path for RMAN (when bkp_dest_type = DISK)
+
+bkp_dest_parm:           "{{ m5_backupdir }}"
+
+# rman_log_benign_patterns: Optional — informational Oracle messages that are
+# legitimately prefixed "ORA-" but are not errors and must NOT fail the RMAN
+# backup/restore log scan (verify_backup_log.yml / verify_restore_log.yml in
+# mig_rman_L0_L1 and mig_rman_L1F). Confirmed live: ORA-28002 (the connecting
+# account's password is inside its profile's PASSWORD_GRACE_TIME window) is
+# printed on every login by SQL*Plus/RMAN once a password is close to expiry
+# — harmless, doesn't block anything — but the old blanket "'ORA-' not in
+# log" check treated it as fatal and failed an otherwise-clean L1F run. Add
+# more benign codes here if a future run hits the same false positive; this
+# is deliberately a short, explicit allow-list — NOT a general-purpose
+# "ignore unknown ORA- codes" mechanism, so a real error still fails the run.
+
+rman_log_benign_patterns:
+  - "ORA-28002"    # password will expire within N days — informational only
+
+# ════════════════════════════════════════════════════════════════════════════════
+# DataPump Parameters
+# ════════════════════════════════════════════════════════════════════════════════
+
+impdp_timeout:           14400    # 4 hours
+
+# impdp_poll: how often (seconds) Ansible checks whether the async impdp.sh
+# job has finished — see rman_poll's comment above for what this actually means.
+
+impdp_poll:              120
+
+# source_dpdmp: Data Pump dump file location on source (SOURCE_DPDMP in properties)
+
+source_dpdmp:            "{{ m5_dumpdir }}"
+
+# dp_parallel: DataPump parallel workers (DP_PARALLEL in properties). KA Doc
+# 2999157.1 Appendix 1: "Use if the destination database is Oracle Database
+# 21c or later." Full Transportable Tablespace import jobs do not support
+# PARALLEL > 1 before 21c — confirmed live against this 19c destination:
+# PARALLEL=4 failed with ORA-39002/ORA-39047 ("Jobs of type TRANSPORTABLE
+# cannot use multiple execution streams"). Set to 1 for 19c/20c destinations;
+# only raise this once the destination is confirmed 21c or later.
+
+dp_parallel:             1
+
+# dp_enc_prompt: Optional — Y = prompt for encryption password, N = do not
+# prompt (DP_ENC_PROMPT). Independent of impdp_run_mode (role default,
+# roles/mig_rman_L1F/defaults/main.yml).
+
+dp_enc_prompt:           "N"
+
+# dp_trace: Optional — DataPump trace level (0 = off, 3FF0300 = full transportable trace)
+
+dp_trace:                0
+
+# ════════════════════════════════════════════════════════════════════════════════
+# Credentials (override from vault at runtime)
+# ════════════════════════════════════════════════════════════════════════════════
+
+# sys_password: the ACTUAL password in use — SYS password, used only for the
+# PDB→PDB RMAN restore connection (rman target sys/{{ sys_password }}@...,
+# mig_pdb=1 topology only). Not the same as system_password below — SYS and
+# SYSTEM are different accounts.
+
+sys_password:            "{{ vault_sys_password }}"
+
+# system_usr (SYSTEM) is not a configured variable here — it's fixed, not
+# user-modifiable (KA mandates the SYSTEM account specifically), so it lives
+# in roles/mig_prechecks/defaults/main.yml instead.
+
+# system_password: SYSTEM's password — piped non-interactively into both
+# dbmig_driver_m5.sh (its own SYSTEM password prompt) and impdp.sh (Data
+# Pump's import password prompt). This is the one that actually matters for
+# the backup and import steps; sys_password above is only for PDB→PDB restore.
+
+system_password:         "{{ vault_system_password }}"
+
+# ════════════════════════════════════════════════════════════════════════════════
+# DBMIG misc
+# ════════════════════════════════════════════════════════════════════════════════
+
+# remove_ts_quote: 1 = remove double-quotes (REMOVE_TS_QUOTE), 0 = keep
+
+remove_ts_quote:         1
+
+# bkp_from_stdby: 1 = using physical standby as source, 0 = primary (BKP_FROM_STDBY)
+
+bkp_from_stdby:          0
+
+# rman_debug: Y = enable RMAN debug trace, N = off (RMAN_DEBUG)
+
+rman_debug:              "N"
+
+# rman_scan: Optional — destination SCAN easy connect (for RAC). Leave empty
+# for single-instance. Keep this empty — RMAN's own channel connections don't
+# use SRC_SCAN_CONN at all (confirmed: L0/L1 backups already work fine with
+# this blank), and SEPS is only required "if RMAN_SCAN is set" per KA Doc
+# 2999157.1 Appendix 1.
+
+rman_scan:               ""
+
+# cat_cred: Optional — ZDLRA catalog connect string (only for SBT_TAPE).
+# Leave empty for DISK.
+
+cat_cred:                ""
+
+# ════════════════════════════════════════════════════════════════════════════════
+# DBMIG Utility
+# ════════════════════════════════════════════════════════════════════════════════
+
+# dbmig_zip: filename of Oracle's DBMIG_5.1.zip — must be manually downloaded
+# from MOS and staged at roles/mig_prechecks/files/{{ dbmig_zip }} on the
+# controller before running prechecks (deploy_dbmig.yml copies it from there
+# to both hosts and unzips it). Not shipped with this collection — Oracle
+# proprietary.
+
+dbmig_zip:               DBMIG_5.1.zip
+
+# ════════════════════════════════════════════════════════════════════════════════
+# DataPump Bundle Patch (DPBP)
+# ════════════════════════════════════════════════════════════════════════════════
+
+# This collection does NOT download, store, or apply the DPBP patch — you
+# must download it yourself from My Oracle Support and apply it manually
+# (opatch apply, by hand) on both source and destination BEFORE running
+# prechecks. Ansible's only role here is to verify it's already applied —
+# patch_apply_source.yml/patch_apply_dest.yml check `opatch lsinventory`
+# for datapump_patch_id and fail with remediation steps if it's missing.
+#
+# The DPBP patch ID is VERSION-SPECIFIC — it must match YOUR installed Oracle
+# RU. Refer to MOS Knowledge Article KB107134 (Data Pump Recommended
+# Proactive Patches for 19.10 and Above) to get the correct DPBP patch ID for
+# your Oracle version, and update datapump_patch_id below to match.
+#
+# No patch_top_dir_src/dst here — this collection has no idea where you'll
+# actually stage a manually-downloaded patch (that's the DBA's own OPatch
+# workflow), so it doesn't pretend to by creating a directory or suggesting
+# a specific path. The failure message just says "apply it manually," same
+# as the other standalone-patch checks in patch_apply_dest.yml
+# (bugfix_patch_id, tde_bugfix_patch_id, stdby_bugfix_patch_id — all three
+# default from roles/mig_prechecks/defaults/main.yml, not from here).
+# ════════════════════════════════════════════════════════════════════════════════
+
+datapump_patch_id:       "38170982"
+
+# ════════════════════════════════════════════════════════════════════════════════
+# Application Schema
+# ════════════════════════════════════════════════════════════════════════════════
+
+# Name of the application schema to use for stats gathering and validation.
+# The schema and its data are already migrated by DataPump Full Transportable —
+# no user recreation is needed. This var is used only for:
+#   - DBMS_STATS.GATHER_SCHEMA_STATS (gather_stats.yml)
+#   - DBA_TABLES count comparison     (validate_migration.yml)
+
+app_schema:              YOUR_APP_SCHEMA
+
+# ════════════════════════════════════════════════════════════════════════════════
+# Computed Values — Do Not Edit
+# ════════════════════════════════════════════════════════════════════════════════
+#
+# Everything below is derived from variables set earlier in this file
+# (mainly the four Topology vars and Database Identity). Edit the source
+# variables, not these — these exist so every task/template references one
+# single correct value instead of repeating the same if/else topology logic
+# in a dozen places.
+# ════════════════════════════════════════════════════════════════════════════════
+
+# dest_host_effective: the destination's address, from Ansible inventory —
+# used everywhere an address is needed against the destination (Oracle Net
+# connect strings, SSH/SCP, reachability checks). See the Host Identity
+# section above for why this replaced two separate variables.
+
+dest_host_effective: >-
+  {{ hostvars[groups['mig_destination'][0]].ansible_host }}
+
+# dest_oracle_sid_effective: CDB root SID when destination is a CDB, else
+# dest_oracle_sid. Used purely as an ORACLE_SID env var for local/bequeath
+# connections (sqlplus / as sysdba) — correct as-is, no host/service needed.
+# Used by run_restore.yml, run_impdp.yml, db_prepare_dest.yml.
+
+dest_oracle_sid_effective: >-
+  {{ dest_cdb_sid if dest_cdb_sid | default('') | length > 0 else dest_oracle_sid }}
+
+# dest_connect_string_effective: full Oracle Net (Easy Connect) connect string used
+# wherever an "@connect_string" is needed against the DESTINATION — RMAN's
+# "target sys@..." for PDB→PDB restore (mig_rman_L0_L1 and mig_rman_L1F
+# run_restore.yml) and impdp.sh's ORACLE_CONNECT_STRING (mig_rman_L1F run_impdp.yml).
+#
+# Built as host:port/service against the destination listener — NOT a bare SID or
+# "cdb_sid/pdb_name" string, which is not valid Oracle Net syntax without a matching
+# TNS alias.
+#   Non-CDB→Non-CDB:       dest_host_effective:listener_port/dest_oracle_sid
+#   Non-CDB→PDB, PDB→PDB:  dest_host_effective:listener_port/dest_pdb_name
+# Assumes the destination's default service name matches dest_oracle_sid /
+# dest_pdb_name (true for standard/default service registration) — if the
+# destination registers a different service name, override this var directly.
+
+dest_connect_string_effective: >-
+  {{ dest_host_effective }}:{{ listener_port }}/{{ dest_pdb_name if dest_pdb_name | default('') | length > 0 else dest_oracle_sid }}
+
+# src_scan: source Easy Connect string, used two ways inside dbmig_driver_m5.sh:
+#   1. RAC channel distribution when RMAN_SCAN is ALSO set (not our case — rman_scan is blank).
+#   2. UNCONDITIONALLY, regardless of RMAN_SCAN: dbmig_driver_m5.sh line 114 builds
+#      SRC_SCAN_CONN="@${SRC_SCAN}" and uses it to build the SQL*Plus/expdp connect
+#      string for the L1F read-only + export step (run_ts_ro/gen_expdp). That line
+#      does not guard against SRC_SCAN being empty, so leaving it blank (the
+#      documented default for single-instance) produces a dangling "SYSTEM/pwd@"
+#      connect string with nothing after the @, which SQL*Plus rejects (SP2-0306)
+#      and which then breaks the Data Pump export too (its USERID= gets the same
+#      broken string) — so instead this is set to a valid local Easy Connect string.
+#
+# KA Doc 2999157.1 Appendix Section 6 table: when PDB_NAME is set (mig_pdb=1),
+# SRC_SCAN must point at the PDB, not the CDB root. Previously this always used
+# source_oracle_sid (the CDB/non-CDB SID) regardless of mig_pdb — for PDB→PDB this
+# made dbmig_driver_m5.sh's read-only + export step connect to the CDB root
+# instead of the PDB. The PDB's tablespaces don't exist at the root, so ALTER
+# TABLESPACE failed with ORA-00959 for all of them except any tablespace that
+# happens to share a name with one already at the root (e.g. USERS) — which
+# then got wrongly altered on the ROOT, not the PDB, silently. Fixed to route
+# to the PDB when set.
+
+src_scan:                "localhost:{{ listener_port }}/{{ pdb_name if mig_pdb | int == 1 and pdb_name | default('') | length > 0 else source_oracle_sid }}"
+
+# m5_tablespace_list: derived from m5_tablespace_list_items (Tablespaces to
+# Migrate section above) — comma-separated, used wherever that form is
+# needed (e.g. DBMS_TTS).
+
+m5_tablespace_list:      "{{ m5_tablespace_list_items | join(',') }}"

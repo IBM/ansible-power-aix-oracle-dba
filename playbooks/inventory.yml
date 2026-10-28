@@ -6,3 +6,25 @@ standby-db ansible_host=222.22.22.222
 
 host242
 pilotdb
+
+# ── Oracle 19c cross-endian migration (M5) — used only by m5_migration.yml ──────
+# One host in each group. ansible_user applies to these two hosts only.
+# Format: <server hostname> ansible_host=<server IP or DNS name>
+
+# ── x86 Linux source ──────────────────────────────────────────────────────
+[mig_source]
+source-linux-host ansible_host=333.33.33.333
+
+# ── IBM AIX Power destination ─────────────────────────────────────────────
+[mig_destination]
+dest-aix-host ansible_host=444.44.44.444
+
+# ── Parent group: both migration hosts ────────────────────────────────────
+[mig:children]
+mig_source
+mig_destination
+
+# ── Settings for the migration hosts only ─────────────────────────────────
+[mig:vars]
+ansible_user=oracle
+ansible_python_interpreter=/usr/bin/python3

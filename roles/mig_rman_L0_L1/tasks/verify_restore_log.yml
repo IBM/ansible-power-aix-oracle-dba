@@ -1,0 +1,46 @@
+---
+# roles/mig_rman_L0_L1/tasks/verify_restore_log.yml
+# Scan RMAN restore log for RMAN-/ORA- errors after restore completes.
+# Included only inside the destination restore block — no delegate_to needed.
+#
+# Uses current_restore_log fact set by run_restore.yml — no file search needed.
+# Logic mirrors verify_backup_log.yml: WARN- is informational, ORA-/RMAN- are fatal.
+
+- name: "[mig_rman_L0_L1:restore] Scan restore log for errors/warnings"
+  ansible.builtin.shell: >
+    egrep -i "WARN-|RMAN-|ORA-" {{ current_restore_log }} | head -50
+  register: restore_errors
+  changed_when: false
+  failed_when: false
+
+- name: "[mig_rman_L0_L1:restore] Restore log — clean (no warnings or errors found)"
+  ansible.builtin.debug:
+    msg: "RMAN {{ rman_level }} restore log is clean — no ORA-/RMAN-/WARN- lines found."
+  when: restore_errors.stdout | length == 0
+
+- name: "[mig_rman_L0_L1:restore] Display restore warnings/errors"
+  ansible.builtin.debug:
+    msg: "WARNING — Restore log entries found:\n{{ restore_errors.stdout_lines }}"
+  when: restore_errors.stdout | length > 0
+
+# Drop known-benign informational lines (e.g. ORA-28002 password-expiry
+# notice) before deciding pass/fail — see rman_log_benign_patterns in
+# playbooks/vars/m5_migration/mig_vars.yml for why this exists.
+- name: "[mig_rman_L0_L1:restore] Filter out known-benign informational lines"
+  ansible.builtin.set_fact:
+    restore_critical_lines: >-
+      {{ restore_errors.stdout_lines
+         | reject('search', rman_log_benign_patterns | join('|'))
+         | list }}
+  when: restore_errors.stdout | length > 0
+
+- name: "[mig_rman_L0_L1:restore] Assert no critical restore errors"
+  ansible.builtin.assert:
+    that:
+      - "restore_critical_lines | select('search', 'RMAN-') | list | length == 0"
+      - "restore_critical_lines | select('search', 'ORA-') | list | length == 0"
+    fail_msg: >
+      RMAN {{ rman_level }} restore log contains critical errors (ORA- or RMAN-).
+      Review: {{ current_restore_log }}
+    success_msg: "RMAN {{ rman_level }} restore log: no critical ORA-/RMAN- errors (WARN- / known-benign only)."
+  when: restore_errors.stdout | length > 0

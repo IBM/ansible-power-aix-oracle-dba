@@ -1,0 +1,88 @@
+---
+# roles/mig_prechecks/tasks/main.yml
+# ════════════════════════════════════════════════════════════════════════════════
+# Consolidated pre-migration role  — guide Sections 4.1–4.9 + IBM collection patterns
+#
+# Sequence (mirrors guide + all IBM collection precheck/os_prep/deploy tasks):
+#  Source host  : OS checks → endian → version → patches → network → disk
+#  Dest host    : OS prep (groups/users/FS/tunables/NTP/profiles) → verify endian
+#  Source host  : Apply patch 38170982 → verify
+#  Dest host    : Apply patch 38170982 → verify
+#  Source host  : SSH key equivalence setup (src→dest and dest→src)
+#  Source host  : Source DB prep (streams_pool, BCT, USERS TS handling, TTS check,
+#                                 M5DIR dir obj, RMAN config)
+#  Dest host    : Dest DB prep (drop USERS TS, streams_pool, M5DIR, dict stats)
+#  Source host  : Deploy DBMIG 5.1 (dirs on both, copy ZIP to both, properties, ts_list)
+#  localhost    : Generate precheck report
+# ════════════════════════════════════════════════════════════════════════════════
+
+- name: "[prechecks] Ensure done directory exists on source"
+  ansible.builtin.file:
+    path:  "{{ done_dir }}"
+    state: directory
+    mode:  '0755'
+  delegate_to: "{{ groups['mig_source'][0] }}"
+  run_once: true
+
+- name: "[prechecks] Ensure report directory exists on controller"
+  ansible.builtin.file:
+    path:  "{{ precheck_report_dir }}"
+    state: directory
+    mode:  '0755'
+  delegate_to: localhost
+  become: false
+  run_once: true
+
+# Gate is checked PER HOST (no run_once) so each play (source / destination /
+# localhost) evaluates it independently against the same done-file path.
+- name: "[prechecks] Idempotency gate"
+  ansible.builtin.stat:
+    path: "{{ done_dir }}/prechecks.done"
+  register: prechecks_done
+  delegate_to: "{{ groups['mig_source'][0] }}"
+
+- name: "[prechecks] Already completed — skipping"
+  ansible.builtin.debug:
+    msg: "Prechecks done. Delete {{ done_dir }}/prechecks.done to re-run."
+  when: prechecks_done.stat.exists
+
+- name: "[prechecks] Run all pre-migration checks"
+  when: not prechecks_done.stat.exists
+  block:
+
+    # ── 1. Source OS checks (endian, version, patches, network, disk) ─────────
+    - ansible.builtin.include_tasks: os_checks_source.yml
+      when: inventory_hostname in groups['mig_source']
+
+    # ── 2. Destination OS checks (DB open, ARCHIVELOG, compatible, charset) ───
+    - ansible.builtin.include_tasks: os_checks_dest.yml
+      when: inventory_hostname in groups['mig_destination']
+
+    # ── 3. Apply patch 38170982 on source (x86 Linux) ─────────────────────────
+    - ansible.builtin.include_tasks: patch_apply_source.yml
+      when: inventory_hostname in groups['mig_source']
+
+    # ── 4. Apply patch 38170982 on destination (AIX) ──────────────────────────
+    - ansible.builtin.include_tasks: patch_apply_dest.yml
+      when: inventory_hostname in groups['mig_destination']
+
+    # ── 5. SSH equivalence: oracle src↔dest (bidirectional) ───────────────────
+    - ansible.builtin.include_tasks: ssh_equivalence.yml
+      when: inventory_hostname in groups['mig_source'] or
+            inventory_hostname in groups['mig_destination']
+
+    # ── 6. Source DB preparation — runs directly on source host ───────────────
+    - ansible.builtin.include_tasks: db_prepare_source.yml
+      when: inventory_hostname in groups['mig_source']
+
+    # ── 7. Destination DB preparation — runs directly on destination host ──────
+    - ansible.builtin.include_tasks: db_prepare_dest.yml
+      when: inventory_hostname in groups['mig_destination']
+
+    # ── 8. Deploy DBMIG 5.1 on source (dirs on both, properties, ts_list) ─────
+    - ansible.builtin.include_tasks: deploy_dbmig.yml
+      when: inventory_hostname in groups['mig_source']
+
+    # ── 9. Generate precheck summary report ───────────────────────────────────
+    - ansible.builtin.include_tasks: generate_report.yml
+      when: inventory_hostname in groups['mig_source']

@@ -1,0 +1,295 @@
+---
+# roles/mig_prechecks/tasks/db_prepare_dest.yml
+# Destination database preparation for M5 import.
+# Reference: MOS Doc 2999157.1 Section 4.7 + prerequisite note 9
+# Runs on: destination host (sqlplus run directly — no Instant Client needed)
+#
+# Topology note:
+#   dest_oracle_sid_effective = dest_cdb_sid (Non-CDB→PDB) or source_oracle_sid (Non-CDB→Non-CDB)
+#   Instance-level parameters always set at CDB root via ORACLE_SID=dest_oracle_sid_effective.
+#   PDB-level objects (DIRECTORY, DROP TABLESPACE) require connecting to the PDB.
+
+# ── Verify / set db_create_file_dest on destination (prerequisite note 9) ──────
+- name: "[prechecks:dbdst] Set db_create_file_dest = {{ db_create_file_dest }} on destination"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ dest_oracle_home }}
+    export ORACLE_SID={{ dest_oracle_sid_effective }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+      ALTER SYSTEM SET db_create_file_dest='{{ db_create_file_dest }}' SCOPE=BOTH;
+      EXIT;
+    SQLEOF
+  register: db_create_dest_result
+  changed_when: "'System altered' in db_create_dest_result.stdout"
+
+- name: "[prechecks:dbdst] Verify db_create_file_dest is set on destination"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ dest_oracle_home }}
+    export ORACLE_SID={{ dest_oracle_sid_effective }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+      SELECT value FROM v$parameter WHERE name='db_create_file_dest';
+      EXIT;
+    SQLEOF
+  register: db_create_file_dest_check
+  changed_when: false
+
+- name: "[prechecks:dbdst] Assert db_create_file_dest is not empty"
+  ansible.builtin.assert:
+    that: db_create_file_dest_check.stdout | trim | length > 0
+    fail_msg: >
+      db_create_file_dest is not set on destination {{ dest_host_effective }}.
+      Set db_create_file_dest in mig_vars.yml (e.g. '+DATA' for ASM).
+    success_msg: >
+      db_create_file_dest confirmed: {{ db_create_file_dest_check.stdout | trim }}
+
+- name: "[prechecks:dbdst] Assert db_create_file_dest is a single location"
+  ansible.builtin.assert:
+    that: (db_create_file_dest_check.stdout | trim).split(',') | length == 1
+    fail_msg: >
+      db_create_file_dest={{ db_create_file_dest_check.stdout | trim }} contains multiple
+      comma-separated locations. KA Doc 2999157.1 prerequisite note 9: "db_create_file_dest
+      only allows for one location." Set a single location in mig_vars.yml.
+    success_msg: "db_create_file_dest is a single location ✓"
+
+# ── USERS tablespace: safe replacement sequence ────────────────────────────────
+# USERS will be transported in from source.  Before dropping the destination
+# copy we must:
+#   1. Check whether USERS exists at all
+#   2. Create USERS_DEF as a substitute (ASM OMF — no explicit path needed)
+#   3. Move all tables + indexes out of USERS into USERS_DEF
+#   4. Set USERS_DEF as the database default tablespace
+#   5. Drop USERS (now empty of user objects)
+# Reference: MOS Doc 2999157.1 Section 4.7 / Appendix Note 3
+
+- name: "[prechecks:dbdst] Check if USERS tablespace exists on destination"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ dest_oracle_home }}
+    export ORACLE_SID={{ dest_oracle_sid_effective }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+      {% if dest_pdb_name | default('') | length > 0 %}
+      ALTER SESSION SET CONTAINER = {{ dest_pdb_name }};
+      {% endif %}
+      SELECT COUNT(*) FROM dba_tablespaces WHERE tablespace_name = 'USERS';
+      EXIT;
+    SQLEOF
+  register: users_ts_exists
+  changed_when: false
+
+- name: "[prechecks:dbdst] USERS tablespace handling"
+  when: (users_ts_exists.stdout | trim) != '0'
+  block:
+
+    # Step 1 — Create USERS_DEF (ASM OMF — db_create_file_dest already set above)
+    - name: "[prechecks:dbdst] Create USERS_DEF substitute tablespace"
+      ansible.builtin.shell: |
+        export ORACLE_HOME={{ dest_oracle_home }}
+        export ORACLE_SID={{ dest_oracle_sid_effective }}
+        export PATH=$ORACLE_HOME/bin:$PATH
+        sqlplus -s / as sysdba <<'SQLEOF'
+          SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+          {% if dest_pdb_name | default('') | length > 0 %}
+          ALTER SESSION SET CONTAINER = {{ dest_pdb_name }};
+          {% endif %}
+          CREATE TABLESPACE USERS_DEF
+            DATAFILE '{{ db_create_file_dest }}'
+            SIZE 100M AUTOEXTEND ON NEXT 10M MAXSIZE 1G
+            EXTENT MANAGEMENT LOCAL AUTOALLOCATE
+            SEGMENT SPACE MANAGEMENT AUTO;
+          EXIT;
+        SQLEOF
+      register: create_users_def
+      changed_when: "'Tablespace created' in create_users_def.stdout"
+      ignore_errors: true   # Already exists on re-run
+
+    # Step 2 — Move all tables from USERS → USERS_DEF
+    - name: "[prechecks:dbdst] Move tables out of USERS to USERS_DEF"
+      ansible.builtin.shell: |
+        export ORACLE_HOME={{ dest_oracle_home }}
+        export ORACLE_SID={{ dest_oracle_sid_effective }}
+        export PATH=$ORACLE_HOME/bin:$PATH
+        sqlplus -s / as sysdba <<'SQLEOF'
+          SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF SERVEROUTPUT ON SIZE UNLIMITED
+          {% if dest_pdb_name | default('') | length > 0 %}
+          ALTER SESSION SET CONTAINER = {{ dest_pdb_name }};
+          {% endif %}
+          BEGIN
+            FOR r IN (
+              SELECT owner, table_name
+              FROM   dba_tables
+              WHERE  tablespace_name = 'USERS'
+              AND    owner NOT IN ('SYS','SYSTEM','OUTLN','DBSNMP','XDB','WMSYS','APEX_PUBLIC_USER')
+            ) LOOP
+              BEGIN
+                EXECUTE IMMEDIATE 'ALTER TABLE "' || r.owner || '"."' || r.table_name
+                  || '" MOVE TABLESPACE USERS_DEF';
+                DBMS_OUTPUT.PUT_LINE('Moved table: ' || r.owner || '.' || r.table_name);
+              EXCEPTION
+                WHEN OTHERS THEN
+                  DBMS_OUTPUT.PUT_LINE('WARN table ' || r.owner || '.' || r.table_name
+                    || ': ' || SQLERRM);
+              END;
+            END LOOP;
+          END;
+          /
+          EXIT;
+        SQLEOF
+      register: move_tables_result
+
+    - name: "[prechecks:dbdst] Display table move results"
+      ansible.builtin.debug:
+        msg: "{{ move_tables_result.stdout_lines }}"
+
+    # Step 3 — Rebuild indexes from USERS → USERS_DEF
+    - name: "[prechecks:dbdst] Rebuild indexes out of USERS to USERS_DEF"
+      ansible.builtin.shell: |
+        export ORACLE_HOME={{ dest_oracle_home }}
+        export ORACLE_SID={{ dest_oracle_sid_effective }}
+        export PATH=$ORACLE_HOME/bin:$PATH
+        sqlplus -s / as sysdba <<'SQLEOF'
+          SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF SERVEROUTPUT ON SIZE UNLIMITED
+          {% if dest_pdb_name | default('') | length > 0 %}
+          ALTER SESSION SET CONTAINER = {{ dest_pdb_name }};
+          {% endif %}
+          BEGIN
+            FOR r IN (
+              SELECT owner, index_name
+              FROM   dba_indexes
+              WHERE  tablespace_name = 'USERS'
+              AND    owner NOT IN ('SYS','SYSTEM','OUTLN','DBSNMP','XDB','WMSYS','APEX_PUBLIC_USER')
+            ) LOOP
+              BEGIN
+                EXECUTE IMMEDIATE 'ALTER INDEX "' || r.owner || '"."' || r.index_name
+                  || '" REBUILD TABLESPACE USERS_DEF';
+                DBMS_OUTPUT.PUT_LINE('Rebuilt index: ' || r.owner || '.' || r.index_name);
+              EXCEPTION
+                WHEN OTHERS THEN
+                  DBMS_OUTPUT.PUT_LINE('WARN index ' || r.owner || '.' || r.index_name
+                    || ': ' || SQLERRM);
+              END;
+            END LOOP;
+          END;
+          /
+          EXIT;
+        SQLEOF
+      register: rebuild_indexes_result
+
+    - name: "[prechecks:dbdst] Display index rebuild results"
+      ansible.builtin.debug:
+        msg: "{{ rebuild_indexes_result.stdout_lines }}"
+
+    # Step 4 — Set USERS_DEF as database default tablespace
+    - name: "[prechecks:dbdst] Set USERS_DEF as database default tablespace"
+      ansible.builtin.shell: |
+        export ORACLE_HOME={{ dest_oracle_home }}
+        export ORACLE_SID={{ dest_oracle_sid_effective }}
+        export PATH=$ORACLE_HOME/bin:$PATH
+        sqlplus -s / as sysdba <<'SQLEOF'
+          SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+          {% if dest_pdb_name | default('') | length > 0 %}
+          ALTER SESSION SET CONTAINER = {{ dest_pdb_name }};
+          {% endif %}
+          ALTER DATABASE DEFAULT TABLESPACE USERS_DEF;
+          EXIT;
+        SQLEOF
+      register: set_default_ts
+      changed_when: "'Database altered' in set_default_ts.stdout"
+
+    # Step 5 — Now safely drop USERS (no user objects remain)
+    - name: "[prechecks:dbdst] Drop USERS tablespace (now empty of user objects)"
+      ansible.builtin.shell: |
+        export ORACLE_HOME={{ dest_oracle_home }}
+        export ORACLE_SID={{ dest_oracle_sid_effective }}
+        export PATH=$ORACLE_HOME/bin:$PATH
+        sqlplus -s / as sysdba <<'SQLEOF'
+          SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+          {% if dest_pdb_name | default('') | length > 0 %}
+          ALTER SESSION SET CONTAINER = {{ dest_pdb_name }};
+          {% endif %}
+          DROP TABLESPACE USERS INCLUDING CONTENTS AND DATAFILES;
+          EXIT;
+        SQLEOF
+      register: drop_users_result
+      changed_when: "'Tablespace dropped' in drop_users_result.stdout"
+
+    - name: "[prechecks:dbdst] USERS tablespace replaced by USERS_DEF"
+      ansible.builtin.debug:
+        msg: >
+          USERS tablespace dropped. USERS_DEF is now the default tablespace.
+          After migration import completes, the transported USERS TS from source
+          will be present. USERS_DEF can then be dropped manually.
+
+- name: "[prechecks:dbdst] USERS tablespace not present — skipping replacement"
+  ansible.builtin.debug:
+    msg: "USERS tablespace does not exist on destination — nothing to replace."
+  when: (users_ts_exists.stdout | trim) == '0'
+
+# ── streams_pool_size — instance parameter, always CDB root ───────────────────
+- name: "[prechecks:dbdst] Set streams_pool_size = 128M on destination"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ dest_oracle_home }}
+    export ORACLE_SID={{ dest_oracle_sid_effective }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+      ALTER SYSTEM SET streams_pool_size=134217728 SCOPE=BOTH;
+      EXIT;
+    SQLEOF
+  register: streams_pool_dest
+  changed_when: "'System altered' in streams_pool_dest.stdout"
+
+# ── Create OS directory on destination ────────────────────────────────────────
+- name: "[prechecks:dbdst] Create OS directory {{ m5_dumpdir }} on destination"
+  ansible.builtin.file:
+    path:  "{{ m5_dumpdir }}"
+    state: directory
+    mode:  '0755'
+
+# ── Oracle DIRECTORY objects on destination ────────────────────────────────────
+# For PDB topology use ALTER SESSION SET CONTAINER to connect into the PDB.
+- name: "[prechecks:dbdst] Create M5DIR and DATA_PUMP_DIR Oracle directories on destination"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ dest_oracle_home }}
+    export ORACLE_SID={{ dest_oracle_sid_effective }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+      {% if dest_pdb_name | default('') | length > 0 %}
+      ALTER SESSION SET CONTAINER = {{ dest_pdb_name }};
+      {% endif %}
+      CREATE OR REPLACE DIRECTORY M5DIR AS '{{ m5_dumpdir }}';
+      CREATE OR REPLACE DIRECTORY DATA_PUMP_DIR AS '{{ m5_dumpdir }}';
+      EXIT;
+    SQLEOF
+  register: dir_create_result
+
+- name: "[prechecks:dbdst] Oracle DIRECTORY objects created"
+  ansible.builtin.debug:
+    msg: "M5DIR and DATA_PUMP_DIR created at {{ m5_dumpdir }} on destination."
+
+# ── Gather SYS/SYSTEM dictionary stats on destination ─────────────────────────
+- name: "[prechecks:dbdst] Gather SYS and SYSTEM dictionary stats on destination"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ dest_oracle_home }}
+    export ORACLE_SID={{ dest_oracle_sid_effective }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF SERVEROUTPUT OFF
+      {% if dest_pdb_name | default('') | length > 0 %}
+      ALTER SESSION SET CONTAINER = {{ dest_pdb_name }};
+      {% endif %}
+      EXEC DBMS_STATS.GATHER_SCHEMA_STATS(ownname=>'SYS',    degree=>DBMS_STATS.AUTO_DEGREE);
+      EXEC DBMS_STATS.GATHER_SCHEMA_STATS(ownname=>'SYSTEM', degree=>DBMS_STATS.AUTO_DEGREE);
+      EXIT;
+    SQLEOF
+  async: 1800
+  poll:  60
+  register: dict_stats_result
+
+- name: "[prechecks:dbdst] Dictionary stats complete"
+  ansible.builtin.debug:
+    msg: "SYS/SYSTEM dictionary stats gathered on destination."

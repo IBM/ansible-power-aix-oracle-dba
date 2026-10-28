@@ -1,0 +1,37 @@
+---
+# roles/mig_prechecks/tasks/patch_apply_source.yml
+# CHECK ONLY — assert mandatory patches are already applied on source.
+# No installation is performed. Apply patches manually before running prechecks.
+# Runs on: source host (x86 Linux)
+#
+# Patches checked:
+#   1. DataPump Bundle Patch 38170982 — mandatory on both hosts per KA Doc 2999157.1.
+#      This is a standalone bundle patch across all 19c versions.
+#
+# NOTE: Bugfix 35564253 is NOT checked here — KA Doc 2999157.1 prerequisites mandate
+# it only on the DESTINATION ("Ensure to have fix for bug 35564253 applied on your
+# destination database"). See patch_apply_dest.yml.
+
+- name: "[prechecks:patch:src] Collect OPatch inventory on source"
+  ansible.builtin.shell: |
+    {{ source_oracle_home }}/OPatch/opatch lsinventory -oh {{ source_oracle_home }} 2>&1
+  register: opatch_inv_src
+  changed_when: false
+  failed_when: false
+
+# ── DataPump Bundle Patch 38170982 (mandatory on all versions) ────────────────
+- name: "[prechecks:patch:src] Assert DataPump BP {{ datapump_patch_id }} is applied on source"
+  ansible.builtin.assert:
+    that: datapump_patch_id in opatch_inv_src.stdout
+    fail_msg: >
+      DataPump Bundle Patch {{ datapump_patch_id }} NOT found on source {{ inventory_hostname }}.
+      Download it from My Oracle Support and apply it manually before running
+      migration:
+        cd <patch_staging_dir>/{{ datapump_patch_id }}
+        $ORACLE_HOME/OPatch/opatch apply -silent
+        $ORACLE_HOME/OPatch/datapatch -verbose
+    success_msg: "DataPump BP {{ datapump_patch_id }} confirmed on source {{ inventory_hostname }} ✓"
+
+- name: "[prechecks:patch:src] Set patch_check_passed fact"
+  ansible.builtin.set_fact:
+    patch_check_passed: true

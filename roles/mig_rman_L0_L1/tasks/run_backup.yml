@@ -1,0 +1,57 @@
+---
+# roles/mig_rman_L0_L1/tasks/run_backup.yml
+# Run dbmig_driver_m5.sh for L0, L1, or L1F on the source host.
+# Uses Ansible async/poll so multi-hour runs are tracked properly.
+# Invocation: sh dbmig_driver_m5.sh [L0|L1|L1F]
+#
+# NOTE: This task file is included only inside the source backup block
+#       (when: inventory_hostname in groups['mig_source']), so no delegate_to needed.
+#
+# NOTE: bash is used explicitly (not /bin/sh) because:
+#   1. PIPESTATUS is a bash array — not available in POSIX sh.
+#   2. Source host is RHEL 8 — bash is always present.
+#   args: executable: /bin/bash achieves this cleanly.
+
+- name: "[mig_rman_L0_L1:backup] Build timestamped log path for {{ rman_level }} backup"
+  ansible.builtin.set_fact:
+    rman_run_log: "{{ m5_workdir }}/log/rman_{{ rman_level }}_run_{{ now(utc=true, fmt='%Y%m%d_%H%M%S') }}.out"
+
+- name: "[mig_rman_L0_L1:backup] Create log directory if absent"
+  ansible.builtin.file:
+    path:  "{{ m5_workdir }}/log"
+    state: directory
+    mode:  '0750'
+
+- name: "[mig_rman_L0_L1:backup] Execute dbmig_driver_m5.sh {{ rman_level }} (timeout={{ rman_timeout }}s)"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ source_oracle_home }}
+    export PATH=${ORACLE_HOME}/bin:${ORACLE_HOME}/OPatch:${PATH}
+    export ORACLE_SID={{ source_oracle_sid }}
+    export NLS_DATE_FORMAT='DD-MON-YYYY HH24:MI:SS'
+    cd {{ m5_workdir }}
+    sh dbmig_driver_m5.sh {{ rman_level }} 2>&1 | tee {{ rman_run_log }}
+    exit ${PIPESTATUS[0]}
+  args:
+    executable: /bin/bash
+  async:  "{{ rman_timeout | int }}"
+  poll:   "{{ rman_poll | int }}"
+  register: rman_job
+
+- name: "[mig_rman_L0_L1:backup] Show last 30 lines of RMAN run log"
+  ansible.builtin.command: "tail -30 {{ rman_run_log }}"
+  register: rman_tail
+  changed_when: false
+  failed_when: false
+
+- name: "[mig_rman_L0_L1:backup] RMAN run log tail"
+  ansible.builtin.debug:
+    msg: "{{ rman_tail.stdout_lines | default([]) }}"
+
+- name: "[mig_rman_L0_L1:backup] Assert dbmig_driver_m5.sh exited cleanly"
+  ansible.builtin.assert:
+    that: rman_job.rc == 0
+    fail_msg: >
+      dbmig_driver_m5.sh {{ rman_level }} FAILED (rc={{ rman_job.rc }}).
+      Full log: {{ rman_run_log }}
+      Also check: {{ m5_workdir }}/log/rman_mig_bkp.log
+    success_msg: "dbmig_driver_m5.sh {{ rman_level }} completed (rc=0)."

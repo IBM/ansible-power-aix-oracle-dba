@@ -1,0 +1,113 @@
+---
+# roles/mig_rman_L1F/tasks/capture_expdp_file.yml
+# Capture the DataPump export dumpfile generated during L1F, and copy it to the
+# destination's DATA_PUMP_DIR.
+#
+# KA MOS Doc 2999157.1: "During the final backup, the export Data Pump file
+# should be also manually copied from the source database to destination
+# database DATA_PUMP_DIR directory." DBMIG's own SSH-equivalence auto-copy
+# (when DEST_SERVER is set) only covers the restore cmdfile/scripts — the dump
+# file itself is explicitly called out as needing separate handling, same as
+# the RMAN backup pieces (see sync_backup_pieces.yml).
+#
+# Runs on source host (L1F only).
+
+- name: "[mig_rman_L1F] Find DataPump export dumpfile in {{ m5_dumpdir }}"
+  ansible.builtin.find:
+    paths:    "{{ m5_dumpdir }}"
+    patterns: "exp_{{ source_oracle_sid }}_*.dmp"
+  delegate_to: "{{ groups['mig_source'][0] }}"
+  register: expdp_files
+
+- name: "[mig_rman_L1F] Assert DataPump dumpfile was created"
+  ansible.builtin.assert:
+    that: expdp_files.files | length > 0
+    fail_msg: >
+      No DataPump export dumpfile found after L1F backup!
+      Expected: {{ m5_dumpdir }}/exp_{{ source_oracle_sid }}_*.dmp
+      Check DBMIG logs for DataPump export errors.
+    success_msg: "DataPump dumpfile found ({{ expdp_files.files | length }} file(s))."
+
+- name: "[mig_rman_L1F] Set expdp_dumpfile facts (basename + full path, latest by mtime)"
+  ansible.builtin.set_fact:
+    expdp_dumpfile: >-
+      {{ (expdp_files.files | sort(attribute='mtime', reverse=true) | first).path | basename }}
+    expdp_dumpfile_path: >-
+      {{ (expdp_files.files | sort(attribute='mtime', reverse=true) | first).path }}
+    expdp_dumpfile_size_mb: >-
+      {{ ((expdp_files.files | sort(attribute='mtime', reverse=true) | first).size / 1024 / 1024) | round(1) }}
+
+- name: "[mig_rman_L1F] DataPump dumpfile registered"
+  ansible.builtin.debug:
+    msg: "DataPump export: {{ expdp_dumpfile }} ({{ expdp_dumpfile_size_mb }} MB)"
+
+# ── Copy the dump file to the destination ──────────────────────────────────────
+# Skipped when shared_filesystem is set to YES (shared m5_dumpdir/dest_dpdmp —
+# destination reads it directly), matching sync_backup_pieces.yml's own logic.
+#
+# Target is dest_dpdmp (== m5_dumpdir), NOT the Oracle DATA_PUMP_DIR directory
+# object's own path. In a PDB destination, DATA_PUMP_DIR can't be pointed at
+# dest_dpdmp — Oracle raises ORA-65040 ("operation not allowed from within a
+# pluggable database") on any attempt to CREATE OR REPLACE DIRECTORY
+# DATA_PUMP_DIR from inside a PDB (confirmed live), and each PDB gets its own
+# auto-provisioned DATA_PUMP_DIR pointing at a GUID-named subdirectory,
+# independent of the CDB root. So instead of chasing that path, impdp.sh
+# (roles/mig_prechecks/files — deployed by deploy_dbmig.yml) is patched by
+# run_impdp.yml to write "directory=M5DIR" instead of "directory=DATA_PUMP_DIR"
+# into its generated par file. M5DIR is an ordinary, non-reserved directory
+# name, so it's freely redirectable to dest_dpdmp in every topology (source
+# non-CDB, dest CDB root, dest PDB) — confirmed live in all three. See
+# run_impdp.yml for the actual script edit.
+- name: "[mig_rman_L1F] Shared filesystem — dump file copy skipped (shared_filesystem: YES)"
+  ansible.builtin.debug:
+    msg: >-
+      shared_filesystem is set to YES — shared storage assumed.
+      Destination reads {{ dest_dpdmp }} directly. No copy needed.
+  when: (shared_filesystem | default(false) | bool)
+
+- name: "[mig_rman_L1F] Ensure destination DataPump directory exists"
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
+        {{ dest_user }}@{{ dest_host_effective }} \
+        "mkdir -p {{ dest_dpdmp }} && chmod 750 {{ dest_dpdmp }}"
+  delegate_to: "{{ groups['mig_source'][0] }}"
+  changed_when: false
+  failed_when: false
+  when: not (shared_filesystem | default(false) | bool)
+
+- name: "[mig_rman_L1F] SCP DataPump dump file to destination (timeout={{ scp_transfer_timeout }}s)"
+  ansible.builtin.shell: |
+    set -e
+    echo "Starting scp of {{ expdp_dumpfile }} ({{ expdp_dumpfile_size_mb }} MB) to {{ dest_user }}@{{ dest_host_effective }}:{{ dest_dpdmp }}/"
+    scp -B -p \
+        -o StrictHostKeyChecking=no \
+        -o ConnectTimeout=30 \
+        -o ServerAliveInterval=60 \
+        -o ServerAliveCountMax=10 \
+        {{ expdp_dumpfile_path | quote }} \
+        {{ dest_user }}@{{ dest_host_effective }}:{{ dest_dpdmp }}/
+    RC=$?
+    echo "scp exit code: ${RC}"
+    exit ${RC}
+  delegate_to: "{{ groups['mig_source'][0] }}"
+  async:  "{{ scp_transfer_timeout | int }}"
+  poll:   "{{ rman_poll | int }}"
+  register: expdp_scp_result
+  when: not (shared_filesystem | default(false) | bool)
+
+- name: "[mig_rman_L1F] Verify DataPump dump file arrived on destination"
+  ansible.builtin.stat:
+    path: "{{ dest_dpdmp }}/{{ expdp_dumpfile }}"
+  delegate_to: "{{ groups['mig_destination'][0] }}"
+  register: dest_dumpfile_stat
+  when: not (shared_filesystem | default(false) | bool)
+
+- name: "[mig_rman_L1F] Assert DataPump dump file present on destination"
+  ansible.builtin.assert:
+    that: dest_dumpfile_stat.stat.exists
+    fail_msg: >
+      DataPump dump file {{ expdp_dumpfile }} NOT found on destination at
+      {{ dest_dpdmp }}/ after SCP.
+      SSH from source: ssh {{ dest_user }}@{{ dest_host_effective }} ls {{ dest_dpdmp }}/{{ expdp_dumpfile }}
+    success_msg: "DataPump dump file {{ expdp_dumpfile }} confirmed on destination {{ dest_dpdmp }}/"
+  when: not (shared_filesystem | default(false) | bool)

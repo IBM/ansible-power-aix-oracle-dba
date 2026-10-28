@@ -1,0 +1,101 @@
+---
+# roles/mig_rman_L1F/tasks/verify_import.yml
+# Verify DataPump import completed successfully.
+# Checks: ORA-/KUP-/IMP- errors in log (informational only), destination DB open.
+
+# NOT a pass/fail gate. impdp.sh's own exit code doesn't reflect whether the
+# internal `impdp` command actually succeeded (confirmed live: rc=0 even on
+# outright failures like UDI-00002/ORA-12504), and Full Transportable Import
+# routinely logs non-fatal noise unrelated to the migrated data (e.g.
+# GSMROOTUSER-related warnings — Oracle's own internal Global Data Services
+# account). Trying to pattern-match which ORA- lines are "really" critical
+# turned into an unreliable, ever-growing exclude-list. The real correctness
+# gate is verify_migration_correctness.yml (source vs destination table
+# count comparison, hard assert) — this task just scans and displays impdp's
+# log so its content is available as context if that gate fails.
+- name: "[mig_rman_L1F:import] Scan impdp log for ORA-/KUP-/IMP- errors (informational — see verify_migration_correctness.yml for the actual pass/fail gate)"
+  ansible.builtin.shell: >
+    egrep -i "ORA-|KUP-|IMP-[0-9]{5}" {{ m5_workdir }}/log/impdp_run.out | head -50
+  delegate_to: "{{ groups['mig_destination'][0] }}"
+  register: impdp_errors
+  changed_when: false
+  failed_when: false
+
+- name: "[mig_rman_L1F:import] Display impdp warnings/errors"
+  ansible.builtin.debug:
+    msg: "IMPDP potential issues (informational — not fatal by itself; see verify_migration_correctness.yml next):\n{{ impdp_errors.stdout_lines }}"
+  when: impdp_errors.stdout | length > 0
+
+- name: "[mig_rman_L1F:import] Verify destination database is OPEN post-import"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ dest_oracle_home }}
+    export ORACLE_SID={{ dest_oracle_sid_effective }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF
+      SELECT status FROM v$instance;
+      EXIT;
+    SQLEOF
+  register: db_status_post
+  changed_when: false
+
+- name: "[mig_rman_L1F:import] Assert destination database is OPEN"
+  ansible.builtin.assert:
+    that: "'OPEN' in db_status_post.stdout"
+    fail_msg: >
+      Destination database is NOT OPEN after impdp.sh!
+      Status: {{ db_status_post.stdout | trim }}
+      Review: {{ m5_workdir }}/log/impdp_run.out
+    success_msg: "Destination database is OPEN — DataPump import succeeded."
+
+# ── Capture the guaranteed restore point impdp.sh creates (KA step 5.7b/5.9) ──
+# impdp.sh runs "create restore point before_imp_${DT} guarantee flashback
+# database" itself in run/run-readonly mode (DT computed at runtime inside
+# the script, so the exact name can't be predicted in advance — found here by
+# querying V$RESTORE_POINT instead). This is informational only: it makes the
+# restore point's name visible in the log/report so it isn't lost. The KA's
+# step 9 ("When determined to go live, remove the previously created restore
+# point") is deliberately NOT automated here — see
+# roles/mig_rman_L1F/tasks/drop_restore_point.yml (tag: golive_drop_restore_point,
+# opt-in only, not part of this automatic sequence).
+#
+# UPPER(name) in the WHERE clause below is required — Oracle stores unquoted
+# restore point names uppercase (e.g. BEFORE_IMP_260916072634), and LIKE is
+# case-sensitive, so matching against the lowercase literal 'before_imp_%'
+# silently returned 0 rows every run even though the restore point existed
+# (confirmed live: V$RESTORE_POINT showed it directly via SQL*Plus while this
+# task reported "none captured").
+- name: "[mig_rman_L1F:import] Look up guaranteed restore point created by impdp.sh"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ dest_oracle_home }}
+    export ORACLE_SID={{ dest_oracle_sid_effective }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+      SELECT name FROM v$restore_point
+      WHERE guarantee_flashback_database = 'YES' AND UPPER(name) LIKE 'BEFORE_IMP_%'
+      ORDER BY scn DESC FETCH FIRST 1 ROWS ONLY;
+      EXIT;
+    SQLEOF
+  register: restore_point_query
+  changed_when: false
+  when: impdp_run_mode in ['run', 'run-readonly']
+
+- name: "[mig_rman_L1F:import] Store restore point name fact"
+  ansible.builtin.set_fact:
+    l1f_restore_point_name: "{{ restore_point_query.stdout | trim }}"
+  when: >-
+    impdp_run_mode in ['run', 'run-readonly']
+    and restore_point_query.stdout | default('') | trim | length > 0
+
+- name: "[mig_rman_L1F:import] Guaranteed restore point"
+  ansible.builtin.debug:
+    msg: >-
+      {{ 'Guaranteed restore point: ' ~ l1f_restore_point_name ~
+         ' — DROP THIS once the migration is verified and you have gone live'
+         ~ ' (KA Doc 2999157.1 Section 5 step 9). Until dropped it retains'
+         ~ ' flashback logs indefinitely. Run: ansible-playbook m5_migration.yml'
+         ~ ' --tags golive_drop_restore_point --ask-vault-pass'
+         if l1f_restore_point_name | default('') | length > 0
+         else 'No guaranteed restore point found via V$RESTORE_POINT (unexpected for run/run-readonly mode — check impdp_run.out).' }}
+  when: impdp_run_mode in ['run', 'run-readonly']

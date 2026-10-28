@@ -1,0 +1,133 @@
+############################################################
+# dbmig_driver.properties
+# Oracle M5 DBMIG Driver Properties — rendered by mig_prechecks/tasks/deploy_dbmig.yml
+# Reference: MOS Doc 2999157.1 Appendix Section 1
+# DBMIG version: 5.1  (my_M5_prop_version=5 MUST be present — version gate in dbmig_driver_m5.sh)
+############################################################
+
+############################################################
+# Source Oracle environment
+############################################################
+export ORACLE_HOME={{ source_oracle_home }}
+export PATH=$PATH:$ORACLE_HOME/bin
+export ORACLE_SID={{ source_oracle_sid }}
+
+############################################################
+# Migration type
+# MIG_PDB: 1 = PDB→PDB source, 0 = non-CDB source
+# PDB_NAME: source PDB name (MIG_PDB=1 only)
+############################################################
+export MIG_PDB={{ mig_pdb }}
+export PDB_NAME={{ pdb_name | default('') }}
+
+############################################################
+# Standby source
+# BKP_FROM_STDBY: 1 = use physical standby as source, 0 = primary
+############################################################
+export BKP_FROM_STDBY={{ bkp_from_stdby }}
+
+############################################################
+# Tablespace name quoting
+# REMOVE_TS_QUOTE: 1 = strip double-quotes, 0 = keep
+############################################################
+export REMOVE_TS_QUOTE={{ remove_ts_quote }}
+
+############################################################
+# RAC SCAN (leave blank for single-instance)
+# RMAN_SCAN: destination SCAN easy connect (distributes channels across RAC nodes)
+# SRC_SCAN:  source SCAN easy connect
+# When RMAN_SCAN is set, SEPS is required; SYSTEM_USR is ignored
+############################################################
+export RMAN_SCAN={{ rman_scan | default('') }}
+export SRC_SCAN={{ src_scan | default('') }}
+
+############################################################
+# Source Data Pump settings
+# SOURCE_DPDIR: name of the Oracle DIRECTORY object used in the expdp par
+# file's DIRECTORY= clause. DATA_PUMP_DIR is Oracle's reserved/common
+# directory name — CREATE OR REPLACE DIRECTORY DATA_PUMP_DIR fails with
+# ORA-65040 when run from inside a PDB, so it stays whatever the CDB root
+# defined (inherited/common), and Data Pump run from within the PDB then
+# silently writes the dump file under a <path>/<PDB_GUID>/ subfolder that
+# DBMIG's own SCP-to-destination step doesn't know about (confirmed live —
+# export succeeded, transfer failed with "No such file or directory").
+# M5DIR has no such restriction and CAN be created as a genuine PDB-local
+# object (db_prepare_source.yml does this when mig_pdb=1), so for PDB→PDB
+# point SOURCE_DPDIR at M5DIR instead to avoid the GUID subfolder entirely.
+############################################################
+export SOURCE_DPDMP={{ source_dpdmp }}
+export SOURCE_DPDIR={{ 'M5DIR' if mig_pdb | int == 1 and pdb_name | default('') | length > 0 else 'DATA_PUMP_DIR' }}
+export SYSTEM_USR={{ system_usr }}
+export DP_TRACE={{ dp_trace }}
+export DP_PARALLEL={{ dp_parallel }}
+export DP_ENC_PROMPT={{ dp_enc_prompt }}
+
+############################################################
+# RMAN backup settings
+# BKP_DEST_TYPE: DISK or SBT_TAPE
+# BKP_DEST_PARM: backup path (DISK) or SBT channel config (ZDLRA)
+# CAT_CRED:      ZDLRA catalog connect string (SBT_TAPE only)
+############################################################
+export BKP_DEST_TYPE={{ bkp_dest_type }}
+export BKP_DEST_PARM={{ bkp_dest_parm }}
+export CAT_CRED={{ cat_cred | default('') }}
+export SECTION_SIZE={{ rman_section_size }}
+export CHN={{ rman_channels }}
+export RMAN_DEBUG={{ rman_debug | default('N') }}
+
+############################################################
+# Destination host settings
+# DEST_SERVER: leave blank to disable SSH auto-copy (use NFS instead)
+# DEST_USER:   destination OS user for scp (when DEST_SERVER is set)
+# DEST_WORKDIR: working directory on destination (must match WORKDIR path)
+# DEST_DPDMP:   DATA_PUMP_DIR path on destination
+#
+# DEST_SERVER is DBMIG's OWN blank/non-blank switch for its internal SSH
+# auto-copy of the restore cmdfile — it has no idea shared_filesystem exists,
+# it only looks at whether this one property is empty. dest_host_effective
+# (from inventory) always holds the real address, regardless of
+# shared_filesystem, so it's gated here instead: blank when shared_filesystem
+# is YES (matching what DBMIG's own comment above says to do for shared
+# storage), the real hostname otherwise. Without this, DBMIG would still
+# SSH-copy the cmdfile onto the same shared path it's already sitting at in
+# shared-storage mode — harmless in practice (same content, same
+# destination) but pointless and a needless point of failure for a mode that
+# shouldn't need it at all.
+############################################################
+export DEST_SERVER={{ dest_host_effective if not (shared_filesystem | default(false) | bool) else '' }}
+export DEST_USER={{ dest_user }}
+export DEST_WORKDIR={{ dest_workdir }}
+export DEST_DPDMP={{ dest_dpdmp }}
+
+############################################################
+# Advanced settings — DO NOT EDIT
+# These are derived at runtime; editing is beyond the scope of this procedure.
+############################################################
+export WORKDIR=$PWD
+export LOG_DIR=${WORKDIR}/log
+export CMD_DIR=${WORKDIR}/cmd
+export PATH=$PATH:$ORACLE_HOME/bin
+export DT=`date +%y%m%d%H%M%S`
+export CMD_MKDIR=`which mkdir`
+export CMD_TOUCH=`which touch`
+export CMD_CAT=`which cat`
+export CMD_RM=`which rm`
+export CMD_AWK=`which awk`
+export CMD_SCP=`which scp`
+export CMD_CUT=`which cut`
+export CMD_PLATFORM=`uname`
+if [[ "$CMD_PLATFORM" = "Linux" ]]; then
+    export CMD_GREP="/usr/bin/grep"
+else
+    if [[ "$CMD_PLATFORM" = "AIX" ]]; then
+      export CMD_GREP="/usr/bin/grep"
+    else
+      if [[ "$CMD_PLATFORM" = "HPUX" ]]; then
+        export CMD_GREP="/usr/bin/grep"
+      else
+        export CMD_GREP=`which ggrep`
+      fi
+    fi
+fi
+# Version gate — checked by dbmig_driver_m5.sh line 61: my_M5_prop_version must be >= 5
+export my_M5_prop_version=5

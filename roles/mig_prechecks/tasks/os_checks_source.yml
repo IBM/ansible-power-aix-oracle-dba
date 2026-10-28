@@ -1,0 +1,269 @@
+---
+# roles/mig_prechecks/tasks/os_checks_source.yml
+# Source x86 OS checks: endian, Oracle version, charset, patches, network, disk.
+# Merged from: m5_precheck/tasks/check_endianness, check_db_version, check_patches,
+#              check_network, check_disk_space patterns.
+
+# ── Endian ────────────────────────────────────────────────────────────────────
+- name: "[prechecks:src] Query platform endian format"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ source_oracle_home }}
+    export ORACLE_SID={{ source_oracle_sid }}
+    export PATH=${ORACLE_HOME}/bin:${PATH}
+    sqlplus -s '/ as sysdba' <<'EOF'
+    SET PAGESIZE 0 FEEDBACK OFF HEADING OFF TRIMSPOOL ON
+    SELECT endian_format FROM v$transportable_platform tp
+    JOIN v$database db ON tp.platform_name = db.platform_name;
+    EXIT;
+    EOF
+  register: src_endian
+  changed_when: false
+
+- name: "[prechecks:src] Assert source is Little Endian (x86)"
+  ansible.builtin.assert:
+    that: "'Little' in src_endian.stdout"
+    fail_msg: "Source must be Little Endian. Got: {{ src_endian.stdout | trim }}"
+    success_msg: "Source endian confirmed: Little (x86)."
+
+- name: "[prechecks:src] Set endian fact"
+  ansible.builtin.set_fact:
+    db_endian_format: "{{ src_endian.stdout | trim }}"
+
+# ── Oracle version and character set ─────────────────────────────────────────
+- name: "[prechecks:src] Query Oracle version"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ source_oracle_home }}
+    export ORACLE_SID={{ source_oracle_sid }}
+    export PATH=${ORACLE_HOME}/bin:${PATH}
+    sqlplus -s '/ as sysdba' <<'EOF'
+    SET PAGESIZE 0 FEEDBACK OFF HEADING OFF TRIMSPOOL ON
+    SELECT version_full FROM v$instance;
+    EXIT;
+    EOF
+  register: src_version
+  changed_when: false
+
+- name: "[prechecks:src] Set oracle_version_full fact"
+  ansible.builtin.set_fact:
+    oracle_version_full: "{{ src_version.stdout | trim }}"
+
+- name: "[prechecks:src] Assert Oracle version is 19c and >= 19.18 (KA minimum)"
+  ansible.builtin.assert:
+    that: oracle_version_full is version('19.18.0.0.0', '>=')
+    fail_msg: >
+      Oracle version {{ oracle_version_full }} does NOT meet the minimum requirement.
+      KA Doc 2999157.1 requires Oracle >= 19.18.0.0.0 on source.
+      Current: {{ oracle_version_full }}
+    success_msg: "Oracle version {{ oracle_version_full }} confirmed (>= 19.18, 19c) ✓"
+
+- name: "[prechecks:src] Query character set, compatible, timezone, log mode, edition"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ source_oracle_home }}
+    export ORACLE_SID={{ source_oracle_sid }}
+    export PATH=${ORACLE_HOME}/bin:${PATH}
+    sqlplus -s '/ as sysdba' <<'EOF'
+    SET PAGESIZE 0 FEEDBACK OFF HEADING OFF TRIMSPOOL ON
+    SELECT value FROM nls_database_parameters WHERE parameter='NLS_CHARACTERSET';
+    SELECT value FROM nls_database_parameters WHERE parameter='NLS_NCHAR_CHARACTERSET';
+    SELECT value FROM v$parameter WHERE name='compatible';
+    SELECT version FROM v$timezone_file;
+    SELECT log_mode FROM v$database;
+    SELECT banner FROM v$version WHERE banner LIKE 'Oracle Database%';
+    EXIT;
+    EOF
+  register: src_meta
+  changed_when: false
+
+- name: "[prechecks:src] Set source DB facts (charset / compatible / timezone / log_mode / edition)"
+  ansible.builtin.set_fact:
+    db_character_set:       "{{ src_meta.stdout_lines[0] | trim }}"
+    db_nchar_character_set: "{{ src_meta.stdout_lines[1] | trim }}"
+    src_compatible:         "{{ src_meta.stdout_lines[2] | trim }}"
+    db_timezone_version:    "{{ src_meta.stdout_lines[3] | trim }}"
+    src_log_mode:           "{{ src_meta.stdout_lines[4] | trim }}"
+    src_edition_banner:     "{{ src_meta.stdout_lines[5] | trim }}"
+
+# COMPATIBLE is normally reported with fewer components (e.g. "19.0.0") than the
+# 5-component RU version strings ("19.18.0.0.0"). Ansible's `version` test treats
+# a shorter version as strictly LESS than a longer one even when every shared
+# component is equal (e.g. "19.0.0" < "19.0.0.0.0"), so pad to 5 components
+# before comparing anywhere COMPATIBLE values are checked.
+- name: "[prechecks:src] Normalize source compatible to 5 components"
+  ansible.builtin.set_fact:
+    src_compatible_norm: "{{ (src_compatible.split('.') + ['0','0','0','0','0'])[:5] | join('.') }}"
+
+- name: "[prechecks:src] Source DB metadata"
+  ansible.builtin.debug:
+    msg: >
+      {{ inventory_hostname }}: Oracle {{ oracle_version_full }}
+      | Charset={{ db_character_set }}
+      | NCharCharset={{ db_nchar_character_set }}
+      | Compatible={{ src_compatible }}
+      | TZVersion={{ db_timezone_version }}
+      | LogMode={{ src_log_mode }}
+      | Edition={{ src_edition_banner }}
+
+# ── Enterprise Edition only (KA: "cannot be used with Standard Edition") ───────
+- name: "[prechecks:src] Assert source is Enterprise Edition"
+  ansible.builtin.assert:
+    that: "'Enterprise Edition' in src_edition_banner"
+    fail_msg: >
+      Source database edition is NOT Enterprise Edition ({{ src_edition_banner }}).
+      KA Doc 2999157.1: cross platform migration via RMAN/Full Transportable is only
+      possible with Enterprise Edition.
+    success_msg: "Source edition confirmed: Enterprise Edition ✓"
+
+# ── Absolute COMPATIBLE floor (independent of the src/dest relative check) ────
+- name: "[prechecks:src] Assert source compatible >= {{ min_compatible_version }}"
+  ansible.builtin.assert:
+    that: src_compatible_norm is version(min_compatible_version, '>=')
+    fail_msg: >
+      Source compatible={{ src_compatible }} is below the minimum {{ min_compatible_version }}
+      required by KA Doc 2999157.1 ("Migration process explained", note 5).
+    success_msg: "Source compatible {{ src_compatible }} >= {{ min_compatible_version }} ✓"
+
+# ── ARCHIVELOG mode — source ──────────────────────────────────────────────────
+- name: "[prechecks:src] Assert source DB is in ARCHIVELOG mode"
+  ansible.builtin.assert:
+    that: src_log_mode | upper == 'ARCHIVELOG'
+    fail_msg: >
+      SOURCE DB is in {{ src_log_mode }} mode!
+      RMAN cross-platform backup requires ARCHIVELOG mode.
+      Fix: ALTER DATABASE ARCHIVELOG; (requires DB restart)
+    success_msg: "Source DB log mode: ARCHIVELOG ✓"
+
+# ── RMAN backup encryption must NOT be configured (KA: not supported) ─────────
+- name: "[prechecks:src] Query RMAN 'ENCRYPTION FOR DATABASE' configuration"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ source_oracle_home }}
+    export ORACLE_SID={{ source_oracle_sid }}
+    export PATH=${ORACLE_HOME}/bin:${PATH}
+    sqlplus -s '/ as sysdba' <<'EOF'
+    SET PAGESIZE 0 FEEDBACK OFF HEADING OFF TRIMSPOOL ON
+    SELECT value FROM v$rman_configuration WHERE name = 'ENCRYPTION FOR DATABASE';
+    EXIT;
+    EOF
+  register: src_rman_encryption
+  changed_when: false
+
+- name: "[prechecks:src] Assert RMAN database encryption is not enabled"
+  ansible.builtin.assert:
+    that: "'ON' not in (src_rman_encryption.stdout | upper)"
+    fail_msg: >
+      RMAN 'ENCRYPTION FOR DATABASE' is configured ON on source.
+      KA Doc 2999157.1 prerequisites: "RMAN backup encryption is not supported with
+      this procedure." Run: CONFIGURE ENCRYPTION FOR DATABASE OFF; in RMAN, then re-run prechecks.
+    success_msg: "RMAN database encryption not enabled ✓"
+
+# ── TDE detection — gates a mandatory manual/patch prerequisite ───────────────
+# KA Doc 2999157.1 prerequisites: if TDE is used on source, fix for bug 30817822
+# is required on the destination (already bundled in RU 19.20.0.0.0+), and the TDE
+# keystore keys must be exported from source and imported/activated on destination
+# BEFORE the L0 backup (Appendix Section 5). This block only detects TDE usage and
+# records it as a fact for patch_apply_dest.yml; it also gates on a manual marker.
+- name: "[prechecks:src] Check for TDE-encrypted tablespaces on source"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ source_oracle_home }}
+    export ORACLE_SID={{ source_oracle_sid }}
+    export PATH=${ORACLE_HOME}/bin:${PATH}
+    sqlplus -s '/ as sysdba' <<'EOF'
+    SET PAGESIZE 0 FEEDBACK OFF HEADING OFF TRIMSPOOL ON
+    SELECT COUNT(*) FROM v$encrypted_tablespaces;
+    EXIT;
+    EOF
+  register: src_tde_check
+  changed_when: false
+
+- name: "[prechecks:src] Set tde_in_use fact"
+  ansible.builtin.set_fact:
+    tde_in_use: "{{ (src_tde_check.stdout | trim | int) > 0 }}"
+
+- name: "[prechecks:src] TDE detected — gate on manual keystore key transfer"
+  when: tde_in_use
+  block:
+    - name: "[prechecks:src] Check for TDE key-transfer completion marker"
+      ansible.builtin.stat:
+        path: "{{ tde_keys_marker }}"
+      register: tde_marker
+      delegate_to: "{{ groups['mig_source'][0] }}"
+
+    - name: "[prechecks:src] Assert TDE keystore keys have been transferred"
+      ansible.builtin.assert:
+        that: tde_marker.stat.exists
+        fail_msg: >
+          TDE-encrypted tablespaces detected on source, but {{ tde_keys_marker }} does not exist.
+          Per KA Doc 2999157.1 Appendix Section 5, you must export the TDE keystore keys from
+          source (ADMINISTER KEY MANAGEMENT EXPORT ENCRYPTION KEYS ...) and import/activate them
+          on the destination BEFORE running the L0 backup. Once done, create the marker ON THE
+          SOURCE HOST:
+            touch {{ tde_keys_marker }}
+          then re-run prechecks.
+        success_msg: "TDE key-transfer marker present — Appendix Section 5 steps assumed complete ✓"
+
+- name: "[prechecks:src] No TDE-encrypted tablespaces detected on source"
+  ansible.builtin.debug:
+    msg: "No TDE-encrypted tablespaces on source — Appendix Section 5 key transfer not required."
+  when: not tde_in_use
+
+# ── Network connectivity (source → destination) ───────────────────────────────
+- name: "[prechecks:src] Ping destination from source"
+  ansible.builtin.shell: "ping -c 3 {{ dest_host_effective }}"
+  register: ping_result
+  changed_when: false
+  failed_when: false
+
+- name: "[prechecks:src] Assert source can reach destination"
+  ansible.builtin.assert:
+    that: ping_result.rc == 0
+    fail_msg: "Source cannot ping {{ dest_host_effective }}. Check network/firewall."
+    success_msg: "Network OK: {{ inventory_hostname }} → {{ dest_host_effective }}."
+
+- name: "[prechecks:src] Test Oracle listener port {{ listener_port }} on destination"
+  ansible.builtin.shell: |
+    nc -zv {{ dest_host_effective }} {{ listener_port }} 2>&1 | head -2 ||
+    (echo >/dev/tcp/{{ dest_host_effective }}/{{ listener_port }}) 2>&1 && echo OPEN || echo CLOSED
+  register: listener_check
+  changed_when: false
+  failed_when: false
+
+- name: "[prechecks:src] Listener connectivity result"
+  ansible.builtin.debug:
+    msg: "Listener {{ dest_host_effective }}:{{ listener_port }}: {{ listener_check.stdout | trim }}"
+
+- name: "[prechecks:src] Test SSH port 22 to destination"
+  ansible.builtin.shell: "nc -zv {{ dest_host_effective }} 22 2>&1 | head -2"
+  register: ssh_port_check
+  changed_when: false
+  failed_when: false
+
+# ── Disk space ────────────────────────────────────────────────────────────────
+- name: "[prechecks:src] Check disk space for m5_workdir"
+  ansible.builtin.shell: |
+    df -Bg {{ m5_workdir }} 2>/dev/null || df -g {{ m5_workdir }} 2>/dev/null || df -BG {{ m5_workdir }}
+  register: df_m5
+  changed_when: false
+  failed_when: false
+
+- name: "[prechecks:src] Display m5_workdir space"
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }} m5_workdir space:\n{{ df_m5.stdout }}"
+
+- name: "[prechecks:src] Check /u01 filesystem space"
+  ansible.builtin.shell: "df -BG /u01 2>/dev/null || df -g /u01 2>/dev/null"
+  register: df_u01
+  changed_when: false
+  failed_when: false
+
+- name: "[prechecks:src] Display /u01 space"
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }} /u01 space:\n{{ df_u01.stdout }}"
+
+- name: "[prechecks:src] Check free memory"
+  ansible.builtin.shell: "free -g 2>/dev/null | head -3 || echo 'Memory check: N/A on this OS'"
+  register: mem_result
+  changed_when: false
+  failed_when: false
+
+- name: "[prechecks:src] Display memory"
+  ansible.builtin.debug:
+    msg: "{{ inventory_hostname }} memory:\n{{ mem_result.stdout }}"

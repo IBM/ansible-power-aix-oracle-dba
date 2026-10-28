@@ -1,0 +1,165 @@
+---
+# roles/mig_prechecks/tasks/ssh_equivalence.yml
+# Verify and establish bidirectional SSH key equivalence for oracle user.
+# DBMIG uses SCP/SSH to transfer backupset files between source and destination.
+# Source: m5_precheck/tasks/check_ssh_equiv.yml + m5_os_prep/tasks/setup_oracle_profiles.yml
+# Runs on: source host AND destination host
+#
+# Flow per direction: test → auto-remediate (push pubkey) if needed → re-test → assert.
+# The assert always runs LAST so remediation gets a chance to fix things first.
+
+# ── Ensure ~/.ssh directory exists on each host ───────────────────────────────
+- name: "[prechecks:ssh] Ensure /home/oracle/.ssh exists"
+  ansible.builtin.file:
+    path:  /home/oracle/.ssh
+    state: directory
+    owner: oracle
+    group: oinstall
+    mode:  '0700'
+
+# ── Generate key on source and destination if absent ──────────────────────────
+- name: "[prechecks:ssh] Generate RSA key for oracle (if absent)"
+  ansible.builtin.command:
+    cmd:     "ssh-keygen -t rsa -b 4096 -N '' -f /home/oracle/.ssh/id_rsa"
+    creates: /home/oracle/.ssh/id_rsa
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Direction 1: source → destination (the critical direction for DBMIG)
+# ═══════════════════════════════════════════════════════════════════════════
+- name: "[prechecks:ssh] Test oracle SSH from source to destination"
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes \
+        -o ConnectTimeout=10 \
+        -o StrictHostKeyChecking=no \
+        oracle@{{ dest_host_effective }} \
+        "echo SSH_OK_FROM_SOURCE"
+  register: ssh_src_to_dst
+  changed_when: false
+  failed_when: false
+  when: inventory_hostname in groups['mig_source']
+
+# ── Publish source public key to destination authorized_keys (if needed) ──────
+- name: "[prechecks:ssh] Fetch oracle public key from source"
+  ansible.builtin.slurp:
+    src: /home/oracle/.ssh/id_rsa.pub
+  register: src_pubkey
+  when:
+    - inventory_hostname in groups['mig_source']
+    - ssh_src_to_dst.rc != 0   # Only push if SSH is not yet working
+
+- name: "[prechecks:ssh] Add source public key to destination authorized_keys"
+  ansible.posix.authorized_key:
+    user:  oracle
+    key:   "{{ hostvars[groups['mig_source'][0]]['src_pubkey']['content'] | b64decode }}"
+    state: present
+  delegate_to: "{{ groups['mig_destination'][0] }}"
+  when:
+    - inventory_hostname in groups['mig_source']
+    - ssh_src_to_dst.rc != 0
+
+# ── Re-test source → destination after remediation ────────────────────────────
+- name: "[prechecks:ssh] Re-test oracle SSH from source to destination (after remediation)"
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes \
+        -o ConnectTimeout=10 \
+        -o StrictHostKeyChecking=no \
+        oracle@{{ dest_host_effective }} \
+        "echo SSH_OK_FROM_SOURCE"
+  register: ssh_src_to_dst_retest
+  changed_when: false
+  failed_when: false
+  when:
+    - inventory_hostname in groups['mig_source']
+    - ssh_src_to_dst.rc != 0
+
+- name: "[prechecks:ssh] Consolidate source→destination SSH result"
+  ansible.builtin.set_fact:
+    ssh_src_to_dst_final: "{{ ssh_src_to_dst_retest if ssh_src_to_dst.rc != 0 else ssh_src_to_dst }}"
+  when: inventory_hostname in groups['mig_source']
+
+- name: "[prechecks:ssh] Assert oracle SSH equivalence source→destination"
+  ansible.builtin.assert:
+    that:
+      - ssh_src_to_dst_final.rc == 0
+      - "'SSH_OK_FROM_SOURCE' in ssh_src_to_dst_final.stdout"
+    fail_msg: >
+      oracle@{{ inventory_hostname }} cannot SSH to oracle@{{ dest_host_effective }} without password!
+      DBMIG requires passwordless SSH for backupset file transfer.
+      Fix on source as oracle user:
+        ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ''
+        ssh-copy-id oracle@{{ dest_host_effective }}
+    success_msg: >
+      SSH equivalence confirmed: oracle@{{ inventory_hostname }}
+      → oracle@{{ dest_host_effective }} (passwordless).
+  when: inventory_hostname in groups['mig_source']
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Direction 2: destination → source (bidirectional, per KA guidance on
+# automatic copy of scripts/backup pieces between hosts)
+# ═══════════════════════════════════════════════════════════════════════════
+- name: "[prechecks:ssh] Test oracle SSH from destination to source"
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes \
+        -o ConnectTimeout=10 \
+        -o StrictHostKeyChecking=no \
+        oracle@{{ hostvars[groups['mig_source'][0]].ansible_host }} \
+        "echo SSH_OK_FROM_DEST"
+  register: ssh_dst_to_src
+  changed_when: false
+  failed_when: false
+  when: inventory_hostname in groups['mig_destination']
+
+# ── Publish destination public key to source authorized_keys (if needed) ──────
+- name: "[prechecks:ssh] Fetch oracle public key from destination"
+  ansible.builtin.slurp:
+    src: /home/oracle/.ssh/id_rsa.pub
+  register: dst_pubkey
+  when:
+    - inventory_hostname in groups['mig_destination']
+    - ssh_dst_to_src.rc != 0   # Only push if SSH is not yet working
+
+- name: "[prechecks:ssh] Add destination public key to source authorized_keys"
+  ansible.posix.authorized_key:
+    user:  oracle
+    key:   "{{ hostvars[groups['mig_destination'][0]]['dst_pubkey']['content'] | b64decode }}"
+    state: present
+  delegate_to: "{{ groups['mig_source'][0] }}"
+  when:
+    - inventory_hostname in groups['mig_destination']
+    - ssh_dst_to_src.rc != 0
+
+# ── Re-test destination → source after remediation ────────────────────────────
+- name: "[prechecks:ssh] Re-test oracle SSH from destination to source (after remediation)"
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes \
+        -o ConnectTimeout=10 \
+        -o StrictHostKeyChecking=no \
+        oracle@{{ hostvars[groups['mig_source'][0]].ansible_host }} \
+        "echo SSH_OK_FROM_DEST"
+  register: ssh_dst_to_src_retest
+  changed_when: false
+  failed_when: false
+  when:
+    - inventory_hostname in groups['mig_destination']
+    - ssh_dst_to_src.rc != 0
+
+- name: "[prechecks:ssh] Consolidate destination→source SSH result"
+  ansible.builtin.set_fact:
+    ssh_dst_to_src_final: "{{ ssh_dst_to_src_retest if ssh_dst_to_src.rc != 0 else ssh_dst_to_src }}"
+  when: inventory_hostname in groups['mig_destination']
+
+- name: "[prechecks:ssh] Assert oracle SSH equivalence destination→source"
+  ansible.builtin.assert:
+    that:
+      - ssh_dst_to_src_final.rc == 0
+      - "'SSH_OK_FROM_DEST' in ssh_dst_to_src_final.stdout"
+    fail_msg: >
+      oracle@{{ inventory_hostname }} cannot SSH to oracle@{{ hostvars[groups['mig_source'][0]].ansible_host }} without password!
+      DBMIG's SSH_equivalence-based transfers rely on bidirectional passwordless SSH.
+      Fix on destination as oracle user:
+        ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ''
+        ssh-copy-id oracle@{{ hostvars[groups['mig_source'][0]].ansible_host }}
+    success_msg: >
+      SSH equivalence confirmed: oracle@{{ inventory_hostname }}
+      → oracle@{{ hostvars[groups['mig_source'][0]].ansible_host }} (passwordless).
+  when: inventory_hostname in groups['mig_destination']

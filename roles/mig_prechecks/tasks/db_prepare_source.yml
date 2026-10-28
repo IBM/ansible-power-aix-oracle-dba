@@ -1,0 +1,235 @@
+---
+# roles/mig_prechecks/tasks/db_prepare_source.yml
+# Source database preparation for M5 migration.
+# Reference: MOS Doc 2999157.1 Section 4.6
+# Runs on: source host (sqlplus / rman run directly — no Instant Client needed)
+
+# ── Init parameters ────────────────────────────────────────────────────────────
+- name: "[prechecks:dbsrc] Set streams_pool_size = 128M on source"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ source_oracle_home }}
+    export ORACLE_SID={{ source_oracle_sid }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+      ALTER SYSTEM SET streams_pool_size=134217728 SCOPE=BOTH;
+      EXIT;
+    SQLEOF
+  register: streams_pool_result
+  changed_when: "'System altered' in streams_pool_result.stdout"
+
+- name: "[prechecks:dbsrc] Set audit_trail = NONE on source (spfile)"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ source_oracle_home }}
+    export ORACLE_SID={{ source_oracle_sid }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+      ALTER SYSTEM SET audit_trail=NONE SCOPE=SPFILE;
+      EXIT;
+    SQLEOF
+  register: audit_trail_result
+  changed_when: "'System altered' in audit_trail_result.stdout"
+  ignore_errors: true
+
+# ── Block Change Tracking ──────────────────────────────────────────────────────
+- name: "[prechecks:dbsrc] Check Block Change Tracking status"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ source_oracle_home }}
+    export ORACLE_SID={{ source_oracle_sid }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+      SELECT status, filename FROM v$block_change_tracking;
+      EXIT;
+    SQLEOF
+  register: bct_status
+  changed_when: false
+
+- name: "[prechecks:dbsrc] Display BCT status"
+  ansible.builtin.debug:
+    msg: "Block Change Tracking: {{ bct_status.stdout | trim }}"
+
+# ORACLE_BASE isn't a configured variable — queried live via the standard
+# orabase utility (ships with every Oracle Home) instead of asking the
+# operator to keep a second, ORACLE_HOME-derived path in sync by hand.
+- name: "[prechecks:dbsrc] Query ORACLE_BASE via orabase"
+  ansible.builtin.command: "{{ source_oracle_home }}/bin/orabase"
+  environment:
+    ORACLE_HOME: "{{ source_oracle_home }}"
+  register: source_oracle_base_result
+  changed_when: false
+  when: "'ENABLED' not in bct_status.stdout | upper"
+
+- name: "[prechecks:dbsrc] Enable Block Change Tracking (if not enabled)"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ source_oracle_home }}
+    export ORACLE_SID={{ source_oracle_sid }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+      ALTER DATABASE ENABLE BLOCK CHANGE TRACKING
+        USING FILE '{{ source_oracle_base_result.stdout | trim }}/admin/{{ source_oracle_sid }}/bct/bct_{{ source_oracle_sid }}.dbf'
+        REUSE;
+      EXIT;
+    SQLEOF
+  when: "'ENABLED' not in bct_status.stdout | upper"
+  ignore_errors: true
+  register: bct_enable_result
+
+# ── USERS tablespace handling ──────────────────────────────────────────────────
+- name: "[prechecks:dbsrc] Check for objects in USERS tablespace"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ source_oracle_home }}
+    export ORACLE_SID={{ source_oracle_sid }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 100 FEEDBACK OFF HEADING ON ECHO OFF LINESIZE 200
+      {% if mig_pdb | int == 1 and pdb_name | default('') | length > 0 %}
+      ALTER SESSION SET CONTAINER = {{ pdb_name }};
+      {% endif %}
+      SELECT owner, segment_name, segment_type
+      FROM dba_segments
+      WHERE tablespace_name = 'USERS'
+      AND owner NOT IN ('SYS','SYSTEM','OUTLN','DBSNMP','XDB')
+      ORDER BY owner, segment_name;
+      EXIT;
+    SQLEOF
+  register: users_ts_objects
+  changed_when: false
+
+- name: "[prechecks:dbsrc] Display objects in USERS tablespace"
+  ansible.builtin.debug:
+    msg: "Objects in USERS tablespace:\n{{ users_ts_objects.stdout | trim }}"
+
+# ── Transportable set self-containment check ───────────────────────────────────
+- name: "[prechecks:dbsrc] Run DBMS_TTS transport set check"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ source_oracle_home }}
+    export ORACLE_SID={{ source_oracle_sid }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF SERVEROUTPUT ON
+      {% if mig_pdb | int == 1 and pdb_name | default('') | length > 0 %}
+      ALTER SESSION SET CONTAINER = {{ pdb_name }};
+      {% endif %}
+      BEGIN
+        DBMS_TTS.TRANSPORT_SET_CHECK(
+          ts_list          => '{{ m5_tablespace_list }}',
+          incl_constraints => TRUE,
+          full_check       => FALSE
+        );
+      END;
+      /
+      EXIT;
+    SQLEOF
+  register: tts_check_result
+  ignore_errors: true
+  changed_when: false
+
+- name: "[prechecks:dbsrc] Query transport_set_violations"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ source_oracle_home }}
+    export ORACLE_SID={{ source_oracle_sid }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 100 FEEDBACK ON HEADING ON ECHO OFF LINESIZE 200
+      {% if mig_pdb | int == 1 and pdb_name | default('') | length > 0 %}
+      ALTER SESSION SET CONTAINER = {{ pdb_name }};
+      {% endif %}
+      SELECT * FROM transport_set_violations;
+      EXIT;
+    SQLEOF
+  register: tts_violations
+  changed_when: false
+
+- name: "[prechecks:dbsrc] Display transport set violations"
+  ansible.builtin.debug:
+    msg: "Transport set violations:\n{{ tts_violations.stdout | trim }}"
+
+- name: "[prechecks:dbsrc] Assert transportable set is self-contained (no violations)"
+  ansible.builtin.assert:
+    that: "'no rows selected' in tts_violations.stdout | lower"
+    fail_msg: >
+      DBMS_TTS.TRANSPORT_SET_CHECK reported violations against transport_set_violations
+      for tablespace list [{{ m5_tablespace_list }}]:
+      {{ tts_violations.stdout | trim }}
+      These MUST be resolved (cross-TS constraints, indexes in other tablespaces, etc.)
+      before the L0 backup — Data Pump Full Transportable import will fail otherwise.
+    success_msg: "Transportable set is self-contained — no violations ✓"
+
+# ── Create OS directory and Oracle DIRECTORY object ────────────────────────────
+- name: "[prechecks:dbsrc] Create OS directory {{ m5_dumpdir }} on source"
+  ansible.builtin.file:
+    path:  "{{ m5_dumpdir }}"
+    state: directory
+    mode:  '0755'
+
+# dbmig_driver_m5.sh builds its Data Pump export par file with
+# "DIRECTORY=${SOURCE_DPDIR}" (dbmig_driver.properties: SOURCE_DPDIR=DATA_PUMP_DIR)
+# — confirmed by reading the deployed script directly. So the export dumpfile
+# lands wherever the DATA_PUMP_DIR Oracle directory object resolves on SOURCE,
+# not M5DIR. Without redirecting it here, it stays at Oracle's default
+# ($ORACLE_BASE/admin/<sid>/dpdump/), which both DBMIG's own internal
+# scp-to-destination step and mig_rman_L1F/tasks/capture_expdp_file.yml
+# expect to be m5_dumpdir instead — confirmed live: a real L1F run's export
+# succeeded but the dumpfile was never found because of exactly this gap.
+# Mirrors db_prepare_dest.yml, which already creates both directories on
+# destination.
+#
+# For PDB→PDB (mig_pdb=1), these MUST be created while connected to the PDB,
+# not the CDB root — a directory object created at the root is a "common"
+# object, and Oracle Data Pump run from within a PDB against an inherited
+# common directory silently redirects the physical file under a
+# <path>/<PDB_GUID>/ subfolder (documented multitenant behavior). DBMIG's own
+# "transfer dump file to destination" step has no knowledge of that GUID
+# subfolder and looks for the file directly under m5_dumpdir, so the transfer
+# fails with "No such file or directory" even though the export itself
+# succeeded — confirmed live against a real PDB→PDB run (file found under
+# cdb_directories con_id=3's auto-generated GUID path). Creating the
+# directory object while inside the PDB makes it PDB-local, which Oracle
+# then uses directly with no GUID redirection — matching the fix already
+# applied on the destination side.
+- name: "[prechecks:dbsrc] Create M5DIR and DATA_PUMP_DIR Oracle directories on source"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ source_oracle_home }}
+    export ORACLE_SID={{ source_oracle_sid }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    sqlplus -s / as sysdba <<'SQLEOF'
+      SET PAGESIZE 0 FEEDBACK OFF HEADING OFF ECHO OFF
+      {% if mig_pdb | int == 1 and pdb_name | default('') | length > 0 %}
+      ALTER SESSION SET CONTAINER = {{ pdb_name }};
+      {% endif %}
+      CREATE OR REPLACE DIRECTORY M5DIR AS '{{ m5_dumpdir }}';
+      CREATE OR REPLACE DIRECTORY DATA_PUMP_DIR AS '{{ m5_dumpdir }}';
+      EXIT;
+    SQLEOF
+  register: m5dir_result
+  changed_when: "'Directory created' in m5dir_result.stdout or
+                 'Directory updated' in m5dir_result.stdout"
+
+- name: "[prechecks:dbsrc] Oracle DIRECTORY objects created"
+  ansible.builtin.debug:
+    msg: "M5DIR and DATA_PUMP_DIR created at {{ m5_dumpdir }} on source."
+
+# ── RMAN configuration ─────────────────────────────────────────────────────────
+- name: "[prechecks:dbsrc] Configure RMAN for M5 backups"
+  ansible.builtin.shell: |
+    export ORACLE_HOME={{ source_oracle_home }}
+    export ORACLE_SID={{ source_oracle_sid }}
+    export PATH=$ORACLE_HOME/bin:$PATH
+    rman target / <<'RMANEOF'
+      CONFIGURE DEVICE TYPE DISK BACKUP TYPE TO COMPRESSED BACKUPSET;
+      CONFIGURE DEVICE TYPE DISK PARALLELISM {{ rman_channels }};
+      CONFIGURE BACKUP OPTIMIZATION ON;
+      CONFIGURE CONTROLFILE AUTOBACKUP ON;
+      CONFIGURE CONTROLFILE AUTOBACKUP FORMAT FOR DEVICE TYPE DISK TO '%F';
+      CONFIGURE CHANNEL DEVICE TYPE DISK FORMAT '{{ m5_backupdir }}/bkp_%U';
+      SHOW ALL;
+      EXIT;
+    RMANEOF
+  register: rman_config_result
+
+- name: "[prechecks:dbsrc] Display RMAN configuration (last 10 lines)"
+  ansible.builtin.debug:
+    msg: "{{ rman_config_result.stdout_lines[-10:] }}"

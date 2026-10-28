@@ -1,2 +1,4 @@
 collections:
   - ibm.power_aix_oracle_dba
+  - name: ansible.posix          # authorized_key — used by the M5 migration prechecks (ssh_equivalence.yml)
+    version: ">=1.4.0"
